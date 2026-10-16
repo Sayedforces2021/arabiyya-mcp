@@ -387,6 +387,15 @@ def _ain_haraka(lemma: str):
             i = pat.find("2")
             if i != -1 and i + 1 < len(pat) and pat[i + 1] in FUTURE_HARAKA:
                 return FUTURE_HARAKA[pat[i + 1]]
+            j = pat.find("1")
+            if i == -1 and j != -1:
+                rest = pat[j + 1:]
+                # الناقص واللفيف المقرون: يَرْوِي (1ْوِي) — العين حرف ظاهر بعد فاء ساكنة
+                if len(rest) >= 3 and rest[0] == "\u0652" and rest[1] not in HARAKAT and rest[2] in FUTURE_HARAKA:
+                    return FUTURE_HARAKA[rest[2]]
+                # الأجوف: يَقُول (1ُو3) — حركة الفاء هي حركة العين المنقولة
+                if len(rest) >= 2 and rest[0] in FUTURE_HARAKA and rest[1] in "اوي":
+                    return FUTURE_HARAKA[rest[0]]
             for ch in pat:  # الأجوف: يَقُول، يَبِيع، يَخاف
                 if ch in HOLLOW_HARAKA:
                     return HOLLOW_HARAKA[ch]
@@ -413,11 +422,49 @@ def _verb_candidates(word: str) -> list:
             past += FATHA
         bare = _strip_tashkeel(past).replace(SHADDA, "")
         rank = 0 if bare == typed else (1 if _norm(bare) == _norm(typed) else 2)
+        rank = rank * 2 + (1 if SHADDA in past and SHADDA not in word else 0)  # المجرد قبل المضعّف عند غياب الشدة
         out.append((rank, {"الفعل": past, "حركة عين المضارع": _ain_haraka(lex),
                            "المعنى (إنجليزي)": a.get("gloss")}))
     out.sort(key=lambda x: x[0])
-    best = [c for r, c in out if r < 2]
+    best = [c for r, c in out if r < 4]
     return best or [c for r, c in out]
+
+
+def _same_verb(cand: str, typed: str) -> bool:
+    """يطابق الفعل المرشح ما كتبه المستخدم: الحروف نفسها، والتشديد نفسه، والحركات حيث وُجدت في الاثنين."""
+    def seq(w):
+        out = []
+        for ch in w.replace("\u0671", "\u0627"):
+            if ch in HARAKAT and out:
+                out[-1][1] += ch
+            elif ch not in HARAKAT:
+                out.append([ch, ""])
+        return out
+    a, b = seq(cand), seq(typed)
+    if [x for x, _ in a] != [x for x, _ in b]:
+        return False
+    for i, ((_, ma), (_, mb)) in enumerate(zip(a, b)):
+        if ("\u0651" in ma) != ("\u0651" in mb):
+            return False
+        va, vb = ma.replace("\u0651", ""), mb.replace("\u0651", "")
+        if va and vb and va != vb and i != len(a) - 1:
+            return False
+    return True
+
+
+def _ain_by_analogy(word: str, transitive: bool):
+    """حركة عين المضارع بالقياس الغالب حين يغيب الفعل عن المعجم الصرفي."""
+    b = _strip_tashkeel(word)
+    if len(b) == 2 and "\u0651" in word or (len(b) == 3 and b[1] == b[2]):
+        return ("ضمة", "بقياس المضعّف المتعدي (مدّ يمُدّ، أمّ يؤُمّ)") if transitive else \
+               ("كسرة", "بقياس المضعّف اللازم (فرّ يفِرّ)")
+    if b.endswith("ى"):
+        return "كسرة", "بقياس الناقص اليائي (رمى يرمي)"
+    if b.endswith("ا"):
+        return "ضمة", "بقياس الناقص الواوي (دعا يدعو)"
+    if b.startswith("و"):
+        return "كسرة", "بقياس المثال الواوي (وعد يعِد)"
+    return "فتحة", "افتراضًا"
 
 
 @mcp.tool()
@@ -440,11 +487,14 @@ def conjugate(verb: str, ain_haraka: str | None = None, transitive: bool = True,
                 word = cands[0]["الفعل"]
                 others = cands[1:]
             if ain_haraka is None:
-                match = next((c for c in cands if _strip_tashkeel(c["الفعل"]) == _strip_tashkeel(word)), cands[0])
-                ain_haraka = match["حركة عين المضارع"]
+                match = next((c for c in cands if _same_verb(c["الفعل"], word)), None)
+                if match is None and not vocalized:
+                    match = cands[0]
+                if match is not None:
+                    ain_haraka = match["حركة عين المضارع"]
     if ain_haraka is None:
-        ain_haraka = "فتحة"
-        notes.append("لم أستطع تحديد حركة عين المضارع؛ افترضتُ الفتحة، فحدّدها إن كانت غيرها.")
+        ain_haraka, why = _ain_by_analogy(word, transitive)
+        notes.append(f"لم أجد الفعل في المعجم الصرفي، فجعلت عين المضارع {ain_haraka} {why}؛ فحدّدها إن كانت غيرها.")
     res = mosaref_main.do_sarf(word, ain_haraka, alltense=True, transitive=transitive, display_format="DICT")
     if not res:
         return {"تنبيه": f"لم يُقبل «{word}» فعلًا صالحًا للتصريف؛ اكتبه ماضيًا مشكولًا (مثل: كَتَبَ)."}
