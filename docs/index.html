@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>العربية — عُدّة باحث في علوم العربية</title>
+<meta name="description" content="خادم MCP لعلوم العربية يعمل داخل Claude بلا إنترنت: الصرف والعروض والأصوات والمعاجم والقرآن والشعر والدلالة والمدوّنات.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Noto+Naskh+Arabic:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f6f1e7; --ink:#231d16; --muted:#6b5f50; --line:#d9cdb8;
+  --accent:#7a2e1f; --accent-soft:#efe1d2; --card:#fbf8f2; --code:#efe7da;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#17140f; --ink:#ece4d6; --muted:#a89a86; --line:#3a3227;
+    --accent:#d98b6a; --accent-soft:#2a211a; --card:#1e1a14; --code:#2a241c;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#17140f; --ink:#ece4d6; --muted:#a89a86; --line:#3a3227;
+  --accent:#d98b6a; --accent-soft:#2a211a; --card:#1e1a14; --code:#2a241c;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Noto Naskh Arabic",serif;font-size:18px;line-height:1.9}
+.wrap{max-width:980px;margin:0 auto;padding:0 16px}
+header{padding:72px 0 40px;border-bottom:1px solid var(--line);text-align:center}
+.mark{font-family:Amiri,serif;font-size:clamp(64px,14vw,120px);line-height:1;color:var(--accent);margin:0}
+.latin{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;letter-spacing:.12em;color:var(--muted);direction:ltr;margin-top:10px}
+.lede{font-family:Amiri,serif;font-size:clamp(22px,3.4vw,28px);max-width:720px;margin:28px auto 0}
+.cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:32px}
+.btn{display:inline-block;padding:10px 22px;border:1px solid var(--accent);border-radius:999px;color:var(--accent);text-decoration:none;font-weight:600}
+.btn.solid{background:var(--accent);color:var(--paper)}
+section{padding:48px 0;border-bottom:1px solid var(--line)}
+h2{font-family:Amiri,serif;font-size:32px;margin:0 0 6px;color:var(--accent)}
+.sub{color:var(--muted);margin:0 0 28px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;text-align:center}
+.stat b{display:block;font-family:Amiri,serif;font-size:34px;color:var(--accent);line-height:1.2}
+.stat span{color:var(--muted);font-size:15px}
+.fanun{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.fann{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px}
+.fann h3{font-family:Amiri,serif;font-size:24px;margin:0 0 10px}
+.tool{margin:0 0 10px}
+.tool code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;background:var(--code);padding:1px 7px;border-radius:5px;direction:ltr;display:inline-block}
+.tool p{margin:2px 0 0;color:var(--muted);font-size:16px;line-height:1.7}
+ol.steps{padding-inline-start:22px;margin:0}
+ol.steps li{margin-bottom:10px}
+.os{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.ask{display:grid;gap:10px}
+.ask div{background:var(--accent-soft);border-radius:10px;padding:12px 16px;font-family:Amiri,serif;font-size:20px}
+.notes li{margin-bottom:8px}
+footer{padding:36px 0 56px;color:var(--muted);font-size:15px;text-align:center}
+footer a,section a{color:var(--accent)}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1 class="mark">العربية</h1>
+    <div class="latin">ARABIYYA · MCP</div>
+    <p class="lede">عُدّة باحث في علوم العربية، تعمل داخل Claude على جهازك وبلا إنترنت في أكثر أدواتها.</p>
+    <div class="cta">
+      <a class="btn solid" href="#install">التثبيت</a>
+      <a class="btn" href="#tools">الأدوات</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section>
+    <div class="stats">
+      <div class="stat"><b>25</b><span>أداة</span></div>
+      <div class="stat"><b>15</b><span>معجمًا تراثيًّا</span></div>
+      <div class="stat"><b>3.8 ملايين</b><span>بيت من الشعر</span></div>
+      <div class="stat"><b>12 مليون</b><span>كلمة في المدوّنة</span></div>
+      <div class="stat"><b>8,800</b><span>كتاب يمكن إضافته</span></div>
+    </div>
+  </section>
+
+  <section id="tools">
+    <h2>الأدوات</h2>
+    <p class="sub">يستعملها Claude من تلقاء نفسه متى احتاجها في المحادثة.</p>
+    <div class="fanun">
+      <div class="fann"><h3>الصرف</h3>
+        <div class="tool"><code>analyze_word</code><p>التحليلات المحتملة للكلمة: الجذر والوزن والنوع والسمات.</p></div>
+        <div class="tool"><code>analyze_text</code><p>تحليل الجملة بترجيح سياقي.</p></div>
+        <div class="tool"><code>root_family</code><p>أسرة الجذر بأوزانها.</p></div>
+        <div class="tool"><code>conjugate</code><p>تصريف الفعل في الأزمنة والضمائر.</p></div>
+      </div>
+      <div class="fann"><h3>الضبط والعروض</h3>
+        <div class="tool"><code>diacritize</code><p>التشكيل الآلي بحسب السياق.</p></div>
+        <div class="tool"><code>scan_verse</code><p>تقطيع البيت وزحافاته وعلله وقافيته.</p></div>
+        <div class="tool"><code>scan_poem</code><p>تقطيع القصيدة والتنبيه على المختل.</p></div>
+      </div>
+      <div class="fann"><h3>الأصوات</h3>
+        <div class="tool"><code>phonetics</code><p>الكتابة الصوتية الدولية والمقاطع والنبر.</p></div>
+        <div class="tool"><code>huruf</code><p>المخارج والصفات على مذهب ابن الجزري، والموازنة بين حرفين.</p></div>
+      </div>
+      <div class="fann"><h3>المعجم</h3>
+        <div class="tool"><code>maajim</code><p>المادة من العين إلى التاج، بالجزء والصفحة.</p></div>
+        <div class="tool"><code>lexicon_lookup</code><p>نحو 47 معجمًا من The Arabic Lexicon.</p></div>
+      </div>
+      <div class="fann"><h3>القرآن والشعر</h3>
+        <div class="tool"><code>quran_word</code><p>صرف كلمات الآية وإعرابها.</p></div>
+        <div class="tool"><code>quran_root</code><p>مواضع الجذر وصيغه.</p></div>
+        <div class="tool"><code>search_poetry</code><p>الشواهد بالشاعر والبحر والعصر.</p></div>
+      </div>
+      <div class="fann"><h3>الدلالة</h3>
+        <div class="tool"><code>semantic_neighbors</code><p>الألفاظ القريبة دلاليًّا.</p></div>
+        <div class="tool"><code>word_similarity</code><p>درجة التقارب بين لفظين.</p></div>
+        <div class="tool"><code>substitutes_in_context</code><p>ما يصلح مكان الكلمة في سياقها.</p></div>
+      </div>
+      <div class="fann"><h3>المدوّنة التراثية</h3>
+        <div class="tool"><code>corpus_concordance</code><p>سياقات الكلمة في 57 كتابًا.</p></div>
+        <div class="tool"><code>corpus_usage</code><p>تطوّر اللفظ عبر القرون.</p></div>
+        <div class="tool"><code>corpus_collocates</code><p>المتلازمات اللفظية.</p></div>
+        <div class="tool"><code>corpus_add_book</code><p>إضافة أي كتاب من OpenITI، والبحث عنه وحذفه.</p></div>
+      </div>
+      <div class="fann"><h3>الأسلوب</h3>
+        <div class="tool"><code>text_profile</code><p>التحليل المعجمي لنص أو ديوان.</p></div>
+        <div class="tool"><code>compare_texts</code><p>الموازنة بين نصّين أو شاعرين أو كتابين.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>أمثلة لما تسأل عنه</h2>
+    <p class="sub">بالعربية، كما تسأل أستاذك.</p>
+    <div class="ask">
+      <div>قطّع هذه القصيدة وبيّن الأبيات المختلة.</div>
+      <div>ما مادة «ح ق ق» في مقاييس اللغة ولسان العرب؟</div>
+      <div>وازن بين «الصاحبي» لابن فارس و«الخصائص» لابن جني.</div>
+      <div>كيف تطوّر استعمال «الاستعارة» عبر القرون؟</div>
+      <div>ما الفرق بين الضاد والظاء مخرجًا وصفة؟</div>
+    </div>
+  </section>
+
+  <section id="install">
+    <h2>التثبيت</h2>
+    <p class="sub">يلزم تطبيق Claude Desktop، ونحو 3 غيغابايت، واتصال بالإنترنت مرة واحدة لتنزيل البيانات.</p>
+    <div class="os">
+      <div class="fann"><h3>ويندوز 11</h3>
+        <ol class="steps">
+          <li>نزّل المستودع (Code ← Download ZIP) وفكّ الضغط.</li>
+          <li>انقر مرتين على <code dir="ltr">install_sarf_windows.bat</code>.</li>
+          <li>أغلق Claude من أيقونته بجانب الساعة ثم افتحه.</li>
+        </ol>
+      </div>
+      <div class="fann"><h3>macOS</h3>
+        <ol class="steps">
+          <li>نزّل المستودع وفكّه في مجلد <code dir="ltr">~/claude</code>.</li>
+          <li>انقر مرتين على <code dir="ltr">install_sarf.command</code>.</li>
+          <li>أغلق Claude (Cmd+Q) ثم افتحه.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>تنبيهات منهجية</h2>
+    <ul class="notes">
+      <li>التحليل الآلي يقارب ولا يقطع؛ فما خالف المقرَّر عند أهل الفن يُراجَع في مظانّه.</li>
+      <li>المشكِّل الآلي مبني على الفصحى المعاصرة، فالشعر القديم يُعطى مشكولًا لصحة التقطيع.</li>
+      <li>المدوّنة مختارة لا شاملة، والنسبة لكل مليون كلمة أدقّ من العدد المجرد.</li>
+    </ul>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    البيانات من مصادرها ولكلٍّ رخصته:
+    <a href="https://github.com/CAMeL-Lab/camel_tools">CAMeL Tools</a> ·
+    <a href="https://huggingface.co/datasets/arbml/ashaar">أشعار</a> ·
+    <a href="https://github.com/mustafa0x/quran-morphology">المدوّنة القرآنية</a> ·
+    <a href="https://github.com/OpenITI">OpenITI</a> ·
+    <a href="https://pypi.org/project/pyarud/">PyArud</a> ·
+    <a href="https://github.com/linuxscout/qutrub">قطرب</a> ·
+    <a href="https://arabiclexicon.hawramani.com/">The Arabic Lexicon</a>
+  </div>
+</footer>
+</body>
+</html>
