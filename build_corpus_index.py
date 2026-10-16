@@ -89,7 +89,7 @@ def norm(s):
 
 def clean(line):
     line = PAGE.sub("", line)
-    line = re.sub(r"\bms\d+\b|@[A-Z0-9]+@|#~:\w+:|%~%", " ", line)
+    line = re.sub(r"\bms\d+\b|@[A-Z0-9]+@|#~:\w+:|%~%|\bAUTO\b", " ", line)
     line = line.replace("~~", " ").lstrip("#$| ").strip()
     return re.sub(r"\s+", " ", line)
 
@@ -169,6 +169,29 @@ def insert_book(con, bid, pid, genre, uri, meta, paras, title_hint=None, author_
     con.executemany("INSERT INTO paras VALUES (?,?,?,?,?)", rows)
     con.executemany("INSERT INTO paras_fts(rowid, body) VALUES (?,?)", frows)
     return title, ntok, counts, pid
+
+
+def add_book(con, repo, path, uri, genre, title_hint=None, author_hint=None, tmpdir=None):
+    """تنزيل كتاب من OpenITI وإضافته إلى مدوّنة قائمة، مع تحديث جدول التكرار. يعيد (العنوان، عدد الكلمات، عدد الفقرات)."""
+    import tempfile
+    tmpdir = tmpdir or tempfile.mkdtemp(prefix="sarf_")
+    local = os.path.join(tmpdir, os.path.basename(path))
+    try:
+        download(repo, path, local)
+        meta, paras = parse(local)
+    finally:
+        try:
+            os.remove(local)
+        except OSError:
+            pass
+    if not paras:
+        raise ValueError("الملف خالٍ من النص")
+    bid = (con.execute("SELECT MAX(id) FROM books").fetchone()[0] or 0) + 1
+    pid = con.execute("SELECT MAX(id) FROM paras").fetchone()[0] or 0
+    title, ntok, counts, _ = insert_book(con, bid, pid, genre, uri, meta, paras, title_hint, author_hint)
+    con.executemany("INSERT INTO freq(token, n) VALUES (?, ?) ON CONFLICT(token) DO UPDATE SET n = n + excluded.n", counts.items())
+    con.commit()
+    return title, ntok, len(paras)
 
 
 def main(src_dir=None):

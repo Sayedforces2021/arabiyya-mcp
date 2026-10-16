@@ -67,8 +67,8 @@ if ($LASTEXITCODE -ne 0) { Fail 'فشل تثبيت CAMeL Tools. أرسل ما ف
 Step 'تثبيت PyArud (العروض)'
 & $Py -m pip install -U --ignore-requires-python --no-deps pyarud
 
-Step 'تثبيت قطرب (التصريف) وpyarrow'
-& $Py -m pip install -U libqutrub pyarrow
+Step 'تثبيت قطرب (التصريف) وpyarrow وStanza (الإعراب)'
+& $Py -m pip install -U libqutrub pyarrow stanza
 
 Step 'تنزيل بيانات CAMeL (قد يستغرق دقائق)'
 & (Join-Path $Scripts 'camel_data.exe') -i light
@@ -79,7 +79,7 @@ Step 'نسخ ملف الخادم'
 $Dest = Join-Path $env:USERPROFILE 'claude'
 New-Item -ItemType Directory -Force -Path $Dest | Out-Null
 Copy-Item (Join-Path $Here 'sarf_mcp.py') (Join-Path $Dest 'sarf_mcp.py') -Force
-foreach ($f in 'build_poetry_index.py','build_lexicon_index.py','build_corpus_index.py','setup_sarf_data.py','openiti_catalog.tsv') {
+foreach ($f in 'sarf_ilal.py','build_poetry_index.py','build_lexicon_index.py','build_corpus_index.py','setup_sarf_data.py','openiti_catalog.tsv') {
   Copy-Item (Join-Path $Here $f) (Join-Path $Dest $f) -Force
 }
 $Server = Join-Path $Dest 'sarf_mcp.py'
@@ -88,7 +88,7 @@ Write-Host $Server
 Step 'اختبار سريع'
 & $Py -c "from camel_tools.morphology.database import MorphologyDB; from camel_tools.morphology.analyzer import Analyzer; a=Analyzer(MorphologyDB.builtin_db()).analyze('\u0643\u062a\u0628')[0]; print('OK:', a['diac'], a['root'])"
 
-Step 'تجهيز البيانات: القرآن والمعاجم والشعر والنموذج الدلالي'
+Step 'تجهيز البيانات: القرآن والمعاجم والشعر والمدوّنة والنماذج'
 & $Py (Join-Path $Dest 'setup_sarf_data.py')
 
 # ---------- 5. إعدادات Claude Desktop ----------

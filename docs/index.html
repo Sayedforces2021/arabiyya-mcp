@@ -73,7 +73,7 @@ footer a,section a{color:var(--accent)}
 <main class="wrap">
   <section>
     <div class="stats">
-      <div class="stat"><b>25</b><span>أداة</span></div>
+      <div class="stat"><b>37</b><span>أداة</span></div>
       <div class="stat"><b>15</b><span>معجمًا تراثيًّا</span></div>
       <div class="stat"><b>3.8 ملايين</b><span>بيت من الشعر</span></div>
       <div class="stat"><b>12 مليون</b><span>كلمة في المدوّنة</span></div>
@@ -91,10 +91,22 @@ footer a,section a{color:var(--accent)}
         <div class="tool"><code>root_family</code><p>أسرة الجذر بأوزانها.</p></div>
         <div class="tool"><code>conjugate</code><p>تصريف الفعل في الأزمنة والضمائر.</p></div>
       </div>
+      <div class="fann"><h3>الميزان والإعلال</h3>
+        <div class="tool"><code>mizan</code><p>الأصل وخطوات الإعلال والإبدال والإدغام بعبارة الصرفيين، متحقَّقًا منها.</p></div>
+        <div class="tool"><code>mushtaqqat</code><p>المشتقات القياسية من الفعل بإعلالها.</p></div>
+        <div class="tool"><code>taqalib</code><p>تقاليب الجذر: المستعمل والمهمل.</p></div>
+      </div>
+      <div class="fann"><h3>النحو</h3>
+        <div class="tool"><code>irab</code><p>الإعراب كلمةً كلمة بالأبواب والعلامات الأصلية والفرعية، مع ضبط الأواخر.</p></div>
+      </div>
+      <div class="fann"><h3>القافية والبديع</h3>
+        <div class="tool"><code>analyze_qafiya</code><p>الروي والوصل والردف والتأسيس، وعيوب القافية.</p></div>
+        <div class="tool"><code>detect_badi</code><p>الجناس والطباق والمقابلة والتصريع والسجع والاقتباس.</p></div>
+      </div>
       <div class="fann"><h3>الضبط والعروض</h3>
         <div class="tool"><code>diacritize</code><p>التشكيل الآلي بحسب السياق.</p></div>
         <div class="tool"><code>scan_verse</code><p>تقطيع البيت وزحافاته وعلله وقافيته.</p></div>
-        <div class="tool"><code>scan_poem</code><p>تقطيع القصيدة والتنبيه على المختل.</p></div>
+        <div class="tool"><code>scan_poem</code><p>تقطيع القصيدة والتنبيه على المختل، مع الضبط الموجَّه بالوزن.</p></div>
       </div>
       <div class="fann"><h3>الأصوات</h3>
         <div class="tool"><code>phonetics</code><p>الكتابة الصوتية الدولية والمقاطع والنبر.</p></div>
@@ -102,17 +114,20 @@ footer a,section a{color:var(--accent)}
       </div>
       <div class="fann"><h3>المعجم</h3>
         <div class="tool"><code>maajim</code><p>المادة من العين إلى التاج، بالجزء والصفحة.</p></div>
+        <div class="tool"><code>lughawiyyat</code><p>الفروق والأضداد والإبدال والمعرّب والمثلثات.</p></div>
         <div class="tool"><code>lexicon_lookup</code><p>نحو 47 معجمًا من The Arabic Lexicon.</p></div>
       </div>
       <div class="fann"><h3>القرآن والشعر</h3>
         <div class="tool"><code>quran_word</code><p>صرف كلمات الآية وإعرابها.</p></div>
         <div class="tool"><code>quran_root</code><p>مواضع الجذر وصيغه.</p></div>
         <div class="tool"><code>search_poetry</code><p>الشواهد بالشاعر والبحر والعصر.</p></div>
+        <div class="tool"><code>takhrij_shahid</code><p>تخريج البيت: نسبته ورواياته، ومن استشهد به من النحاة والبلاغيين.</p></div>
       </div>
       <div class="fann"><h3>الدلالة</h3>
         <div class="tool"><code>semantic_neighbors</code><p>الألفاظ القريبة دلاليًّا.</p></div>
         <div class="tool"><code>word_similarity</code><p>درجة التقارب بين لفظين.</p></div>
         <div class="tool"><code>substitutes_in_context</code><p>ما يصلح مكان الكلمة في سياقها.</p></div>
+        <div class="tool"><code>semantic_change</code><p>التطور الدلالي للفظ عبر القرون.</p></div>
       </div>
       <div class="fann"><h3>المدوّنة التراثية</h3>
         <div class="tool"><code>corpus_concordance</code><p>سياقات الكلمة في 57 كتابًا.</p></div>
@@ -123,6 +138,9 @@ footer a,section a{color:var(--accent)}
       <div class="fann"><h3>الأسلوب</h3>
         <div class="tool"><code>text_profile</code><p>التحليل المعجمي لنص أو ديوان.</p></div>
         <div class="tool"><code>compare_texts</code><p>الموازنة بين نصّين أو شاعرين أو كتابين.</p></div>
+        <div class="tool"><code>attribute_author</code><p>نسبة النص إلى قائله بمقياس Delta.</p></div>
+        <div class="tool"><code>usage_compare</code><p>موازنة التعابير في الاستعمال الفصيح.</p></div>
+        <div class="tool"><code>benchmark</code><p>قياس دقة الأدوات على بيانات معيارية.</p></div>
       </div>
     </div>
   </section>
@@ -136,6 +154,10 @@ footer a,section a{color:var(--accent)}
       <div>وازن بين «الصاحبي» لابن فارس و«الخصائص» لابن جني.</div>
       <div>كيف تطوّر استعمال «الاستعارة» عبر القرون؟</div>
       <div>ما الفرق بين الضاد والظاء مخرجًا وصفة؟</div>
+      <div>ما أصل «مَبِيع» وما خطوات إعلاله؟</div>
+      <div>أعرب: «إنّ العلمَ نورٌ يهدي إلى الحق».</div>
+      <div>خرّج «قفا نبك من ذكرى حبيب ومنزل»: ومن استشهد به من النحاة؟</div>
+      <div>ما عيوب القافية في هذه القصيدة؟</div>
     </div>
   </section>
 

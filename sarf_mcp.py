@@ -17,6 +17,11 @@
 - compare_texts: الموازنة الأسلوبية بين نصّين أو شاعرين أو كتابين (الألفاظ والجذور والأوزان المميِّزة والمعجم المشترك).
 - corpus_find_book / corpus_add_book / corpus_remove_book: توسيع المدوّنة بأي كتاب من OpenITI.
 - phonetics / huruf: الكتابة الصوتية (IPA) والمقاطع والنبر، ومخارج الحروف وصفاتها.
+- mizan / mushtaqqat / taqalib: الميزان الصرفي وخطوات الإعلال، والمشتقات القياسية، وتقاليب الجذر.
+- irab: الإعراب بمحلل نحوي حديث (Stanza/UD) منقولًا إلى أبواب النحو العربي.
+- analyze_qafiya / detect_badi: علم القافية وعيوبها، والمحسنات البديعية.
+- takhrij_shahid / usage_compare / attribute_author / semantic_change / lughawiyyat: تخريج الشاهد، وموازنة التعابير، ونسبة النص، والتطور الدلالي، وكتب اللغة المتخصصة.
+- benchmark: قياس دقة الأدوات.
 """
 
 import os
@@ -30,17 +35,20 @@ from camel_tools.morphology.database import MorphologyDB
 from camel_tools.morphology.analyzer import Analyzer
 from camel_tools.tokenizers.word import simple_word_tokenize
 
-INSTRUCTIONS = """أداة «العربية»: عُدّة باحث في علوم العربية تعمل على الجهاز بلا إنترنت.
-- الصرف: analyze_word (تحليلات الكلمة كلها)، analyze_text (تحليل الجملة بالسياق)، root_family (أسرة الجذر)، conjugate (تصريف الفعل).
-- الضبط والعروض: diacritize (التشكيل)، scan_verse (تقطيع البيت)، scan_poem (تقطيع القصيدة والتنبيه على المختل).
-- الأصوات: phonetics (الكتابة الصوتية IPA والمقاطع والنبر)، huruf (المخارج والصفات والموازنة بين حرفين).
-- المعجم: maajim (15 معجمًا تراثيًّا معزوّة بالجزء والصفحة)، lexicon_lookup (The Arabic Lexicon عبر الإنترنت).
-- القرآن: quran_word (صرف كلمات الآية وإعرابها)، quran_root (مواضع الجذر وصيغه).
-- الشعر: search_poetry (شواهد من أكثر من 3.8 مليون بيت).
-- الدلالة: semantic_neighbors وword_similarity وsubstitutes_in_context (نموذج CAMeLBERT الكلاسيكي).
-- المدوّنة التراثية: corpus_concordance (السياقات)، corpus_usage (التطوّر عبر القرون)، corpus_collocates (المتلازمات)، corpus_find_book / corpus_add_book / corpus_remove_book (توسيعها من OpenITI).
-- الأسلوب: text_profile (التحليل المعجمي لنص أو ديوان)، compare_texts (الموازنة بين نصّين أو شاعرين أو كتابين).
-تنبيهات: التحليل الآلي يقارب ولا يقطع، فما خالف المقرر عند أهل الفن يُنبَّه عليه ولا يُسلَّم به؛ والشعر القديم يُعطى مشكولًا ما أمكن لأن التشكيل الآلي مبني على الفصحى المعاصرة؛ ويُذكر المصدر بالجزء والصفحة كما تُرجعه الأدوات."""
+INSTRUCTIONS = """أداة «العربية»: عُدّة باحث في علوم العربية تعمل على الجهاز (37 أداة).
+- الصرف: analyze_word، analyze_text، root_family، conjugate، mizan (الميزان مع الأصل وخطوات الإعلال والإبدال)، mushtaqqat (المشتقات القياسية)، taqalib (تقاليب الجذر).
+- النحو: irab (إعراب الجملة كلمةً كلمة بالأبواب والعلامات، مع ضبط الأواخر).
+- الضبط والعروض والقافية: diacritize، scan_verse وscan_poem (مع الضبط الموجَّه بالوزن)، analyze_qafiya (عناصر القافية وعيوبها).
+- الأصوات: phonetics (IPA والمقاطع والنبر)، huruf (المخارج والصفات).
+- البلاغة: detect_badi (الجناس والطباق والمقابلة والتصريع وردّ العجز والسجع والاقتباس).
+- المعجم: maajim (15 معجمًا تراثيًّا بالجزء والصفحة)، lughawiyyat (الفروق والأضداد والإبدال والمعرّب والمثلثات وفقه اللغة)، lexicon_lookup (عبر الإنترنت).
+- القرآن: quran_word، quran_root.
+- الشعر: search_poetry، takhrij_shahid (تخريج البيت ونسبته ورواياته ومواضع الاستشهاد به).
+- الدلالة: semantic_neighbors، word_similarity، substitutes_in_context، semantic_change (التطور الدلالي عبر القرون).
+- المدوّنة التراثية: corpus_concordance، corpus_usage، corpus_collocates، usage_compare (موازنة التعابير)، corpus_find_book / corpus_add_book / corpus_remove_book.
+- الأسلوب: text_profile، compare_texts، attribute_author (نسبة النص إلى قائله بمقياس Delta).
+- benchmark: قياس دقة الأدوات على بيانات معيارية.
+تنبيهات: التحليل الآلي يقارب ولا يقطع، فما خالف المقرر عند أهل الفن يُنبَّه عليه ولا يُسلَّم به؛ والشعر القديم يُعطى مشكولًا ما أمكن؛ ويُذكر المصدر بالجزء والصفحة كما تُرجعه الأدوات، ويُميَّز بين ما نقلته الأداة وما استنبطته."""
 
 try:  # mcp 2.x
     mcp = FastMCP("arabiyya", title="العربية", description="عُدّة باحث في علوم العربية بلا إنترنت: الصرف والعروض والأصوات والمعاجم والقرآن والشعر والدلالة والمدوّنات.",
@@ -229,15 +237,286 @@ def _shatr(s) -> dict:
     }
 
 
+_SHORT = "\u064e\u064f\u0650"  # فتحة ضمة كسرة
+
+
+def _letters_marks(w: str):
+    out = []
+    for ch in w.replace("\u0671", "\u0627"):
+        if ch in HARAKAT and out:
+            out[-1][1] += ch
+        elif ch not in HARAKAT and ch != "ـ":
+            out.append([ch, ""])
+    return out
+
+
+def _agrees(cand: str, orig: str) -> bool:
+    """المرشح يوافق ما ضبطه صاحب النص: الحروف نفسها، وكل حركة أو شدة في الأصل موجودة فيه."""
+    a, b = _letters_marks(cand), _letters_marks(orig)
+    if [x for x, _ in a] != [x for x, _ in b]:
+        return False
+    return all(all(c in ma for c in mb) for (_, ma), (_, mb) in zip(a, b))
+
+
+def _poetic_variants(w: str) -> list:
+    """بدائل الضرورة والإشباع: إشباع هاء الكناية، وصلة ميم الجمع."""
+    out = []
+    if len(w) > 2 and w[-1] in "\u064f\u0650" and w[-2] == "ه":
+        out.append(w + ("و" if w[-1] == "\u064f" else "ي"))
+    for suf in ("كُمْ", "هُمْ", "تُمْ", "كُمْ"):
+        if w.endswith(suf):
+            out.append(w[:-1] + "\u064f" + "و")
+    if w.endswith("هُمْ") or w.endswith("هِمْ"):
+        out.append(w[:-1] + "\u064f" + "و")
+    return out
+
+
+_END_VOWELS = ["\u064f", "\u064e", "\u0650", "\u064c", "\u064d", "\u0652"]
+
+
+def _ending_variants(w: str, noun: bool = True) -> list:
+    """بدائل حركة الآخر لكلمة خلا آخرها من الضبط أو احتمل غيره: الحركات الثلاث والتنوين والسكون."""
+    if not w:
+        return []
+    lm = _letters_marks(w)
+    last, marks = lm[-1]
+    if last in "اىو" and len(lm) > 1 or last == "ي" and len(lm) > 1 and not marks:
+        return []
+    keep = marks.replace("\u064e", "").replace("\u064f", "").replace("\u0650", "").replace("\u064b", "") \
+        .replace("\u064c", "").replace("\u064d", "").replace("\u0652", "")
+    stem = "".join(c + m for c, m in lm[:-1])
+    vs = [stem + last + keep + v for v in (_END_VOWELS if noun else ["\u064f", "\u064e", "\u0650", "\u0652"])]
+    if last == "ة" or (noun and last not in "ء"):
+        pass
+    if noun and last != "ة":
+        vs.append(stem + last + keep + "\u064b" + "ا")  # تنوين النصب بألفه
+    return vs
+
+
+_SUN_LETTERS = set("تثدذرزسشصضطظلن")
+
+
+def _sun_shadda(w: str) -> str:
+    """يُثبت شدة الحرف الشمسي بعد «ال» (يغفلها ضبط CAMeL، فيفسد بها التقطيع): السَيْف ← السَّيْف."""
+    lm = _letters_marks(w)
+    for i in range(len(lm) - 2):
+        if lm[i][0] == "ا" and lm[i + 1][0] == "ل" and not any(c in lm[i + 1][1] for c in "\u064e\u064f\u0650") \
+                and lm[i + 2][0] in _SUN_LETTERS and "\u0651" not in lm[i + 2][1] \
+                and (i == 0 or (i <= 2 and all(x[0] in "وفبكل" for x in lm[:i]))):
+            lm[i + 2][1] = "\u0651" + lm[i + 2][1]
+            break
+    else:
+        # لِلشَّمْس: لام الجر ثم لام التعريف
+        if len(lm) > 3 and lm[0][0] == "ل" and lm[1][0] == "ل" and lm[2][0] in _SUN_LETTERS and "\u0651" not in lm[2][1] \
+                and not any(c in lm[1][1] for c in "\u064e\u064f\u0650\u0651"):
+            lm[2][1] = "\u0651" + lm[2][1]
+    return "".join(c + m for c, m in lm)
+
+
+def _has_end_mark(w: str) -> bool:
+    lm = _letters_marks(w)
+    return bool(lm) and (any(c in lm[-1][1] for c in "\u064e\u064f\u0650\u064b\u064c\u064d\u0652")
+                         or lm[-1][0] in "اىوي" and len(lm) > 1)
+
+
+def _word_candidates(orig: str, base: str, limit: int = 24) -> list:
+    """ضبوط ممكنة للكلمة، أولها ما اختاره المشكِّل، مقيدة بما ضبطه صاحب النص:
+    تحليلات المحلل الصرفي، وبدائل حركة الآخر (الإعراب والتنوين والسكون)، وإشباع الهاء وصلة الميم."""
+    seen, out = set(), []
+
+    def add(c, check=True):
+        if c and c not in seen and (not check or _agrees(c, orig)):
+            seen.add(c)
+            out.append(c)
+    add(base, check=False)
+    try:
+        anal = _analyzer().analyze(_strip_tashkeel(orig))
+    except Exception:
+        anal = []
+    anal = sorted(anal, key=lambda x: -float(x.get("pos_lex_logprob", -99) or -99))
+    forms = []
+    for a_ in anal:
+        d = a_.get("diac") or ""
+        if d and d not in [f for f, _ in forms]:
+            forms.append((d, a_.get("pos") not in ("verb",)))
+    marked = [d for d, _ in forms if _has_end_mark(d)]
+    bare = [(d, n) for d, n in forms if not _has_end_mark(d)]
+    trusted = {base} | {d for d, _ in forms}
+    for v in _ending_variants(base, True) if not _has_end_mark(base) else []:
+        add(v)
+    for d in marked[:12]:
+        add(d)
+    for d, n in bare[:5]:
+        for v in _ending_variants(d, n):
+            add(v)
+    for d, _ in bare[:5]:
+        add(d)
+    for d in list(out[:8]):
+        for v in _poetic_variants(d):
+            add(v, check=False)
+            trusted.add(v)
+    out = out[:limit] or [base]
+    fixed = []
+    for c in out:
+        c2 = _sun_shadda(c)
+        if c2 not in fixed:
+            fixed.append(c2)
+            _CAND_TRUST[c2] = c in trusted
+    return fixed
+
+
+_CAND_TRUST = {}
+
+
+def _vowel_end(w: str) -> bool:
+    lm = _letters_marks(w)
+    return bool(lm) and (any(c in lm[-1][1] for c in "\u064e\u064f\u0650\u064b\u064c\u064d")
+                         or (lm[-1][0] in "اىوي" and len(lm) > 1 and not lm[-1][1]))
+
+
+def _verse_score(parts, meter):
+    import pyarud
+    _patch_pyarud()
+    try:
+        r = pyarud.analyze_verse(parts[0], parts[1] if len(parts) > 1 else "", forced_meter=meter)
+    except Exception:
+        return (False, 0.0), None
+    return (bool(r.is_valid), float(r.score or 0)), r
+
+
+@lru_cache(maxsize=1)
+def _patch_pyarud():
+    """تصحيح علّة في PyArud: قاعدة «يس ← ياسين» تُطبَّق على آخر «ليس» و«وليس» فتفسد وزنهما."""
+    import gc
+    from pyarud.core import phonetics as ph
+    ph.DEFAULT_ARUDI_REPLACEMENTS.pop("يس", None)
+    for o in gc.get_objects():
+        if isinstance(o, ph.ArudiConverter):
+            o.replacements.pop("يس", None)
+    return True
+
+
+@lru_cache(maxsize=1)
+def _meter_grammars():
+    """أنماط الأشطر الصحيحة لكل بحر وفروعه، وبادئاتها، من نحو PyArud."""
+    from pyarud.meters.engine import ALL_GRAMMARS
+    out = []
+    for g in ALL_GRAMMARS:
+        def prefixes(pats):
+            ps = set()
+            for p in pats:
+                for i in range(len(p) + 1):
+                    ps.add(p[:i])
+            return ps
+        out.append({"key": g.meter_key, "type": g.bahr_type, "name": g.name_ar,
+                    "sadr": g.canonical_patterns_sadr, "ajuz": g.canonical_patterns_ajuz or g.canonical_patterns_sadr,
+                    "sadr_pre": prefixes(g.canonical_patterns_sadr),
+                    "ajuz_pre": prefixes(g.canonical_patterns_ajuz or g.canonical_patterns_sadr)})
+    return out
+
+
+@lru_cache(maxsize=1)
+def _arudi():
+    from pyarud.core.phonetics import ArudiConverter
+    _patch_pyarud()
+    return ArudiConverter()
+
+
+def _fit_shatr(cands: list, full: set, pre: set, ajuz: bool, max_changes: int = 5, budget: int = 15000):
+    """بحث بالعمق مع التقليم: أقل عدد من التغييرات عن ضبط المشكِّل يجعل نمط الشطر من أنماط البحر."""
+    conv = _arudi()
+    n = len(cands)
+    best = [None]
+    calls = [0]
+
+    def pat(words, final):
+        calls[0] += 1
+        t = " ".join(words)
+        if final:
+            pats = {conv.prepare_text(t, saturate=True)[1], conv.prepare_text(t, saturate=False)[1]}
+            if ajuz:
+                pats.add(conv.prepare_text(t, saturate=False, muqayyad=True)[1])
+            return pats
+        return {conv.prepare_text(t, saturate=False)[1]}
+
+    def dfs(i, chosen, changes):
+        if calls[0] > budget or (best[0] and changes >= best[0][0]):
+            return
+        if i == n:
+            if pat(chosen, True) & full:
+                best[0] = (changes, list(chosen))
+            return
+        for j, c in enumerate(cands[i]):
+            # التغيير عن ضبط المشكِّل بنقطة، وترك آخر الكلمة بلا حركة في حشو الشطر بنصف نقطة
+            ch = changes + (j > 0) + (0.5 if i + 1 < n and not _vowel_end(c) and not _CAND_TRUST.get(c, True) else 0)
+            if ch > max_changes or (best[0] and ch >= best[0][0]):
+                continue
+            chosen.append(c)
+            ok = True
+            if i + 1 < n:  # تقليم: نمط ما قبل الكلمة الأخيرة يجب أن يكون بادئة نمط صحيح
+                p = next(iter(pat(chosen, False)))
+                ok = p[:-2] in pre
+            if ok:
+                dfs(i + 1, chosen, ch)
+            chosen.pop()
+            if best[0] and best[0][0] == 0:
+                return
+    dfs(0, [], 0)
+    return best[0]
+
+
+def _fit_meter(orig_parts: list, base_parts: list, meter: str | None = None):
+    """التشكيل الموجَّه بالعروض: يختار لكل كلمة من ضبوطها الممكنة ما يستقيم به البيت على بحره بأقل تغيير عن ضبط المشكِّل.
+    يعيد (الأجزاء المضبوطة، التغييرات، نتيجة PyArud)."""
+    ow = [p.split() for p in orig_parts]
+    bw = [p.split() for p in base_parts]
+    if any(len(o) != len(b) for o, b in zip(ow, bw)):
+        return base_parts, [], None
+    cands = [[_word_candidates(o, b) for o, b in zip(os_, bs)] for os_, bs in zip(ow, bw)]
+    grams = [g for g in _meter_grammars() if not meter or g["key"] == meter]
+    if len(grams) > 6:  # تقديم أقرب البحور إلى نمط الضبط الأولي
+        import difflib
+        bp = _arudi().prepare_text(base_parts[0], saturate=True)[1]
+        def closeness(g):
+            return max((difflib.SequenceMatcher(None, bp, x).ratio() for x in g["sadr"]), default=0)
+        grams = sorted(grams, key=closeness, reverse=True)[:6]
+    sols = []
+    for g in grams:
+        sol, total = [], 0
+        for si, c in enumerate(cands):
+            r = _fit_shatr(c, g["ajuz"] if si else g["sadr"], g["ajuz_pre"] if si else g["sadr_pre"], ajuz=bool(si))
+            if r is None:
+                sol = None
+                break
+            total += r[0]
+            sol.append(r[1])
+        if sol is not None:
+            sols.append((total, g, sol))
+    if not sols:
+        return base_parts, [], None
+    order = {g["key"] + g["type"]: i for i, g in enumerate(_meter_grammars())}
+    sols.sort(key=lambda x: (x[0], order.get(x[1]["key"] + x[1]["type"], 99)))
+    for total, g, sol in sols[:4]:
+        parts = [" ".join(x) for x in sol]
+        sc, r = _verse_score(parts, g["key"])
+        if r is not None and r.is_valid:
+            changes = [{"قبل": bw[si][wi], "بعد": sol[si][wi]} for si in range(len(sol)) for wi in range(len(sol[si]))
+                       if sol[si][wi] != bw[si][wi]]
+            return parts, changes, r
+    return base_parts, [], None
+
+
 @mcp.tool()
 def scan_verse(verse: str, meter: str | None = None, auto_diacritize: bool = True) -> dict:
     """تقطيع بيت شعر عروضيًّا: البحر ونوعه، والتفعيلات وزحافاتها وعللها، والقافية والرويّ.
     verse: البيت بشطريه مفصولين بـ " * " (أو شطر واحد). يفضَّل أن يكون مشكولًا؛ فإن لم يكن شُكِّل آليًّا أولًا.
     meter: اسم بحر بالإنجليزية لفرضه (taweel, baseet, kamel, wafer, ...) عند الحاجة."""
     import pyarud
+    _patch_pyarud()
 
     parts = [p.strip() for p in verse.replace("...", "*").split("*", 1)]
-    note = None
+    orig_parts = list(parts)
+    note, changes = None, []
     if auto_diacritize:
         prepared = [_prepare_verse_text(p) for p in parts]
         parts = [p for p, _ in prepared]
@@ -245,6 +524,10 @@ def scan_verse(verse: str, meter: str | None = None, auto_diacritize: bool = Tru
         if notes:
             note = " ".join(sorted(notes)) + " راجع الضبط إن بدت النتيجة غريبة."
     r = pyarud.analyze_verse(parts[0], parts[1] if len(parts) > 1 else "", forced_meter=meter)
+    if auto_diacritize and not (r.is_valid and r.score >= 0.99):
+        fitted, changes, r2 = _fit_meter(orig_parts, parts, meter)
+        if r2 is not None and changes and (r2.is_valid, r2.score) > (r.is_valid, r.score):
+            parts, r = fitted, r2
     out = {
         "البحر": r.meter_name_ar,
         "نوعه": BAHR_TYPE.get(str(r.bahr_type), r.bahr_type),
@@ -263,8 +546,12 @@ def scan_verse(verse: str, meter: str | None = None, auto_diacritize: bool = Tru
         }
     if r.errors:
         out["ملاحظات المحلل"] = [str(e) for e in r.errors]
+    out["النص المقطَّع"] = " * ".join(parts)
+    if changes:
+        out["ضبط موجَّه بالوزن"] = changes
+        note = (note or "") + " وعُدّل ضبط بعض الكلمات ليستقيم الوزن (انظر «ضبط موجَّه بالوزن»)؛ فهو ضبطٌ يقتضيه العروض لا روايةٌ محققة."
     if note:
-        out["تنبيه"] = note
+        out["تنبيه"] = note.strip()
     return {k: v for k, v in out.items() if v is not None}
 
 
@@ -1172,6 +1459,11 @@ def _merge_tashkeel(orig: str, auto: str) -> str:
 
 def _prepare_verse_text(text: str):
     """يعيد (النص المهيأ، ملاحظة) بحسب نسبة التشكيل: آليّ كامل، أو ملء الناقص، أو كما هو."""
+    t, n = _prepare_verse_text0(text)
+    return " ".join(_sun_shadda(w) for w in t.split()), n
+
+
+def _prepare_verse_text0(text: str):
     letters = sum(1 for c in text if "ء" <= c <= "ي")
     marks = sum(1 for c in text if c in HARAKAT)
     ratio = marks / letters if letters else 0
@@ -1185,39 +1477,69 @@ def _prepare_verse_text(text: str):
     return text, None
 
 
-@mcp.tool()
-def scan_poem(poem: str, meter: str | None = None, auto_diacritize: bool = True) -> dict:
-    """تقطيع قصيدة كاملة: البحر الغالب، والرويّ الغالب، وحال كل بيت (موزون أو مختل، ونسبة مطابقته)، مع التنبيه على الأبيات التي خرجت عن البحر أو الروي.
-    poem: الأبيات سطرًا سطرًا، وكل بيت «الصدر * العجز»؛ أو الصدر والعجز في سطرين متتاليين.
-    meter: لفرض بحر بعينه بالإنجليزية (taweel, kamel...) عند الحاجة."""
-    import pyarud
+def _split_poem(poem: str):
     lines = [l.strip() for l in poem.strip().splitlines() if l.strip()]
     verses = []
-    if all(("*" in l or "..." in l) for l in lines):
+    if all(("*" in l or "..." in l or "\t" in l) for l in lines):
         for l in lines:
-            s, _, a = l.replace("...", "*").partition("*")
-            verses.append((s.strip(), a.strip()))
+            s_, _, a_ = l.replace("...", "*").replace("\t", "*").partition("*")
+            verses.append((s_.strip(), a_.strip()))
     else:
         for i in range(0, len(lines), 2):
             verses.append((lines[i], lines[i + 1] if i + 1 < len(lines) else ""))
-    notes = set()
-    prepared = []
-    for s, a in verses:
+    return verses
+
+
+def _prepare_poem(poem: str, meter: str | None, auto_diacritize: bool):
+    """تهيئة القصيدة: تقسيم الأبيات، والتشكيل، ثم التشكيل الموجَّه بالبحر الغالب للأبيات المختلة."""
+    import pyarud
+    _patch_pyarud()
+    verses = _split_poem(poem)
+    notes, prepared = set(), []
+    for s_, a_ in verses:
         if auto_diacritize:
-            s2, n1 = _prepare_verse_text(s)
-            a2, n2 = _prepare_verse_text(a) if a else (a, None)
+            s2, n1 = _prepare_verse_text(s_)
+            a2, n2 = _prepare_verse_text(a_) if a_ else (a_, None)
             notes |= {n for n in (n1, n2) if n}
             prepared.append((s2, a2))
         else:
-            prepared.append((s, a))
+            prepared.append((s_, a_))
     r = pyarud.analyze_poem(prepared, forced_meter=meter) if meter else pyarud.analyze_poem(prepared)
+    fixed = {}
+    if auto_diacritize:
+        dom = meter or r.meter
+        for i, v in enumerate(r.verses):
+            if not (v.is_valid and v.score >= 0.99):
+                o = [verses[i][0], verses[i][1]] if verses[i][1] else [verses[i][0]]
+                b_ = [prepared[i][0], prepared[i][1]] if verses[i][1] else [prepared[i][0]]
+                f, ch, r2 = _fit_meter(o, b_, dom)
+                if ch and r2 is not None and (r2.is_valid, r2.score) > (v.is_valid, v.score):
+                    prepared[i] = (f[0], f[1] if len(f) > 1 else "")
+                    fixed[i + 1] = ch
+        if fixed:
+            r = pyarud.analyze_poem(prepared, forced_meter=meter) if meter else pyarud.analyze_poem(prepared)
+    if fixed:
+        notes.add(f"وعُدّل ضبط كلمات في {len(fixed)} بيتًا ليستقيم على البحر الغالب (انظر «ضبط موجَّه بالوزن»)، وهو ضبطٌ يقتضيه العروض لا روايةٌ محققة.")
+    return verses, prepared, r, fixed, notes
+
+
+@mcp.tool()
+def scan_poem(poem: str, meter: str | None = None, auto_diacritize: bool = True) -> dict:
+    """تقطيع قصيدة كاملة: البحر الغالب، والرويّ الغالب، وحال كل بيت (موزون أو مختل، ونسبة مطابقته)، مع التنبيه على الأبيات التي خرجت عن البحر أو الروي.
+    يُضبط البيت المختل ضبطًا موجَّهًا بالبحر الغالب: تُجرَّب الضبوط الممكنة لكلماته (الإعراب، والتنوين، وإشباع الهاء، وصلة الميم) فيُختار أقلها تغييرًا مما يستقيم به الوزن.
+    poem: الأبيات سطرًا سطرًا، وكل بيت «الصدر * العجز»؛ أو الصدر والعجز في سطرين متتاليين.
+    meter: لفرض بحر بعينه بالإنجليزية (taweel, kamel...) عند الحاجة."""
+    verses, prepared, r, fixed, notes = _prepare_poem(poem, meter, auto_diacritize)
     rows, odd = [], []
-    for i, (v, (s, a)) in enumerate(zip(r.verses, verses), 1):
+    for i, (v, (s_, a_)) in enumerate(zip(r.verses, verses), 1):
         rawi = v.qafiyah.rawi if v.qafiyah else None
-        row = {"البيت": i, "النص": f"{s} * {a}" if a else s, "البحر": v.meter_name_ar,
+        row = {"البيت": i, "النص": f"{s_} * {a_}" if a_ else s_, "البحر": v.meter_name_ar,
                "موزون": v.is_valid, "المطابقة": round(v.score, 2), "الروي": rawi}
         if not v.is_valid:
             row["الخلل"] = [str(e) for e in v.errors][:2]
+        if i in fixed:
+            row["ضبط موجَّه بالوزن"] = fixed[i]
+            row["النص المقطَّع"] = " * ".join(x for x in prepared[i - 1] if x)
         rows.append(row)
         if v.meter_name_ar != r.meter_name_ar or not v.is_valid or (rawi and r.dominant_rawi and rawi != r.dominant_rawi):
             odd.append(i)
@@ -1225,7 +1547,209 @@ def scan_poem(poem: str, meter: str | None = None, auto_diacritize: bool = True)
            "الموزون منها": r.valid_verses_count, "متجانسة البحر": r.is_homogeneous,
            "أبيات تستحق المراجعة": odd, "الأبيات": rows}
     if notes:
-        out["تنبيه"] = " ".join(sorted(notes)) + " راجع الضبط في الأبيات المختلة قبل الحكم عليها."
+        out["تنبيه"] = " ".join(sorted(notes)) + " راجع الضبط في الأبيات المختلة قبل الحكم عليها. ولتفصيل القافية وعيوبها استعمل analyze_qafiya."
+    return out
+
+
+# ───────────── علم القافية ─────────────
+
+_VNAME = {"\u064e": "فتحة", "\u064f": "ضمة", "\u0650": "كسرة", "\u0652": "سكون", None: None}
+_MADD_OF = {"\u064e": "ا", "\u064f": "و", "\u0650": "ي"}
+_RAWI_NAME = {"ء": "همزية", "ا": "ألفية (مقصورة)", "ب": "بائية", "ت": "تائية", "ث": "ثائية", "ج": "جيمية", "ح": "حائية",
+              "خ": "خائية", "د": "دالية", "ذ": "ذالية", "ر": "رائية", "ز": "زائية", "س": "سينية", "ش": "شينية",
+              "ص": "صادية", "ض": "ضادية", "ط": "طائية", "ظ": "ظائية", "ع": "عينية", "غ": "غينية", "ف": "فائية",
+              "ق": "قافية", "ك": "كافية", "ل": "لامية", "م": "ميمية", "ن": "نونية", "ه": "هائية", "و": "واوية",
+              "ي": "يائية"}
+
+
+def _units(text: str):
+    """وحدات آخر العجز: (الحرف، حركته، رقم الكلمة)، مع ردّ الهمزات إلى ء والألف المقصورة إلى ا."""
+    words = text.split()[-3:]
+    out = []
+    for wi, w in enumerate(words):
+        for ch, m in _letters_marks(w):
+            if ch in "أإؤئ":
+                ch = "ء"
+            elif ch in "ىٱآ":
+                ch = "ا" if ch != "آ" else "ء"
+            elif ch == "ة":
+                ch = "ه" if wi == len(words) - 1 else "ت"
+            if not ("ء" <= ch <= "ي"):
+                continue
+            v = next((c for c in m if c in "\u064e\u064f\u0650\u0652"), None)
+            tan = next((c for c in m if c in "\u064b\u064c\u064d"), None)
+            if tan:
+                v = {"\u064b": "\u064e", "\u064c": "\u064f", "\u064d": "\u0650"}[tan]
+            out.append([ch, v, wi])
+    # ألف تنوين النصب في الآخر ليست حرفًا منطوقًا إلا إطلاقًا
+    return out
+
+
+def _is_madd(u, prev):
+    return u[0] in "اوي" and u[1] in (None, "\u0652") and prev is not None and \
+        (u[0] == "ا" and prev[1] in ("\u064e", None) or u[0] == "و" and prev[1] == "\u064f" or u[0] == "ي" and prev[1] == "\u0650")
+
+
+def _qafiya_hypotheses(text: str):
+    """الاحتمالات الممكنة للروي في آخر البيت: [(موضع الروي، الوحدات)]."""
+    u = _units(text)
+    if not u:
+        return u, []
+    n = len(u)
+    hyps = []
+    last = n - 1
+    if n >= 2 and _is_madd(u[last], u[last - 1]):
+        # ألف الإطلاق أو واوه أو ياؤه: الروي ما قبلها
+        r = last - 1
+        if u[r][0] == "ه" and r >= 1 and u[r - 1][1] in ("\u064e", "\u064f", "\u0650") and r - 1 >= 0:
+            hyps.append(r - 1)  # هاء الوصل والخروج
+        hyps.append(r)
+        if u[last][0] in "اي":
+            hyps.append(last)  # المقصورة أو الياء رويًّا
+    elif u[last][0] == "ه" and n >= 2 and u[last - 1][1] in ("\u064e", "\u064f", "\u0650"):
+        hyps += [last - 1, last]
+    else:
+        hyps.append(last)
+    return u, hyps
+
+
+def _qafiya_details(u, r):
+    """عناصر القافية إذا كان الروي في الموضع r."""
+    rawi = u[r]
+    d = {"الروي": rawi[0]}
+    after = u[r + 1:]
+    majra = rawi[1] if rawi[1] in ("\u064e", "\u064f", "\u0650") else None
+    if after:
+        d["الوصل"] = after[0][0]
+        if after[0][0] == "ه":
+            d["النفاذ"] = _VNAME.get(after[0][1])
+            if len(after) > 1:
+                d["الخروج"] = after[1][0]
+            elif after[0][1] in _MADD_OF:
+                d["الخروج"] = _MADD_OF[after[0][1]] + " (إشباع)"
+    elif majra:
+        d["الوصل"] = _MADD_OF[majra] + " (إشباع)"
+    d["المجرى"] = _VNAME.get(majra) if majra else None
+    d["نوعها"] = "مطلقة" if majra or after else "مقيدة"
+    if rawi[0] in "ا" and not after:
+        d["نوعها"] = "مقيدة"
+    if r >= 1 and (u[r - 1][0] == "ا" and u[r - 1][1] in (None, "\u0652") or
+                   u[r - 1][0] in "وي" and u[r - 1][1] in (None, "\u0652")):
+        d["الردف"] = u[r - 1][0]
+        if r >= 2:
+            d["الحذو"] = _VNAME.get(u[r - 2][1])
+    elif r >= 2 and u[r - 2][0] == "ا" and u[r - 2][1] in (None, "\u0652") and u[r - 1][1] in ("\u064e", "\u064f", "\u0650") \
+            and u[r - 2][2] == u[r][2]:
+        d["التأسيس"] = "ا"
+        d["الدخيل"] = u[r - 1][0]
+        d["الإشباع"] = _VNAME.get(u[r - 1][1])
+        if r >= 3:
+            d["الرس"] = _VNAME.get(u[r - 3][1])
+    if d["نوعها"] == "مقيدة" and r >= 1 and "الردف" not in d and "التأسيس" not in d:
+        d["التوجيه"] = _VNAME.get(u[r - 1][1])
+    return {k: v for k, v in d.items() if v}
+
+
+def _letter_relation(a: str, b: str) -> str:
+    ia, ib = _letter_info(a), _letter_info(b)
+    if not ia or not ib:
+        return "متباعدان"
+    order = list(dict.fromkeys(v[1] for v in _MAKHRAJ.values()))
+    x, y = order.index(ia["المخرج (ابن الجزري)"]), order.index(ib["المخرج (ابن الجزري)"])
+    return "متقاربان" if abs(x - y) <= 1 and ia["الموضع العام"] == ib["الموضع العام"] else "متباعدان"
+
+
+@mcp.tool()
+def analyze_qafiya(poem: str, auto_diacritize: bool = True) -> dict:
+    """علم القافية لقصيدة كاملة: الروي وتسمية القصيدة به، والمجرى، والقافية مطلقة أو مقيدة، وعناصرها في كل بيت (الوصل، والخروج، والردف، والتأسيس، والدخيل)، وحروفها وحركاتها (الرس، والإشباع، والحذو، والتوجيه، والنفاذ)،
+    ونوعها بحسب عدد المتحركات بين ساكنيها (المتكاوس، المتراكب، المتدارك، المتواتر، المترادف)؛
+    ثم عيوبها: الإقواء والإصراف، والإكفاء والإجازة، وسناد الردف والتأسيس والإشباع والحذو والتوجيه، والإيطاء.
+    poem: الأبيات سطرًا سطرًا، وكل بيت «الصدر * العجز». ويُستحسن أن يكون مشكولًا، فإن لم يكن ضُبط آليًّا ضبطًا موجَّهًا بالوزن."""
+    from collections import Counter
+    verses, prepared, r, fixed, notes = _prepare_poem(poem, None, auto_diacritize)
+    data = []
+    for i, ((s_, a_), (ps, pa)) in enumerate(zip(verses, prepared)):
+        end = pa or ps
+        u, hyps = _qafiya_hypotheses(end)
+        data.append((u, hyps))
+    tally = Counter(u[h][0] for u, hyps in data for h in hyps[:2] if u)
+    if not tally:
+        return {"تنبيه": "لم أجد أبياتًا."}
+    rawi_letter = tally.most_common(1)[0][0]
+    rows = []
+    for i, ((u, hyps), v) in enumerate(zip(data, r.verses), 1):
+        if not u:
+            continue
+        pick = next((h for h in hyps if u[h][0] == rawi_letter), hyps[0])
+        det = _qafiya_details(u, pick)
+        q = v.qafiyah
+        if q:
+            det["القافية"] = q.qafiyah_text
+            det["نوعها بحسب المتحركات"] = q.qafiyah_type_ar
+        det["البيت"] = i
+        det["آخر العجز"] = " ".join((prepared[i - 1][1] or prepared[i - 1][0]).split()[-2:])
+        rows.append(det)
+    # الحكم العام
+    R = Counter(d["الروي"] for d in rows).most_common(1)[0][0]
+    majras = Counter(d.get("المجرى") for d in rows if d.get("المجرى"))
+    kind = Counter(d.get("نوعها") for d in rows).most_common(1)[0][0]
+    summary = {"الروي": R, "تسميتها": _RAWI_NAME.get(R, R), "نوعها": kind}
+    if majras:
+        m = majras.most_common(1)[0][0]
+        summary["المجرى"] = m
+        summary["وصفها"] = f"{_RAWI_NAME.get(R, R)} {'مضمومة' if m == 'ضمة' else 'مكسورة' if m == 'كسرة' else 'مفتوحة'}"
+    types = Counter(d.get("نوعها بحسب المتحركات") for d in rows if d.get("نوعها بحسب المتحركات"))
+    if types:
+        summary["نوع القافية بحسب المتحركات"] = types.most_common(1)[0][0]
+    has_ridf = sum(1 for d in rows if "الردف" in d)
+    has_tasis = sum(1 for d in rows if "التأسيس" in d)
+    summary["مردفة"] = has_ridf > len(rows) / 2
+    summary["مؤسسة"] = has_tasis > len(rows) / 2
+    # العيوب
+    uyub = []
+    for d in rows:
+        n = d["البيت"]
+        if d["الروي"] != R:
+            rel = _letter_relation(d["الروي"], R)
+            uyub.append({"العيب": "الإكفاء" if rel == "متقاربان" else "الإجازة", "البيت": n,
+                         "بيانه": f"الروي «{d['الروي']}» مكان «{R}» ({'حرفان متقاربا المخرج' if rel == 'متقاربان' else 'حرفان متباعدا المخرج'})"})
+        mj = d.get("المجرى")
+        if majras and mj and mj != summary["المجرى"]:
+            pair = {mj, summary["المجرى"]}
+            uyub.append({"العيب": "الإصراف" if "فتحة" in pair else "الإقواء", "البيت": n,
+                         "بيانه": f"المجرى {mj} والغالب {summary['المجرى']}"})
+        if summary["مردفة"] != ("الردف" in d):
+            uyub.append({"العيب": "سناد الردف", "البيت": n, "بيانه": "أُردف هذا البيت والغالب غير مردف" if "الردف" in d else "لم يُردف والغالب مردف"})
+        elif "الردف" in d:
+            ridfs = Counter(x["الردف"] for x in rows if "الردف" in x)
+            main = ridfs.most_common(1)[0][0]
+            if (d["الردف"] == "ا") != (main == "ا"):
+                uyub.append({"العيب": "سناد الردف", "البيت": n, "بيانه": f"الردف «{d['الردف']}» مع غلبة «{main}» (تتعاقب الواو والياء، ولا تعاقب الألف أحدهما)"})
+        if summary["مؤسسة"] != ("التأسيس" in d):
+            uyub.append({"العيب": "سناد التأسيس", "البيت": n, "بيانه": "أُسّس هذا البيت والغالب غير مؤسس" if "التأسيس" in d else "لم يؤسس والغالب مؤسس"})
+    for key, name in (("الإشباع", "سناد الإشباع"), ("الحذو", "سناد الحذو"), ("التوجيه", "سناد التوجيه")):
+        vals = Counter(d[key] for d in rows if key in d)
+        if len(vals) > 1:
+            main = vals.most_common(1)[0][0]
+            for d in rows:
+                if key in d and d[key] != main and not (key == "الحذو" and {d[key], main} == {"ضمة", "كسرة"}):
+                    uyub.append({"العيب": name, "البيت": d["البيت"], "بيانه": f"{key} {d[key]} والغالب {main}"})
+    words = {}
+    for d in rows:
+        w = _norm(_strip_tashkeel(d["آخر العجز"].split()[-1])) if d["آخر العجز"] else ""
+        if w:
+            words.setdefault(w, []).append(d["البيت"])
+    for w, ns in words.items():
+        if len(ns) > 1:
+            gaps = [b - a for a, b in zip(ns, ns[1:])]
+            uyub.append({"العيب": "الإيطاء (تكرار كلمة القافية)", "البيت": ns,
+                         "بيانه": f"تكررت «{w}»؛ وأقرب ما بين تكرارين {min(gaps)} أبيات" + ("، وهو دون سبعة أبيات فيُعدّ عيبًا عند أكثرهم" if min(gaps) < 7 else "، فوق سبعة أبيات فيُتسامح فيه") +
+                                  " — ولا يكون إيطاءً إذا اختلف المعنى (فهو حينئذ جناس)."})
+    out = {"الحكم العام": summary, "عيوب القافية": uyub or "لم يظهر عيب.", "الأبيات": rows,
+           "ملاحظة": "الحكم مبني على ضبط آخر العجز؛ فإن كان الضبط آليًّا فراجع الأبيات المعيبة قبل القطع، ولا سيما الإقواء. "
+                     "وعيب التضمين (تعلّق القافية بما بعدها) لا يُكشف آليًّا."}
+    if notes:
+        out["تنبيه"] = " ".join(sorted(notes))
     return out
 
 
@@ -1990,6 +2514,1302 @@ def phonetics(text: str, auto_diacritize: bool = True, pausal: bool = True) -> d
     if note:
         out["تنبيه"] = note
     return out
+
+
+
+# ───────────── الميزان الصرفي والإعلال، والمشتقات، والتقاليب ─────────────
+
+def _ilal():
+    import sys
+    here = os.path.dirname(os.path.abspath(__file__))
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    import sarf_ilal
+    return sarf_ilal
+
+
+@lru_cache(maxsize=4096)
+def _root_books(root: str) -> int:
+    """عدد المعاجم التي فيها هذا الجذر (لترجيح الواوي على اليائي ونحوه)."""
+    import sqlite3
+    if not os.path.exists(MAAJIM_DB):
+        return 0
+    con = sqlite3.connect(f"file:{MAAJIM_DB}?mode=ro", uri=True)
+    n = con.execute("SELECT COUNT(DISTINCT u.book) FROM keys k JOIN units u ON u.id = k.unit WHERE k.key = ?", (_mk(root),)).fetchone()[0]
+    con.close()
+    return n
+
+
+def _resolve_roots(camel_root: str, surface: str) -> list:
+    """يردّ رمز «#» في جذر CAMeL (حرف علة أو همزة) إلى الحروف الممكنة، مرتبةً بشيوعها في المعاجم."""
+    import itertools
+    parts = (camel_root or "").split(".")
+    if not parts or len(parts) < 3:
+        return []
+    opts = [["و", "ي", "ء"] if p == "#" else [p.translate(HAMZA_FORMS)] for p in parts]
+    cands = ["".join(c) for c in itertools.product(*opts)]
+    scored = [(c, _root_books(c)) for c in cands]
+    if any(n for _, n in scored):
+        scored = [x for x in scored if x[1]]
+    scored.sort(key=lambda x: -x[1])
+    return [c for c, _ in scored]
+
+
+@lru_cache(maxsize=4096)
+def _root_evidence(word: str, root: str) -> int:
+    """عدد مواد الجذر في المعاجم التي تذكر الكلمة بلفظها (شاهد على نسبتها إلى هذا الجذر)."""
+    import sqlite3
+    if not os.path.exists(MAAJIM_DB):
+        return 0
+    con = sqlite3.connect(f"file:{MAAJIM_DB}?mode=ro", uri=True)
+    rows = con.execute("SELECT u.text FROM keys k JOIN units u ON u.id = k.unit WHERE k.key = ? AND u.book IN ('lisan','taj','sihah','qamus','maqayis')",
+                       (_mk(root),)).fetchall()
+    con.close()
+    w = _norm(word)
+    return sum(1 for (t,) in rows if w in _norm(_strip_tashkeel(t or "")))
+
+
+_BAB = {"ضمة": "فَعَلَ يَفْعُلُ (باب نَصَرَ)، أو فَعُلَ يَفْعُلُ (باب كَرُمَ)", "كسرة": "فَعَلَ يَفْعِلُ (باب ضَرَبَ)، أو فَعِلَ يَفْعِلُ (باب حَسِبَ)",
+        "فتحة": "فَعِلَ يَفْعَلُ (باب فَرِحَ)، أو فَعَلَ يَفْعَلُ (باب فَتَحَ) إذا كانت عينه أو لامه حرف حلق"}
+
+
+@mcp.tool()
+def mizan(word: str, context: str | None = None) -> dict:
+    """الميزان الصرفي مع بيان الأصل وخطوات الإعلال والإبدال والإدغام بعبارة الصرفيين:
+    الجذر ونوعه (صحيح، مهموز، مضعّف، مثال، أجوف، ناقص، لفيف)، والوزن الأصلي، والأصل قبل الإعلال، ثم كل خطوة (إعلال بالقلب أو بالنقل أو بالحذف، أو إبدال، أو إدغام) حتى الصورة المنطوقة، والوزن على لفظ الكلمة، والصيغة (اسم فاعل، مصدر، اسم آلة...).
+    مثل: قال، يقول، مقول، مبيع، قائل، ميزان، اتّصل، اصطبر، مرميّ، مدعوّ، داعٍ، دعاء، استقامة، آمن، إيمان، يعد، مدّ.
+    word: الكلمة (يُستحسن مشكولة). context: جملة ترد فيها الكلمة لترجيح قراءتها.
+    التحقق ذاتي: لا تُعرض الخطوات إلا إذا أعادت القواعدُ الأصلَ إلى الكلمة نفسها."""
+    I = _ilal()
+    w = word.strip()
+    analyses = []
+    if context:
+        try:
+            for dw in _bert().disambiguate(simple_word_tokenize(context)):
+                if _strip_tashkeel(dw.word) == _strip_tashkeel(w) and dw.analyses:
+                    analyses = [x.analysis for x in dw.analyses[:3]]
+                    break
+        except Exception:
+            pass
+    if not analyses:
+        analyses = sorted(_analyzer().analyze(_strip_tashkeel(w)), key=lambda x: -float(x.get("pos_lex_logprob", -99) or -99))
+    vocalized = any(c in HARAKAT for c in w)
+    readings, seen = [], set()
+    for a in analyses[:12]:
+        diac = a.get("diac") or ""
+        stem = a.get("stem") or diac
+        # الكلمة مجردة من السوابق واللواحق: جذعها مع لاحقة التأنيث أو حرف المضارعة
+        core = _stem_core(a)
+        if vocalized and not _agrees(core, _core_of_typed(w, core)):
+            pass
+        pos = "verb" if a.get("pos") == "verb" else "noun"
+        roots = _resolve_roots(a.get("root") or "", core)
+        if not roots:
+            continue
+        key = (core, pos)
+        if key in seen:
+            continue
+        seen.add(key)
+        ms = I.match_word(core, roots[:3], pos)
+        if not ms:
+            continue
+        if len({m["root"] for m in ms}) > 1:  # جذران محتملان: يُرجَّح ما تشهد له المعاجم بورود الكلمة في مادته
+            ev = {rt: _root_evidence(_strip_tashkeel(core), rt) for rt in {m["root"] for m in ms}}
+            roots = sorted(roots, key=lambda rt: -ev.get(rt, -1))
+        ms.sort(key=lambda m: (roots.index(m["root"]), m["order"]))
+        m = ms[0]
+        r = {
+            "الكلمة": diac, "الجذع المعتبر": core, "الجذر": " ".join(m["root"]), "نوع الجذر": I.root_type(m["root"]),
+            "الصيغة": m["desc"], "الوزن": m["wazn"], "الأصل": m["asl"],
+            "خطوات الإعلال": [{"النوع": s["النوع"], "الخطوة": s["الخطوة"], "فصار": s["الصورة"]} for s in m["steps"]] or "لا إعلال فيه",
+            "الوزن على لفظه": m["swazn"] if m["steps"] and any(x["النوع"] != "إدغام" for x in m["steps"]) else m["wazn"],
+        }
+        if pos == "verb" and m["form"] == "I" and m["wazn"].startswith("فَعَ"):
+            ah = _ain_haraka((a.get("lex") or "").split("_")[0].split("-")[0])
+            if ah:
+                r["باب الفعل"] = _BAB.get(ah, "")
+                r["الوزن"] = {"ضمة": "فَعَلَ", "كسرة": "فَعَلَ", "فتحة": "فَعِلَ"}[ah] if m["steps"] else r["الوزن"]
+        alts = [f"{x['wazn']} ({x['desc']})" for x in ms[1:4] if x["wazn"] != m["wazn"]]
+        if alts:
+            r["أوزان أخرى تحتملها"] = alts
+        if len(roots) > 1 and roots[0] == m["root"]:
+            others = [" ".join(x) for x in roots[1:] if any(y["root"] == x for y in ms)]
+            if others:
+                r["جذر محتمل آخر"] = others
+        readings.append(r)
+        if len(readings) >= 3:
+            break
+    if not readings:
+        return {"تنبيه": "لم أستطع وزن هذه الكلمة بالقوالب القياسية؛ قد تكون جامدة أو رباعية أو أعجمية، أو على وزن غير مدرج.",
+                "التحليل الصرفي": _fmt(analyses[0]) if analyses else None}
+    return {"القراءات": readings,
+            "ملاحظة": "الأصل والخطوات مولّدة بقواعد الإعلال والإبدال ومتحقَّق منها بإعادة الكلمة نفسها؛ وما فيه خلاف بين البصريين والكوفيين أو بين سيبويه والأخفش يُنبَّه عليه في الخطوة."}
+
+
+def _stem_core(a: dict) -> str:
+    """الجذع مع ما يدخل في الوزن (حرف المضارعة، ولاحقة التأنيث والجمع) دون السوابق والضمائر وعلامة الإعراب."""
+    diac, stem, bw = a.get("diac") or "", a.get("stem") or "", a.get("bw") or ""
+    if not stem or stem not in diac:
+        return diac
+    segs = [x.rpartition("/") for x in bw.split("+")]
+    k = next((j for j, (t, _, _g) in enumerate(segs) if stem in t), None)
+    core = stem
+    if k is not None:
+        j = k - 1
+        while j >= 0 and segs[j][2].startswith("IV") and "SUFF" not in segs[j][2]:
+            core = segs[j][0] + core
+            j -= 1
+        j = k + 1
+        while j < len(segs) and segs[j][2].startswith("NSUFF") and "FEM_SG" in segs[j][2]:
+            core = core + segs[j][0]
+            j += 1
+    return core.replace("ٱ", "ا")
+
+
+def _core_of_typed(w, core):
+    return w
+
+
+_DERIV_I = [("فاعِل", "اسم الفاعل"), ("مَفْعُول", "اسم المفعول"), ("مَفْعَل", "المصدر الميمي"),
+            ("مَفْعَل", "اسم الزمان والمكان"), ("مِفْعَل", "اسم الآلة"), ("مِفْعال", "اسم الآلة"), ("مِفْعَلَة", "اسم الآلة"),
+            ("فَعّال", "صيغة المبالغة"), ("مِفْعال", "صيغة المبالغة"), ("فَعُول", "صيغة المبالغة"), ("فَعِيل", "صيغة المبالغة"),
+            ("فَعِل", "صيغة المبالغة"), ("أَفْعَل", "اسم التفضيل"), ("فَعْلَة", "اسم المرة"), ("فِعْلَة", "اسم الهيئة")]
+_DERIV_AUG = {
+    "IV": ("إِفْعال", "مُفْعِل", "مُفْعَل"), "II": ("تَفْعِيل", "مُفَعِّل", "مُفَعَّل"), "III": ("مُفاعَلَة", "مُفاعِل", "مُفاعَل"),
+    "VII": ("اِنْفِعال", "مُنْفَعِل", "مُنْفَعَل"), "VIII": ("اِفْتِعال", "مُفْتَعِل", "مُفْتَعَل"), "IX": ("اِفْعِلال", "مُفْعَلّ", None),
+    "V": ("تَفَعُّل", "مُتَفَعِّل", "مُتَفَعَّل"), "VI": ("تَفاعُل", "مُتَفاعِل", "مُتَفاعَل"), "X": ("اِسْتِفْعال", "مُسْتَفْعِل", "مُسْتَفْعَل"),
+}
+
+
+def _attested(word: str, root: str) -> bool:
+    """هل الصيغة المولّدة مستعملة في المعجم الصرفي بالجذر نفسه؟"""
+    try:
+        for a in _analyzer().analyze(_strip_tashkeel(word)):
+            r = (a.get("root") or "").split(".")
+            if len(r) == len(root) and all(x == "#" or x.translate(HAMZA_FORMS) == y for x, y in zip(r, root)) \
+                    and a.get("pos") != "verb" and not (a.get("prc1") not in (None, "0", "") or a.get("prc0") not in (None, "0", "")):
+                return True
+    except Exception:
+        pass
+    return False
+
+
+@mcp.tool()
+def mushtaqqat(verb: str, ain_haraka: str | None = None) -> dict:
+    """المشتقات القياسية من الفعل مع أوزانها وإعلالها: اسم الفاعل، واسم المفعول، والمصدر الميمي، واسما الزمان والمكان، واسم الآلة، وصيغ المبالغة، واسم التفضيل، واسما المرة والهيئة، ومصدر المزيد.
+    يُبيَّن لكل صيغة: وزنها، وصورتها بعد الإعلال، وهل هي مستعملة في المعجم الصرفي أو قياسية لم تُسمع فيه.
+    verb: الفعل الماضي (كتب، قال، رمى، وعد، استقام، اختار). ain_haraka: حركة عين المضارع للثلاثي إن أردت فرضها («ضمة» أو «كسرة» أو «فتحة»)."""
+    I = _ilal()
+    cands = [a for a in _analyzer().analyze(_strip_tashkeel(verb.strip())) if a.get("pos") == "verb" and a.get("asp") == "p"]
+    if not cands:
+        cands = [a for a in _analyzer().analyze(_strip_tashkeel(verb.strip())) if a.get("pos") == "verb"]
+    if not cands:
+        return {"تنبيه": "لم أجد هذا الفعل في المعجم الصرفي؛ اكتبه ماضيًا (مثل: كتب)."}
+    a = max(cands, key=lambda x: float(x.get("pos_lex_logprob", -99) or -99))
+    lex = (a.get("lex") or "").split("_")[0].split("-")[0]
+    roots = _resolve_roots(a.get("root") or "", lex)
+    if not roots:
+        return {"تنبيه": "لم أستطع تحديد جذر الفعل."}
+    # الباب: من قالب الماضي المطابق
+    form, root = None, None
+    for rt in roots[:3]:
+        ms = I.match_word(lex if lex.endswith(("َ", "ا", "ى")) else lex + "َ", [rt], "verb")
+        ms = [m for m in ms if not m["wazn"].startswith("يَ") and not m["wazn"].startswith("يُ")]
+        if ms:
+            form, root = ms[0]["form"], rt
+            break
+    if not form:
+        form, root = "I", roots[0]
+    if len(root) != 3:
+        return {"تنبيه": "توليد المشتقات للثلاثي ومزيده فقط."}
+    ah = ain_haraka or _ain_haraka(lex) or _ain_by_analogy(lex, True)[0]
+    rows = []
+    if form == "I":
+        tmpl = list(_DERIV_I)
+        # اسم الزمان والمكان: مَفْعِل من مكسور العين في المضارع ومن المثال، وإلا مَفْعَل
+        if ah == "كسرة" and root[2] not in "وي" or root[0] == "و":
+            tmpl[3] = ("مَفْعِل", "اسم الزمان والمكان")
+    else:
+        m, fa, mf = _DERIV_AUG[form]
+        tmpl = [(m, "المصدر"), (fa, "اسم الفاعل")]
+        if mf:
+            tmpl += [(mf, "اسم المفعول"), (mf, "اسم الزمان والمكان والمصدر الميمي")]
+        if form == "II" and root[2] in "وي":
+            tmpl[0] = ("تَفْعِلَة", "المصدر")
+    for wazn, name in tmpl:
+        ctx = I.ctx_for(wazn, "noun", form)
+        r = I.derive(I.parse_wazn(wazn), root, ctx)
+        if not r:
+            continue
+        asl, surf, steps = r
+        rows.append({"الصيغة": name, "الوزن": wazn, "الكلمة": surf,
+                     "مستعملة في المعجم الصرفي": _attested(surf, root),
+                     **({"الأصل": asl, "الإعلال": [s["الخطوة"] for s in steps]} if steps else {})})
+    return {"الفعل": a.get("diac"), "الجذر": " ".join(root), "نوعه": I.root_type(root),
+            "البناء": "ثلاثي مجرد" if form == "I" else f"مزيد (الباب {form})",
+            "حركة عين المضارع": ah if form == "I" else None, "المشتقات": rows,
+            "ملاحظة": "الصيغ قياسية؛ وما لم يُستعمل في المعجم الصرفي لا يعني أنه غير مسموع في المعاجم التراثية (فابحثه بـ maajim). "
+                      "ومصادر الثلاثي سماعية فلا تُولَّد قياسًا؛ وتُرى في أسرة الجذر (root_family). وصيغ المبالغة والصفة المشبهة سماعية في أكثرها."}
+
+
+@mcp.tool()
+def taqalib(root: str) -> dict:
+    """تقاليب الجذر على طريقة الخليل في العين وابن جني في الاشتقاق الكبير: التباديل الستة لحروف الثلاثي (أو الأربعة والعشرون للرباعي)،
+    وما استُعمل منها وما أُهمل بحسب المعاجم الخمسة عشر، مع عدد المعاجم التي ذكرت كل تقليب وأسمائها.
+    root: الجذر بحروفه (كتب، أو ك ت ب)."""
+    import itertools, sqlite3
+    letters = [c for c in _strip_tashkeel(root).translate(HAMZA_FORMS) if c not in " .،"]
+    if len(letters) not in (3, 4):
+        return {"تنبيه": "أعطِ جذرًا ثلاثيًّا أو رباعيًّا."}
+    if not os.path.exists(MAAJIM_DB):
+        return {"تنبيه": "فهرس المعاجم لم يُبنَ بعد."}
+    con = sqlite3.connect(f"file:{MAAJIM_DB}?mode=ro", uri=True)
+    names = dict(con.execute("SELECT id, name FROM books").fetchall())
+    perms = sorted(set("".join(p) for p in itertools.permutations(letters)))
+    rows = []
+    for p in perms:
+        books = [b for (b,) in con.execute("SELECT DISTINCT u.book FROM keys k JOIN units u ON u.id = k.unit WHERE k.key = ?", (_mk(p),))]
+        nonq = [b for b in books if b not in ("cayn", "jamhara", "tahdhib", "muhkam")]
+        status = "مستعمل" if len(nonq) >= 2 else ("نادر (في معجم واحد)" if len(nonq) == 1 else
+                                                   ("في معاجم التقاليب وحدها" if books else "مهمل"))
+        rows.append({"التقليب": " ".join(p), "الحال": status, "عدد المعاجم": len(books),
+                     "المعاجم": [names.get(b, b) for b in books]})
+    con.close()
+    used = [r["التقليب"] for r in rows if r["الحال"] == "مستعمل"]
+    return {"الجذر": " ".join(letters), "التقاليب": rows, "المستعمل": used,
+            "المهمل": [r["التقليب"] for r in rows if r["الحال"] == "مهمل"],
+            "ملاحظة": "الحكم بالاستعمال مبني على ورود المادة في المعاجم المرتبة على الحروف (لا يكفي ذكرها في أبواب التقاليب، فقد يُذكر فيها المهمل). "
+                      "وللنظر في المعنى الجامع بين التقاليب (الاشتقاق الأكبر) اعرض موادّها بـ maajim."}
+
+
+
+# ───────────── الإعراب: محلّل نحوي حديث (Stanza/UD) مع نقل علاقاته إلى أبواب النحو العربي ─────────────
+
+@lru_cache(maxsize=1)
+def _stanza():
+    import stanza
+    for pkg in ("default_accurate", "default"):
+        try:
+            return stanza.Pipeline("ar", processors="tokenize,mwt,pos,lemma,depparse", package=pkg,
+                                   download_method=None, verbose=False, use_gpu=False), pkg
+        except Exception:
+            continue
+    raise RuntimeError("نموذج المحلل النحوي (Stanza) غير منزّل؛ شغّل سكربت التثبيت مرة أخرى.")
+
+
+_NASIKH_KANA = {"كان", "أصبح", "أضحى", "ظل", "أمسى", "بات", "صار", "ليس", "زال", "برح", "فتئ", "انفك", "دام"}
+_NASIKH_INNA = {"إن": "إنّ", "أن": "أنّ", "كأن": "كأنّ", "لكن": "لكنّ", "ليت": "ليت", "لعل": "لعلّ"}
+_ZARF = {"يوم", "ليلة", "صباح", "مساء", "عند", "قبل", "بعد", "فوق", "تحت", "أمام", "خلف", "وراء", "بين", "حين", "وقت",
+         "ساعة", "دون", "لدى", "لدن", "حول", "يمين", "شمال", "شهر", "عام", "سنة", "أبد", "غدا", "أمس", "الآن", "ثم", "هنا", "حيث",
+         "إذ", "إذا", "متى", "أين", "كلما", "لما", "مع", "نحو", "جانب", "قرب", "وسط"}
+_PARTICLES = {
+    "لم": "حرف نفي وجزم وقلب، مبني على السكون لا محل له من الإعراب",
+    "لن": "حرف نفي ونصب واستقبال، مبني على السكون لا محل له من الإعراب",
+    "لا": "حرف نفي مبني على السكون لا محل له من الإعراب",
+    "ما": "حرف نفي مبني على السكون لا محل له من الإعراب",
+    "قد": "حرف تحقيق (أو تقليل مع المضارع) مبني على السكون لا محل له من الإعراب",
+    "سوف": "حرف استقبال مبني على الفتح لا محل له من الإعراب",
+    "س": "حرف استقبال مبني على الفتح لا محل له من الإعراب",
+    "هل": "حرف استفهام مبني على السكون لا محل له من الإعراب",
+    "أ": "همزة الاستفهام، حرف مبني على الفتح لا محل له من الإعراب",
+    "يا": "حرف نداء مبني على السكون لا محل له من الإعراب",
+    "أن": "حرف مصدري ونصب مبني على السكون لا محل له من الإعراب",
+    "كي": "حرف مصدري ونصب مبني على السكون لا محل له من الإعراب",
+    "إذن": "حرف جواب وجزاء ونصب مبني على السكون لا محل له من الإعراب",
+    "إن": "حرف شرط جازم مبني على السكون لا محل له من الإعراب",
+    "لو": "حرف شرط غير جازم مبني على السكون لا محل له من الإعراب",
+    "بل": "حرف إضراب مبني على السكون لا محل له من الإعراب",
+    "إلا": "أداة استثناء (أو حصر) مبنية على السكون لا محل لها من الإعراب",
+    "و": "حرف عطف مبني على الفتح لا محل له من الإعراب",
+    "ف": "حرف عطف (أو استئناف أو جواب) مبني على الفتح لا محل له من الإعراب",
+    "ثم": "حرف عطف مبني على الفتح لا محل له من الإعراب",
+    "أو": "حرف عطف مبني على السكون لا محل له من الإعراب",
+    "أم": "حرف عطف مبني على السكون لا محل له من الإعراب",
+    "حتى": "حرف غاية (جر أو عطف أو ابتداء) مبني على السكون لا محل له من الإعراب",
+}
+_CASE_AR = {"Nom": "مرفوع", "Acc": "منصوب", "Gen": "مجرور"}
+_CASE_MAHALL = {"Nom": "في محل رفع", "Acc": "في محل نصب", "Gen": "في محل جر"}
+_MOOD_AR = {"Ind": "مرفوع", "Sub": "منصوب", "Jus": "مجزوم"}
+
+
+def _feats(w) -> dict:
+    return dict(x.split("=", 1) for x in (w.feats or "").split("|") if "=" in x)
+
+
+def _bare_ar(s: str) -> str:
+    return _norm(_strip_tashkeel(s or ""))
+
+
+def _sign(w, f, case_or_mood: str) -> str:
+    """علامة الإعراب الأصلية أو الفرعية بحسب نوع الكلمة."""
+    t = _strip_tashkeel(w.text or "")
+    num, gen = f.get("Number"), f.get("Gender")
+    if w.upos == "VERB":
+        five = t.endswith(("ون", "ين", "ان")) and f.get("Person") in ("2", "3") and num in ("Plur", "Dual") or \
+            (t.endswith("ين") and gen == "Fem" and f.get("Person") == "2")
+        if case_or_mood == "Ind":
+            return "ثبوت النون لأنه من الأفعال الخمسة" if five else ("الضمة المقدرة على آخره للثقل" if t.endswith(("و", "ي")) else
+                                                                     "الضمة المقدرة على آخره للتعذر" if t.endswith(("ا", "ى")) else "الضمة الظاهرة على آخره")
+        if case_or_mood == "Sub":
+            return "حذف النون لأنه من الأفعال الخمسة" if five else ("الفتحة المقدرة للتعذر" if t.endswith(("ا", "ى")) else "الفتحة الظاهرة على آخره")
+        if case_or_mood == "Jus":
+            return "حذف النون لأنه من الأفعال الخمسة" if five else ("حذف حرف العلة من آخره" if t.endswith(("و", "ي", "ا", "ى")) else "السكون الظاهر على آخره")
+        return ""
+    if num == "Dual":
+        return "الألف لأنه مثنى" if case_or_mood == "Nom" else "الياء لأنه مثنى"
+    if num == "Plur" and gen == "Masc" and t.endswith(("ون", "ين", "و", "ي")) and w.upos in ("NOUN", "ADJ", "PROPN"):
+        return "الواو لأنه جمع مذكر سالم" if case_or_mood == "Nom" else "الياء لأنه جمع مذكر سالم"
+    if num == "Plur" and gen == "Fem" and t.endswith("ات") and case_or_mood == "Acc":
+        return "الكسرة نيابة عن الفتحة لأنه جمع مؤنث سالم"
+    if _bare_ar(w.lemma) in ("اب", "اخ", "حم", "فو", "ذو") and t.endswith(("و", "ا", "ي")) and f.get("Definite") == "Cons":
+        return {"Nom": "الواو", "Acc": "الألف", "Gen": "الياء"}[case_or_mood] + " لأنه من الأسماء الخمسة"
+    if t.endswith(("ى", "ا")) and len(t) > 2 and not t.endswith("اء"):
+        return {"Nom": "الضمة", "Acc": "الفتحة", "Gen": "الكسرة"}[case_or_mood] + " المقدرة على الألف للتعذر"
+    if t.endswith("ي") and w.upos in ("NOUN", "ADJ") and f.get("Definite") in ("Def", "Cons") and case_or_mood != "Acc" and len(t) > 3:
+        return {"Nom": "الضمة", "Gen": "الكسرة"}[case_or_mood] + " المقدرة على الياء للثقل"
+    if case_or_mood == "Gen" and f.get("Definite") == "Ind" and f.get("Diptote") == "Yes":
+        return "الفتحة نيابة عن الكسرة لأنه ممنوع من الصرف"
+    return {"Nom": "الضمة الظاهرة", "Acc": "الفتحة الظاهرة", "Gen": "الكسرة الظاهرة"}[case_or_mood] + " على آخره" + \
+        ("" if f.get("Definite") != "Ind" else " (منوّنًا)")
+
+
+def _verb_desc(w, f) -> str:
+    asp, mood, voice = f.get("Aspect"), f.get("Mood"), f.get("Voice")
+    pas = " مبني للمجهول" if voice == "Pass" else ""
+    lem = _bare_ar(w.lemma)
+    naqis = " ناقص (ناسخ)" if lem in {_norm(x) for x in _NASIKH_KANA} else ""
+    if asp == "Perf":
+        return f"فعل ماضٍ{naqis}{pas} مبني"
+    if mood == "Imp" or asp is None and w.xpos and w.xpos.startswith("VC"):
+        return f"فعل أمر{pas} مبني"
+    m = mood or "Ind"
+    return f"فعل مضارع{naqis}{pas} {_MOOD_AR.get(m, 'مرفوع')} وعلامة {'رفعه' if m == 'Ind' else 'نصبه' if m == 'Sub' else 'جزمه'} {_sign(w, f, m)}"
+
+
+def _role(w, sent, by_id, kids) -> tuple:
+    """(الباب النحوي، الحالة المتوقعة) للكلمة بحسب علاقتها بعاملها."""
+    rel = (w.deprel or "").split(":")[0]
+    sub = w.deprel or ""
+    head = by_id.get(w.head)
+    f = _feats(w)
+    hf = _feats(head) if head else {}
+    lem = _bare_ar(w.lemma)
+    hk = kids.get(w.head, [])
+    if rel == "root":
+        if w.upos == "VERB":
+            return "", None
+        cop = [k for k in kids.get(w.id, []) if k.deprel == "cop"]
+        if cop:
+            return f"خبر {_strip_tashkeel(cop[0].text)}", "Acc"
+        inna = [k for k in kids.get(w.id, []) if _bare_ar(k.text) in {_norm(x) for x in _NASIKH_INNA} and k.deprel in ("mark", "aux", "cop")]
+        if inna:
+            return f"خبر {_NASIKH_INNA.get(_strip_tashkeel(inna[0].text), _strip_tashkeel(inna[0].text))}", "Nom"
+        return "خبر", "Nom"
+    if sub == "nsubj:pass":
+        return "نائب فاعل", "Nom"
+    if rel == "nsubj":
+        if head is not None and head.upos == "VERB":
+            if _bare_ar(head.lemma) in {_norm(x) for x in _NASIKH_KANA}:
+                return f"اسم {_strip_tashkeel(head.text)}", "Nom"
+            return "فاعل", "Nom"
+        cop = [k for k in hk if k.deprel == "cop"]
+        if cop:
+            return f"اسم {_strip_tashkeel(cop[0].text)}", "Nom"
+        inna = [k for k in hk if _bare_ar(k.text) in {_norm(x) for x in _NASIKH_INNA}]
+        if inna or f.get("Case") == "Acc":
+            n = _strip_tashkeel(inna[0].text) if inna else "إنّ"
+            return f"اسم {_NASIKH_INNA.get(n, n)}", "Acc"
+        return "مبتدأ", "Nom"
+    if rel == "obj":
+        return "مفعول به", "Acc"
+    if rel == "iobj":
+        return "مفعول به ثانٍ", "Acc"
+    if rel == "amod":
+        return f"نعت لـ«{_strip_tashkeel(head.text)}»" if head else "نعت", hf.get("Case")
+    if rel == "conj":
+        return f"معطوف على «{_strip_tashkeel(head.text)}»" if head else "معطوف", hf.get("Case") if head and head.upos != "VERB" else None
+    if rel == "appos":
+        return f"بدل من «{_strip_tashkeel(head.text)}»" if head else "بدل", hf.get("Case")
+    if rel in ("nmod", "obl"):
+        case_kids = [k for k in kids.get(w.id, []) if k.deprel == "case"]
+        if case_kids:
+            return f"اسم مجرور بـ«{_strip_tashkeel(case_kids[0].text)}»", "Gen"
+        if rel == "nmod" and f.get("Case") == "Gen":
+            return "مضاف إليه", "Gen"
+        if f.get("Case") == "Acc" or rel == "obl":
+            if lem in {_norm(x) for x in _ZARF} or w.upos == "ADV":
+                return "ظرف (مفعول فيه)", "Acc"
+            if head is not None and head.upos == "VERB" and _same_root(w.lemma, head.lemma):
+                return "مفعول مطلق", "Acc"
+            if w.upos in ("ADJ",) and f.get("Definite") == "Ind":
+                return "حال", "Acc"
+            if f.get("Definite") == "Ind" and w.upos == "NOUN":
+                return "مفعول لأجله أو تمييز (بحسب المعنى)", "Acc"
+            return "منصوب على الظرفية أو المفعولية (بحسب المعنى)", "Acc"
+        return "مضاف إليه", "Gen"
+    if rel == "xcomp" or rel == "advcl" and w.upos == "ADJ":
+        if f.get("Case") == "Acc" and w.upos in ("ADJ", "NOUN"):
+            return "حال" if f.get("Definite") == "Ind" else "خبر الفعل الناسخ أو مفعول به ثانٍ", "Acc"
+    if rel == "nummod":
+        return "عدد", f.get("Case")
+    if rel == "vocative":
+        return "منادى", "Acc"
+    if rel == "advmod":
+        return "ظرف أو حال (بحسب المعنى)", "Acc"
+    if rel == "ccomp":
+        return "جملة في محل نصب مفعول به", None
+    if rel == "acl":
+        return "جملة صلة الموصول أو نعت جملة", None
+    return "", f.get("Case")
+
+
+def _same_root(a: str, b: str) -> bool:
+    try:
+        ra = {x.get("root") for x in _analyzer().analyze(_strip_tashkeel(a or "")) if x.get("root")}
+        rb = {x.get("root") for x in _analyzer().analyze(_strip_tashkeel(b or "")) if x.get("root")}
+        return bool(ra & rb)
+    except Exception:
+        return False
+
+
+def _irab_word(w, sent, by_id, kids) -> str:
+    f = _feats(w)
+    t = _strip_tashkeel(w.text)
+    rel = w.deprel or ""
+    if w.upos == "PUNCT":
+        return ""
+    if w.upos == "ADP" or rel == "case":
+        return "حرف جر مبني لا محل له من الإعراب"
+    if w.upos in ("CCONJ",) or rel == "cc":
+        return _PARTICLES.get(t, "حرف عطف مبني لا محل له من الإعراب")
+    if t in _NASIKH_INNA and w.upos in ("SCONJ", "PART", "X"):
+        return f"{_NASIKH_INNA[t]}: حرف ناسخ (توكيد ونصب أو ما في معناه) مبني على الفتح لا محل له من الإعراب"
+    if w.upos in ("PART", "SCONJ", "AUX") and t in _PARTICLES:
+        return _PARTICLES[t]
+    if w.upos == "VERB":
+        d = _verb_desc(w, f)
+        role, _ = _role(w, sent, by_id, kids)
+        if role and "جملة" in role:
+            d += f"، والجملة {role.replace('جملة ', '')}"
+        return d
+    role, case = _role(w, sent, by_id, kids)
+    case = f.get("Case") or case
+    mabni = w.upos in ("PRON", "DET") or (w.xpos or "").startswith(("S", "D")) or _bare_ar(w.lemma) in ("الذي", "التي", "الذين", "هذا", "هذه", "ذلك", "تلك", "هؤلاء", "من", "ما")
+    kind = {"PRON": "ضمير", "DET": "اسم إشارة"}.get(w.upos, "")
+    if mabni and f.get("Number") != "Dual":
+        if role:
+            return f"{kind + ' ' if kind else ''}مبني {_CASE_MAHALL.get(case, '')} {role}".replace("  ", " ").strip()
+        return f"{kind + ' ' if kind else ''}مبني".strip()
+    if not role:
+        role = {"Nom": "اسم مرفوع", "Acc": "اسم منصوب", "Gen": "اسم مجرور"}.get(case, "")
+    if case in _CASE_AR:
+        sign = _sign(w, f, case)
+        verb = {"Nom": "رفعه", "Acc": "نصبه", "Gen": "جره"}[case]
+        out = f"{role} {_CASE_AR[case]} وعلامة {verb} {sign}"
+        if f.get("Definite") == "Cons":
+            out += "، وهو مضاف"
+        return out
+    return role
+
+
+def _end_mark(w, case_or_mood) -> str:
+    """حركة الآخر المقترحة: الضمة أو الفتحة أو الكسرة أو السكون، منوّنة للنكرة."""
+    f = _feats(w)
+    t = _strip_tashkeel(w.text)
+    if t.endswith(("ا", "ى", "و", "ي", "ون", "ين", "ان", "ات")) and w.upos != "VERB" and not t.endswith("ات"):
+        return ""
+    ind = f.get("Definite") == "Ind"
+    if w.upos == "VERB":
+        return {"Ind": "ُ", "Sub": "َ", "Jus": "ْ"}.get(case_or_mood or "", "")
+    if t.endswith("ات") and case_or_mood == "Acc":
+        return "ٍ" if ind else "ِ"
+    m = {"Nom": ("ُ", "ٌ"), "Acc": ("َ", "ً"), "Gen": ("ِ", "ٍ")}.get(case_or_mood or "")
+    if not m:
+        return ""
+    return m[1] if ind else m[0]
+
+
+@mcp.tool()
+def irab(sentence: str, detail: bool = True) -> dict:
+    """إعراب الجملة كلمةً كلمة: الباب النحوي (فاعل، نائب فاعل، مبتدأ، خبر، اسم كان وخبرها، اسم إنّ وخبرها، مفعول به، مفعول مطلق، ظرف، حال، تمييز، نعت، معطوف، بدل، مضاف إليه، اسم مجرور...)
+    والحكم (مرفوع، منصوب، مجرور، مجزوم، مبني) وعلامة الإعراب الأصلية أو الفرعية (الألف للمثنى، والواو والياء لجمع المذكر، والكسرة نيابة عن الفتحة لجمع المؤنث، وثبوت النون وحذفها للأفعال الخمسة، والمقدّرة للتعذر والثقل...)،
+    مع الضبط المقترح لأواخر الكلمات بحسب مواقعها.
+    يعتمد على المحلل النحوي Stanza (نموذج AraELECTRA المدرَّب على شجرة PADT في Universal Dependencies)، ثم تُنقل علاقاته إلى أبواب النحو العربي بقواعد.
+    sentence: جملة أو جمل قليلة. detail: يعرض علاقة كل كلمة بعاملها في الشجرة."""
+    try:
+        nlp, pkg = _stanza()
+    except Exception as e:
+        return {"تنبيه": str(e)}
+    doc = nlp(_strip_tashkeel(sentence))
+    out_sents = []
+    for s_ in doc.sentences:
+        by_id = {w.id: w for w in s_.words}
+        kids = {}
+        for w in s_.words:
+            kids.setdefault(w.head, []).append(w)
+        rows = []
+        for tok in s_.tokens:
+            parts = []
+            for w in tok.words:
+                i = _irab_word(w, s_, by_id, kids)
+                if not i:
+                    continue
+                part = {"الجزء": w.text, "الإعراب": i}
+                if detail:
+                    head = by_id.get(w.head)
+                    part["العامل في الشجرة"] = head.text if head else "—"
+                    part["العلاقة (UD)"] = w.deprel
+                parts.append(part)
+            if parts:
+                rows.append({"الكلمة": tok.text, "الأجزاء": parts} if len(parts) > 1 else {"الكلمة": tok.text, **parts[0]})
+        # الضبط المقترح للأواخر
+        voc = []
+        for tok in s_.tokens:
+            seg = []
+            for w in tok.words:
+                f = _feats(w)
+                _, case = _role(w, s_, by_id, kids) if w.upos not in ("VERB",) else ("", f.get("Mood") or "Ind")
+                cm = f.get("Case") or case if w.upos != "VERB" else (f.get("Mood") or "Ind")
+                seg.append(w.text + (_end_mark(w, cm) if w.upos in ("NOUN", "ADJ", "PROPN", "VERB") and f.get("Aspect") != "Perf" else ""))
+            voc.append("".join(seg) if len(tok.words) > 1 else seg[0])
+        out_sents.append({"الجملة": s_.text, "الإعراب": rows, "ضبط الأواخر المقترح": " ".join(voc)})
+    return {"الجمل": out_sents, "النموذج": f"Stanza ({pkg})",
+            "تنبيه": "الإعراب آليّ: المحلل مدرَّب على نصوص صحفية معاصرة، فتقلّ دقته في الشعر والتقديم والتأخير؛ وما احتمل وجهين (كالحال والتمييز، والمفعول لأجله، والظرف) يُذكر بوجهيه. "
+                      "فراجع الإعراب على قواعد النحو قبل اعتماده، ولا سيما في النصوص التراثية."}
+
+
+# ───────────── أدوات البحث: تخريج الشاهد، وموازنة التعابير، ونسبة النص، والتطور الدلالي، وكتب اللغة، والبديع ─────────────
+
+def _ntoks(text: str) -> list:
+    import re
+    return [_norm(t) for t in re.findall("[ء-ي]+", _strip_tashkeel(text or ""))]
+
+
+def _sim(a: list, b: list) -> float:
+    import difflib
+    return difflib.SequenceMatcher(None, a, b, autojunk=False).ratio()
+
+
+def _word_diff(a: list, b: list) -> list:
+    import difflib
+    out = []
+    for op, i1, i2, j1, j2 in difflib.SequenceMatcher(None, a, b, autojunk=False).get_opcodes():
+        if op != "equal":
+            out.append({"في المُدخل": " ".join(a[i1:i2]) or "—", "في الرواية": " ".join(b[j1:j2]) or "—"})
+    return out
+
+
+@mcp.tool()
+def takhrij_shahid(verse: str, limit: int = 8, citations: bool = True) -> dict:
+    """تخريج بيت الشعر: نسبته إلى قائله وقصيدته وبحره وعصره من مدوّنة «أشعار»، واختلاف رواياته (الألفاظ التي تختلف بين المصادر، واختلاف النسبة إن نُسب إلى أكثر من شاعر)،
+    ثم مواضع الاستشهاد به في كتب النحو واللغة والبلاغة والأدب في المدوّنة التراثية، بالكتاب والجزء والصفحة، مع موضع «الشاهد فيه» إن صرّح به المؤلف.
+    verse: البيت أو شطره (مشكولًا أو غير مشكول). citations: البحث عن مواضع الاستشهاد به."""
+    import sqlite3
+    q = _ntoks(verse)
+    if len(q) < 3:
+        return {"تنبيه": "أعطِ شطرًا كاملًا على الأقل."}
+    out = {"البيت": verse}
+    if os.path.exists(POETRY_DB):
+        con = sqlite3.connect(f"file:{POETRY_DB}?mode=ro", uri=True)
+        rare = sorted(set(q), key=len, reverse=True)[:8]
+        match = " OR ".join(f'"{t}"' for t in rare if len(t) > 1)
+        rows = con.execute("SELECT rowid FROM verses_fts WHERE verses_fts MATCH ? ORDER BY rank LIMIT 400", (match,)).fetchall()
+        cands = []
+        for (rid,) in rows:
+            v = con.execute("SELECT v.sadr, v.ajuz, v.n, p.poet, p.title, p.meter, p.era, p.id FROM verses v JOIN poems p ON p.id = v.poem_id WHERE v.rowid = ?",
+                            (rid,)).fetchone()
+            if not v:
+                continue
+            t = _ntoks(v[0] + " " + v[1])
+            sc = max(_sim(q, t), _sim(q, _ntoks(v[0])) if len(q) <= len(t) * 0.7 else 0, _sim(q, _ntoks(v[1])) if len(q) <= len(t) * 0.7 else 0)
+            cands.append((sc, v, t))
+        cands.sort(key=lambda x: -x[0])
+        cands = [c for c in cands if c[0] >= 0.55][:max(1, min(int(limit), 30))]
+        con.close()
+        if cands:
+            best = cands[0]
+            sc, v, t = best
+            out["النسبة"] = {"الشاعر": v[3], "العصر": v[6], "القصيدة": v[4], "البحر": v[5], "رقم البيت": v[2],
+                             "نص البيت": f"{v[0]} * {v[1]}", "نسبة التطابق": round(sc, 2)}
+            poets, names = {}, {}
+            rw, near, seen_t = [], [], set()
+            for sc2, v2, t2 in cands:
+                key = " ".join(t2)
+                if key in seen_t:
+                    continue
+                seen_t.add(key)
+                if sc2 >= 0.85:
+                    pn = _norm(_strip_tashkeel(v2[3] or ""))
+                    poets[pn] = poets.get(pn, 0) + 1
+                    names.setdefault(pn, v2[3])
+                d = _word_diff(q, t2) if sc2 < 0.999 else []
+                if sc2 < 0.999 and d:
+                    item = {"الشاعر": v2[3], "القصيدة": v2[4], "النص": f"{v2[0]} * {v2[1]}", "الفروق": d[:6], "التطابق": round(sc2, 2)}
+                    (rw if sc2 >= 0.85 else near).append(item)
+            if rw:
+                out["اختلاف الرواية"] = rw
+            if near:
+                out["أبيات قريبة (معارضة أو تضمين أو اقتباس)"] = near[:6]
+            if len(poets) > 1:
+                out["اختلاف النسبة"] = [{"الشاعر": names[p], "عدد المواضع": n} for p, n in sorted(poets.items(), key=lambda x: -x[1])]
+        else:
+            out["النسبة"] = "لم أجده في مدوّنة «أشعار»."
+    else:
+        out["النسبة"] = "فهرس الشعر لم يُبنَ بعد."
+    if citations and os.path.exists(CORPUS_DB):
+        ref = q if "النسبة" not in out or not isinstance(out["النسبة"], dict) else _ntoks(out["النسبة"]["نص البيت"])
+        grams = []
+        for start in (0, max(0, len(ref) // 2 - 1), max(0, len(ref) - 3)):
+            g = ref[start:start + 3]
+            if len(g) == 3 and " ".join(g) not in grams:
+                grams.append(" ".join(g))
+        con = sqlite3.connect(f"file:{CORPUS_DB}?mode=ro", uri=True)
+        hits = {}
+        for g in grams:
+            for pid, text, vol, page, title, died, genre, author in con.execute(
+                    "SELECT p.id, p.text, p.vol, p.page, b.title, b.died, b.genre, b.author FROM paras p JOIN books b ON b.id = p.book "
+                    "WHERE p.id IN (SELECT rowid FROM paras_fts WHERE paras_fts MATCH ?) LIMIT 300", (f'"{g}"',)):
+                if pid in hits:
+                    continue
+                pt = _ntoks(text)
+                covered = sum(1 for x in set(ref) if x in pt) / max(1, len(set(ref)))
+                if covered >= 0.6:
+                    hits[pid] = (died, title, author, genre, vol, page, text)
+        con.close()
+        cites = []
+        for pid, (died, title, author, genre, vol, page, text) in sorted(hits.items(), key=lambda x: x[1][0]):
+            item = {"الكتاب": f"{title} (ت {died}هـ)", "الفن": genre, "الموضع": f"ج{vol} ص{page}" if vol else ""}
+            import re
+            m = re.search(r"(?:والشاهد|الشاهد|وشاهده|استشهد|والاستشهاد)[^.]{0,220}", _strip_tashkeel(text))
+            if m:
+                item["الشاهد فيه"] = m.group(0)[:220]
+            else:
+                item["السياق"] = _strip_tashkeel(text)[:260]
+            cites.append(item)
+        out["مواضع الاستشهاد في المدوّنة"] = cites[:40] if cites else "لم أجد موضعًا في كتب المدوّنة."
+        if cites:
+            from collections import Counter
+            out["عدد مواضع الاستشهاد بحسب الفن"] = dict(Counter(c["الفن"] for c in cites))
+    out["ملاحظة"] = "المطابقة تقريبية على الألفاظ بعد توحيد الرسم؛ وما في «أشعار» قد يقع فيه تصحيف أو اختلاف عن المطبوع، فتُراجَع الرواية في الدواوين المحققة."
+    return out
+
+
+def _phrase_variants(phrase: str) -> list:
+    toks = [_norm(t) for t in _strip_tashkeel(phrase).split() if t]
+    if not toks:
+        return []
+    out = []
+    for v in _variants(toks[0], True):
+        out.append(" ".join([v] + toks[1:]))
+    return out
+
+
+@mcp.tool()
+def usage_compare(expressions: list[str], genre: str | None = None, examples: int = 2) -> dict:
+    """موازنة استعمال تعبيرين أو أكثر في المدوّنة التراثية: كم ورد كل تعبير، ونسبته لكل مليون كلمة، وتوزّعه على الفنون والقرون، مع شواهد منه.
+    ينفع في مسائل التعدية والاستعمال الفصيح: «رغب في» و«رغب عن»، «تأسّف على» و«تأسّف لـ»، «استقال من»، «لعب بـ»، وفي المفاضلة بين صيغتين («مِئذنة» و«مأذنة»).
+    expressions: قائمة التعابير (كلمة أو أكثر). genre: لتقييد الموازنة بفن («نحو»، «لغة»، «بلاغة»، «شعر»، «أدب»)."""
+    import sqlite3, re
+    if not os.path.exists(CORPUS_DB):
+        return {"تنبيه": "المدوّنة لم تُبنَ بعد."}
+    con = sqlite3.connect(f"file:{CORPUS_DB}?mode=ro", uri=True)
+    total = con.execute("SELECT SUM(tokens) FROM books" + (" WHERE genre = ?" if genre else ""), [genre] if genre else []).fetchone()[0] or 1
+    res = []
+    for e in expressions[:6]:
+        vs = _phrase_variants(e)
+        if not vs:
+            continue
+        match = " OR ".join(f'"{v}"' for v in vs)
+        sql = ("SELECT p.text, p.vol, p.page, b.title, b.died, b.genre FROM paras p JOIN books b ON b.id = p.book "
+               "WHERE p.id IN (SELECT rowid FROM paras_fts WHERE paras_fts MATCH ?)" + (" AND b.genre = ?" if genre else "") + " ORDER BY b.died LIMIT 20000")
+        rows = con.execute(sql, [match] + ([genre] if genre else [])).fetchall()
+        n, by_g, by_c, ex = 0, {}, {}, []
+        pats = [re.compile(r"(?<![ء-ي])" + re.escape(v) + r"(?![ء-ي])") for v in vs]
+        for text, vol, page, title, died, g in rows:
+            nt = " ".join(_ntoks(text))
+            k = sum(len(p.findall(nt)) for p in pats)
+            if not k:
+                continue
+            n += k
+            by_g[g] = by_g.get(g, 0) + k
+            c = (died - 1) // 100 + 1
+            by_c[c] = by_c.get(c, 0) + k
+            if len(ex) < examples:
+                i = next((m.start() for p in pats for m in [p.search(nt)] if m), 0)
+                ex.append({"الشاهد": nt[max(0, i - 80):i + 100], "المصدر": f"{title} (ت {died}هـ)" + (f"، ج{vol} ص{page}" if vol else "")})
+        res.append({"التعبير": e, "الورود": n, "لكل مليون كلمة": round(n * 1e6 / total, 2),
+                    "بحسب الفن": by_g, "بحسب القرن": dict(sorted(by_c.items())), "شواهد": ex})
+    con.close()
+    return {"الموازنة": res,
+            "ملاحظة": "كثرة الورود في المدوّنة قرينة على الاستعمال لا حكمٌ بالصواب أو الخطأ؛ وقد يختلف المعنى بحرف الجر نفسه (رغب فيه: أراده، ورغب عنه: زهد فيه). "
+                      "ويُبحث التعبير بالسوابق في كلمته الأولى (و، ف، ب، ك، ل، ال)."}
+
+
+def _load_side(name: str, kind: str, max_words: int):
+    if kind == "poet":
+        return _load_poet(name, 20000)
+    return _load_corpus_book(name, max_words)
+
+
+@mcp.tool()
+def attribute_author(text: str, candidates: list[str], kind: str = "poet", features: int = 150) -> dict:
+    """نسبة النص إلى قائله بالأسلوبية الإحصائية: يوازن النصَّ المجهول بنصوص المرشحين بمقياس «دلتا» لبروز (Burrows's Delta) ومقياس «دلتا جيب التمام» (Cosine Delta)،
+    على أكثر الألفاظ دورانًا (وجلّها حروف المعاني والضمائر التي يستعملها الكاتب بلا قصد)، ثم يرتّب المرشحين من الأقرب إلى الأبعد.
+    text: النص المجهول النسبة (يُستحسن ألا يقل عن ألف كلمة). candidates: أسماء المرشحين.
+    kind: «poet» للشعراء من مدوّنة «أشعار»، أو «book» لكتب المدوّنة التراثية (جزء من العنوان أو اسم المؤلف). features: عدد الألفاظ الأكثر دورانًا."""
+    import math
+    from collections import Counter
+    tt = [t for t in _ntoks(text)]
+    if len(tt) < 100:
+        return {"تنبيه": "النص قصير جدًّا؛ لا يصح الحكم الإحصائي بأقل من مئات الكلمات (ويُستحسن ألف فأكثر)."}
+    corpora, info = {}, {}
+    for c in candidates[:12]:
+        t, inf = _load_side(c, kind, 200000)
+        if t is None:
+            return inf
+        corpora[c] = _ntoks(t)
+        info[c] = inf
+    if len(corpora) < 2:
+        return {"تنبيه": "أعطِ مرشحَين على الأقل."}
+    allc = Counter()
+    for toks in corpora.values():
+        allc.update(toks)
+    mfw = [w for w, _ in allc.most_common(int(features))]
+    chunk = max(500, min(2000, len(tt)))
+
+    def rel(toks):
+        c = Counter(toks)
+        n = len(toks) or 1
+        return [c[w] / n for w in mfw]
+    # المتوسط والانحراف من مقاطع المرشحين جميعًا
+    segs = []
+    for toks in corpora.values():
+        for i in range(0, max(1, len(toks) - chunk + 1), chunk):
+            segs.append(rel(toks[i:i + chunk]))
+    if len(segs) < 3:
+        return {"تنبيه": "نصوص المرشحين قصيرة جدًّا للحساب."}
+    mean = [sum(s[j] for s in segs) / len(segs) for j in range(len(mfw))]
+    sd = [math.sqrt(sum((s[j] - mean[j]) ** 2 for s in segs) / (len(segs) - 1)) or 1e-9 for j in range(len(mfw))]
+
+    def z(v):
+        return [(v[j] - mean[j]) / sd[j] for j in range(len(mfw))]
+    zt = z(rel(tt))
+    rows = []
+    for c, toks in corpora.items():
+        zc = z(rel(toks))
+        delta = sum(abs(a - b) for a, b in zip(zt, zc)) / len(mfw)
+        dot = sum(a * b for a, b in zip(zt, zc))
+        na, nb = math.sqrt(sum(a * a for a in zt)), math.sqrt(sum(b * b for b in zc))
+        cosd = 1 - dot / (na * nb) if na and nb else 1
+        rows.append({"المرشح": info[c].get("الشاعر") or info[c].get("الكتاب") or c, "Delta": round(delta, 3),
+                     "Cosine Delta": round(cosd, 3), "حجم نصوصه": len(toks)})
+    rows.sort(key=lambda r: r["Cosine Delta"])
+    gap = rows[1]["Cosine Delta"] - rows[0]["Cosine Delta"] if len(rows) > 1 else 0
+    verdict = ("فارق واضح يرجّح الأول" if gap > 0.15 else "فارق متوسط" if gap > 0.05 else "الفارق ضئيل فلا ترجيح")
+    return {"الترتيب (الأقرب أولًا)": rows, "الحكم": verdict, "حجم النص": len(tt), "الألفاظ المعتمدة": mfw[:30],
+            "منهج": "Burrows (2002) وSmith & Aldridge (2011): تُحسب نسب أكثر الألفاظ دورانًا في كل نص، وتُحوَّل إلى درجات معيارية بمتوسط مقاطع المرشحين وانحرافها، "
+                    "ثم يُقاس البعد. وأصغر القيمة أقرب. والنتيجة قرينة إحصائية تُضمّ إلى أدلة النسبة الأخرى (الرواية والتاريخ والأسلوب)، لا حكمٌ قاطع؛ "
+                    "وتضعف إذا قصر النص عن ألف كلمة أو كان المرشحون من غير عصره أو فنّه."}
+
+
+def _collocates_core(word, window, genre, min_count, clitics, cf, ct, top):
+    import math
+    con, vs, rows = _corpus_rows(word, clitics, genre, cf, ct, None, 30000)
+    co, node = {}, 0
+    for _pid, text, *_ in rows:
+        toks = [_cn(t).strip(".,،؛:!?()[]«»\"'") for t in text.split()]
+        for i, t in enumerate(toks):
+            if t in vs:
+                node += 1
+                for j in range(max(0, i - window), min(len(toks), i + window + 1)):
+                    if j != i and toks[j] and toks[j] not in vs and toks[j] not in STOPWORDS and len(toks[j]) > 1:
+                        co[toks[j]] = co.get(toks[j], 0) + 1
+    N = con.execute("SELECT SUM(tokens) FROM books").fetchone()[0]
+    cands = [(w, n) for w, n in co.items() if n >= min_count]
+    freqs = {}
+    for i in range(0, len(cands), 500):
+        chunk = [w for w, _ in cands[i:i + 500]]
+        q = ",".join("?" * len(chunk))
+        freqs.update(dict(con.execute(f"SELECT token, n FROM freq WHERE token IN ({q})", chunk).fetchall()))
+    con.close()
+    span = max(1, node * 2 * window)
+    res = []
+    for w, a in cands:
+        f = freqs.get(w, a)
+        e = span * f / N
+        b, c = span - a, f - a
+        d = max(N - span - c, 1)
+        ll = 2 * sum(o * math.log(o / ex) for o, ex in ((a, e), (b, span - e), (c, f - e), (d, N - span - f + e)) if o > 0 and ex > 0)
+        if a > e:
+            res.append((w, a, round(ll, 1)))
+    res.sort(key=lambda x: -x[2])
+    return node, res[:top], rows
+
+
+@mcp.tool()
+def semantic_change(word: str, periods: list[str] | None = None, top: int = 20, genre: str | None = None) -> dict:
+    """التطور الدلالي للفظ عبر العصور في المدوّنة التراثية: لكل حقبة متلازماته الأقوى، وتكراره لكل مليون كلمة، ومقدار التداخل بين متلازمات الحقب (معامل جاكار)،
+    وما استجدّ من متلازماته وما غاب؛ ومقدار ابتعاد معناه بين الحقب بتمثيلاته السياقية في نموذج CAMeLBERT الكلاسيكي (متوسط تمثيل اللفظ في سياقاته في كل حقبة).
+    ينفع في تتبع انتقال اللفظ من معناه اللغوي إلى الاصطلاحي (المجاز، الاستعارة، البديع، النظم، الإعراب...).
+    periods: حقب بالقرون الهجرية مثل ["2-4", "5-7", "8-11"] (الافتراضي). genre: لتقييدها بفن."""
+    if not os.path.exists(CORPUS_DB):
+        return {"تنبيه": "المدوّنة لم تُبنَ بعد."}
+    import sqlite3
+    periods = periods or ["2-4", "5-7", "8-11"]
+    con = sqlite3.connect(f"file:{CORPUS_DB}?mode=ro", uri=True)
+    out, colls, contexts = [], [], []
+    for p in periods:
+        a_, _, b_ = p.partition("-")
+        cf, ct = int(a_), int(b_ or a_)
+        size = con.execute("SELECT SUM(tokens) FROM books WHERE died > ? AND died <= ?" + (" AND genre = ?" if genre else ""),
+                           [(cf - 1) * 100, ct * 100] + ([genre] if genre else [])).fetchone()[0] or 1
+        node, res, rows = _collocates_core(word, 4, genre, 3, True, cf, ct, top)
+        colls.append({w for w, _, _ in res})
+        out.append({"الحقبة": f"القرن {cf}–{ct}", "الورود": node, "لكل مليون كلمة": round(node * 1e6 / size, 1),
+                    "حجم نصوص الحقبة": size, "المتلازمات": [{"اللفظ": w, "المجاورة": n, "LL": ll} for w, n, ll in res]})
+        vs = set(_variants(word, True))
+        ctx = []
+        for _pid, text, *_ in rows[:400]:
+            toks = text.split()
+            for i, t in enumerate(toks):
+                if _cn(t).strip(".,،؛:!?()[]«»\"'") in vs:
+                    ctx.append((" ".join(toks[max(0, i - 20):i + 21]), t))
+                    break
+            if len(ctx) >= 40:
+                break
+        contexts.append(ctx)
+    con.close()
+    shifts = []
+    for i in range(len(periods) - 1):
+        a, b = colls[i], colls[i + 1]
+        j = len(a & b) / len(a | b) if a | b else 0
+        shifts.append({"بين": f"{out[i]['الحقبة']} و{out[i + 1]['الحقبة']}", "تداخل المتلازمات (جاكار)": round(j, 2),
+                       "متلازمات استجدّت": sorted(b - a)[:12], "متلازمات غابت": sorted(a - b)[:12]})
+    # الابتعاد الدلالي بالتمثيلات السياقية
+    try:
+        import numpy as np
+        cents = []
+        for ctx in contexts:
+            if len(ctx) < 5:
+                cents.append(None)
+                continue
+            v = _embed([c for c, _ in ctx], [t for _, t in ctx]).numpy()
+            c = v.mean(0)
+            cents.append(c / (np.linalg.norm(c) or 1))
+        for i, s in enumerate(shifts):
+            a, b = cents[i], cents[i + 1]
+            if a is not None and b is not None:
+                s["الابتعاد الدلالي السياقي (1 − جيب التمام)"] = round(float(1 - a @ b), 4)
+    except Exception as e:
+        for s in shifts:
+            s["الابتعاد الدلالي السياقي"] = f"تعذّر حسابه ({type(e).__name__})"
+    return {"اللفظ": word, "الحقب": out, "التحوّل بين الحقب": shifts,
+            "منهج": "المتلازمات بنسبة الأرجحية في نافذة ±4 كلمات؛ والابتعاد السياقي على طريقة Giulianelli et al. (2020) مبسّطةً: متوسط تمثيل اللفظ في 40 سياقًا من كل حقبة. "
+                    "والقيمة تُقرأ بالموازنة بين الحقب لا منفردة، وتتأثر بتفاوت الفنون في كل حقبة."}
+
+
+LUGHAWIYYAT = [
+    ("0395AbuHilalCaskari.FuruqLughawiyya", "الفروق اللغوية لأبي هلال العسكري"),
+    ("0328AbuBakrIbnAnbari.Addad", "الأضداد لابن الأنباري"),
+    ("0244IbnSikkit.QalbWaIbdal", "القلب والإبدال لابن السكيت"),
+    ("0351AbuTayyibLughawi.Ibdal", "الإبدال لأبي الطيب اللغوي"),
+    ("0351AbuTayyibLughawi.Ittibac", "الإتباع لأبي الطيب اللغوي"),
+    ("0582IbnBarri.FiTacrib", "في التعريب والمعرّب لابن بري"),
+    ("0911Suyuti.MuhadhdhabFimaWaqaca", "المهذب فيما وقع في القرآن من المعرّب للسيوطي"),
+    ("0685SadidDinMuhallabi.MuthallathatLughawiyya", "المثلثات اللغوية للمهلبي"),
+    ("0429AbuMansurThacalibi.FiqhLugha", "فقه اللغة وسر العربية للثعالبي"),
+]
+
+
+@mcp.tool()
+def lughawiyyat(word: str, books: list[str] | None = None, limit: int = 12) -> dict:
+    """البحث في كتب اللغة المتخصصة: الفروق اللغوية (العسكري)، والأضداد (ابن الأنباري)، والقلب والإبدال (ابن السكيت، وأبو الطيب)، والإتباع، والمعرّب (ابن بري، والسيوطي)، والمثلثات، وفقه اللغة للثعالبي (الحقول الدلالية).
+    يُخرج المواضع التي تذكر اللفظ، بالكتاب والجزء والصفحة. ينفع في: الفرق بين لفظين متقاربين، وهل اللفظ من الأضداد، وهل هو معرّب، وما أُبدل من حروفه، وحقله الدلالي.
+    word: اللفظ أو لفظان (مثل «الحمد المدح» للفرق بينهما). books: لتقييد الكتب بجزء من أسمائها («الفروق»، «الأضداد»)."""
+    import sqlite3, re
+    if not os.path.exists(CORPUS_DB):
+        return {"تنبيه": "المدوّنة لم تُبنَ بعد."}
+    con = sqlite3.connect(f"file:{CORPUS_DB}?mode=ro", uri=True)
+    have = {u: (bid, t) for u, bid, t in con.execute("SELECT uri, id, title FROM books")}
+    sel = [(u, n) for u, n in LUGHAWIYYAT if not books or any(b in n for b in books)]
+    missing = [n for u, n in sel if u not in have]
+    words = [w for w in _strip_tashkeel(word).split() if w]
+    vs_all = [set(_variants(w, True)) | {_norm(w)} for w in words]
+    res = []
+    for u, n in sel:
+        if u not in have:
+            continue
+        bid = have[u][0]
+        match = " AND ".join("(" + " OR ".join(f'"{v}"' for v in vs) + ")" for vs in vs_all)
+        rows = con.execute("SELECT p.text, p.vol, p.page FROM paras p WHERE p.book = ? AND p.id IN (SELECT rowid FROM paras_fts WHERE paras_fts MATCH ?) "
+                           "ORDER BY p.id LIMIT ?", (bid, match, int(limit))).fetchall()
+        for text, vol, page in rows:
+            loc = (f"ج{vol} ص{page}" if vol and vol < 200 else f"ص{page}" if page else "")
+            res.append({"الكتاب": n, "الموضع": loc, "النص": _strip_tashkeel(text).replace("AUTO", "").strip()[:900]})
+    con.close()
+    out = {"اللفظ": word, "المواضع": res or "لم يرد في الكتب المختارة."}
+    if missing:
+        out["كتب لم تُضف بعد"] = missing
+        out["تنبيه"] = "بعض الكتب لم تُضف إلى المدوّنة؛ أضفها بـ corpus_add_book أو أعد تشغيل سكربت التثبيت."
+    return out
+
+
+# ── البديع ──
+
+_ANTONYMS = [("حياة", "موت"), ("حي", "ميت"), ("ليل", "نهار"), ("نور", "ظلام"), ("ضياء", "ظلام"), ("ابيض", "اسود"), ("بياض", "سواد"),
+             ("سماء", "ارض"), ("شمس", "قمر"), ("قريب", "بعيد"), ("قرب", "بعد"), ("كبير", "صغير"), ("عظيم", "حقير"), ("طويل", "قصير"),
+             ("غني", "فقير"), ("غنى", "فقر"), ("عز", "ذل"), ("عزيز", "ذليل"), ("حق", "باطل"), ("خير", "شر"), ("صدق", "كذب"),
+             ("حلو", "مر"), ("فرح", "حزن"), ("ضحك", "بكى"), ("ضحك", "بكاء"), ("سرور", "حزن"), ("اول", "اخر"), ("ظاهر", "باطن"),
+             ("قديم", "حديث"), ("جديد", "قديم"), ("حر", "عبد"), ("حر", "برد"), ("حار", "بارد"), ("قوي", "ضعيف"), ("قوة", "ضعف"),
+             ("علم", "جهل"), ("عالم", "جاهل"), ("نفع", "ضر"), ("سلم", "حرب"), ("امن", "خوف"), ("رجاء", "ياس"), ("وصل", "هجر"),
+             ("وصال", "هجر"), ("لقاء", "فراق"), ("قرب", "نوى"), ("يمين", "شمال"), ("شرق", "غرب"), ("صباح", "مساء"), ("غداة", "عشي"),
+             ("صيف", "شتاء"), ("ذكر", "انثى"), ("رجل", "امراه"), ("دنيا", "اخره"), ("جنه", "نار"), ("ثواب", "عقاب"), ("ايمان", "كفر"),
+             ("هدى", "ضلال"), ("رشد", "غي"), ("صحه", "سقم"), ("سقم", "شفاء"), ("داء", "دواء"), ("جود", "بخل"), ("كريم", "لئيم"),
+             ("كرم", "لؤم"), ("شجاع", "جبان"), ("شجاعه", "جبن"), ("عدل", "ظلم"), ("جمع", "فرق"), ("فتح", "غلق"), ("دخل", "خرج"),
+             ("اقبل", "ادبر"), ("اقبال", "ادبار"), ("علا", "سفل"), ("علو", "سفل"), ("فوق", "تحت"), ("امام", "خلف"), ("سهل", "صعب"),
+             ("لين", "شده"), ("رخاء", "شده"), ("يسر", "عسر"), ("ضيق", "سعه"), ("بخيل", "جواد"), ("صادق", "كاذب"), ("مؤمن", "كافر"),
+             ("نوم", "يقظه"), ("نائم", "يقظان"), ("عطش", "ري"), ("جوع", "شبع"), ("بكاء", "ضحك"), ("يبكي", "يضحك"), ("احيا", "امات"),
+             ("يحيي", "يميت"), ("رفع", "خفض"), ("رفع", "وضع"), ("اعطى", "منع"), ("عطاء", "منع"), ("حضر", "غاب"), ("حاضر", "غائب"),
+             ("صحو", "سكر"), ("حب", "بغض"), ("حبيب", "عدو"), ("صديق", "عدو"), ("وفاء", "غدر"), ("نجاح", "فشل"), ("سعد", "شقاء"),
+             ("سعيد", "شقي"), ("ربح", "خسر"), ("ربح", "خساره"), ("بدايه", "نهايه"), ("كثير", "قليل"), ("كثره", "قله"), ("ملك", "مملوك")]
+
+
+@lru_cache(maxsize=1)
+def _antonym_index():
+    idx = {}
+    for a, b in _ANTONYMS:
+        idx.setdefault(_norm(a), set()).add(_norm(b))
+        idx.setdefault(_norm(b), set()).add(_norm(a))
+    return idx
+
+
+def _lemma_bare(w: str) -> str:
+    try:
+        an = _analyzer().analyze(_strip_tashkeel(w))
+        if an:
+            a = max(an, key=lambda x: float(x.get("pos_lex_logprob", -99) or -99))
+            return _norm(_strip_tashkeel((a.get("lex") or "").split("_")[0].split("-")[0]))
+    except Exception:
+        pass
+    return _norm(_strip_tashkeel(w))
+
+
+def _core_letters(w: str) -> str:
+    """الكلمة مجردة من «ال» وأحرف العطف والجر في أولها."""
+    b = _norm(_strip_tashkeel(w))
+    for p in ("وال", "فال", "بال", "كال", "لل", "ال"):
+        if b.startswith(p) and len(b) - len(p) >= 2:
+            return b[len(p):]
+    if len(b) > 3 and b[0] in "وف":
+        return b[1:]
+    return b
+
+
+def _roots_of(w: str) -> set:
+    try:
+        return {a.get("root") for a in _analyzer().analyze(_strip_tashkeel(w)) if a.get("root") and "#" not in (a.get("root") or "")}
+    except Exception:
+        return set()
+
+
+@mcp.tool()
+def detect_badi(text: str) -> dict:
+    """استخراج المحسنات البديعية من بيت أو قصيدة أو نثر: الجناس (التام، والناقص بزيادة حرف، والمضارع واللاحق باختلاف حرف متقارب المخرج أو متباعده، والمحرّف باختلاف الحركات، وجناس الاشتقاق)،
+    والطباق (طباق الإيجاب بمعجم للأضداد، وطباق السلب بالنفي)، والمقابلة، والتصريع، وردّ العجز على الصدر، ولزوم ما لا يلزم، والسجع في النثر (المطرَّف والمتوازي)، والاقتباس من القرآن.
+    text: النص؛ والشعر بيتًا في كل سطر بشطريه مفصولين بـ «*». النتائج مرشحات تُراجع: البديع حكم بلاغي يتوقف على المعنى."""
+    import re
+    lines = [l.strip() for l in text.strip().splitlines() if l.strip()]
+    poetry = sum(1 for l in lines if "*" in l) >= max(1, len(lines) // 2)
+    units = []
+    for l in lines:
+        if poetry and "*" in l:
+            s_, _, a_ = l.partition("*")
+            units.append((s_.strip(), a_.strip()))
+        else:
+            for seg in re.split(r"[.،؛!?؟\n]+", l):
+                if seg.strip():
+                    units.append((seg.strip(), ""))
+    found = {"الجناس": [], "الطباق": [], "المقابلة": [], "التصريع": [], "ردّ العجز على الصدر": [], "السجع": [], "لزوم ما لا يلزم": [], "الاقتباس": []}
+    ant = _antonym_index()
+    neg = {"لا", "لم", "لن", "ما", "ليس", "غير"}
+    for ui, (s_, a_) in enumerate(units, 1):
+        words = re.findall("[ء-يً-ْ]+", s_ + " " + a_)
+        bare = [_core_letters(w) for w in words]
+        lemmas = [_lemma_bare(w) for w in words]
+        where = f"البيت {ui}" if poetry else f"الجملة {ui}"
+        # الجناس
+        for i in range(len(words)):
+            for j in range(i + 1, len(words)):
+                x, y = bare[i], bare[j]
+                if len(x) < 3 or len(y) < 3 or x in STOPWORDS or y in STOPWORDS:
+                    continue
+                kind = None
+                if x == y:
+                    if lemmas[i] != lemmas[j]:
+                        kind = "جناس تام (اتفقت الحروف واختلف المعنى)"
+                    elif _strip_tashkeel(words[i]) != _strip_tashkeel(words[j]) and any(c in HARAKAT for c in words[i] + words[j]) \
+                            and words[i].strip("ًٌٍَُِّْ") != words[j].strip("ًٌٍَُِّْ"):
+                        kind = "جناس محرّف (اختلفت الحركات)"
+                elif len(x) == len(y) and sum(1 for p, q in zip(x, y) if p != q) == 1:
+                    p, q = next((p, q) for p, q in zip(x, y) if p != q)
+                    rel = _letter_relation(p, q)
+                    kind = f"جناس {'مضارع' if rel == 'متقاربان' else 'لاحق'} (اختلفا في «{p}» و«{q}»)"
+                elif abs(len(x) - len(y)) == 1 and (x in y or y in x or x[1:] == y or y[1:] == x or x[:-1] == y or y[:-1] == x):
+                    kind = "جناس ناقص (زاد أحدهما حرفًا)"
+                elif lemmas[i] != lemmas[j] and _roots_of(words[i]) & _roots_of(words[j]):
+                    kind = "جناس الاشتقاق (من جذر واحد)"
+                if kind:
+                    found["الجناس"].append({"الموضع": where, "اللفظان": [words[i], words[j]], "نوعه": kind})
+        # الطباق
+        pairs = []
+        for i in range(len(words)):
+            for j in range(i + 1, len(words)):
+                if lemmas[j] in ant.get(lemmas[i], set()) or bare[j] in ant.get(bare[i], set()):
+                    pairs.append((i, j))
+                    found["الطباق"].append({"الموضع": where, "اللفظان": [words[i], words[j]], "نوعه": "طباق إيجاب"})
+                elif lemmas[i] == lemmas[j] and len(bare[i]) > 2 and lemmas[i] not in STOPWORDS and \
+                        ((i > 0 and _norm(words[i - 1]) in neg) != (j > 0 and _norm(words[j - 1]) in neg)):
+                    found["الطباق"].append({"الموضع": where, "اللفظان": [words[i], words[j]], "نوعه": "طباق سلب (إثبات ونفي)"})
+        distinct = []
+        for i, j in pairs:
+            key = frozenset((lemmas[i], lemmas[j]))
+            if key not in [frozenset((lemmas[a], lemmas[b])) for a, b in distinct] and all(i != a and j != b for a, b in distinct):
+                distinct.append((i, j))
+        if len(distinct) >= 2:
+            found["المقابلة"].append({"الموضع": where, "الأزواج": [[words[i], words[j]] for i, j in distinct]})
+        # ردّ العجز على الصدر
+        if poetry and a_:
+            last = _core_letters(a_.split()[-1])
+            sw = [_core_letters(w) for w in s_.split()]
+            r_last = _roots_of(a_.split()[-1])
+            for k, w in enumerate(s_.split()):
+                if len(last) > 2 and (sw[k] == last or (r_last & _roots_of(w))):
+                    found["ردّ العجز على الصدر"].append({"الموضع": where, "اللفظان": [w, a_.split()[-1]],
+                                                       "موضعه": "أول الصدر" if k == 0 else "حشو الصدر" if k < len(sw) - 1 else "آخر الصدر"})
+                    break
+        # التصريع (في المطلع غالبًا)
+        if poetry and a_:
+            us, hs = _qafiya_hypotheses(s_)
+            ua, ha = _qafiya_hypotheses(a_)
+            if us and ua and hs and ha and us[hs[0]][0] == ua[ha[0]][0] and (us[hs[0]][1] == ua[ha[0]][1] or not us[hs[0]][1] or not ua[ha[0]][1]):
+                found["التصريع"].append({"الموضع": where, "آخر الصدر": s_.split()[-1], "آخر العجز": a_.split()[-1]})
+    # لزوم ما لا يلزم: التزام حرف قبل الروي في القصيدة
+    if poetry and len(units) >= 3:
+        before = []
+        for s_, a_ in units:
+            u, h = _qafiya_hypotheses(a_ or s_)
+            if u and h and h[0] >= 1:
+                before.append(u[h[0] - 1][0])
+        if before and len(set(before)) == 1 and before[0] not in "اوي":
+            found["لزوم ما لا يلزم"].append({"الحرف الملتزم قبل الروي": before[0], "في الأبيات": len(before)})
+    # السجع في النثر
+    if not poetry and len(units) >= 2:
+        ends = [(_core_letters(u.split()[-1]), u.split()[-1]) for u, _ in units if u.split()]
+        for (b1, w1), (b2, w2) in zip(ends, ends[1:]):
+            if b1 and b2 and b1[-1] == b2[-1] and b1 != b2:
+                same_wazn = _wazn_of(w1) == _wazn_of(w2) and _wazn_of(w1)
+                found["السجع"].append({"الفاصلتان": [w1, w2], "نوعه": "سجع متوازٍ (اتفقتا وزنًا ورويًّا)" if same_wazn else "سجع مطرَّف (اتفقتا رويًّا واختلفتا وزنًا)"})
+    # الاقتباس من القرآن
+    try:
+        found["الاقتباس"] = _iqtibas(text)
+    except Exception:
+        pass
+    found = {k: v for k, v in found.items() if v}
+    return {"المحسنات": found or "لم يظهر محسّن بديعي من الأنواع المرصودة.",
+            "ملاحظة": "الجناس يُرصد بالموازنة الحرفية والصرفية، والطباق بمعجم أضداد مختار وبالنفي؛ فهي مرشحات يُحكم فيها المعنى. "
+                      "والتورية والاستخدام والتوجيه ونحوها مما يقوم على المعنى الخفي لا يُرصد آليًّا."}
+
+
+def _wazn_of(w: str) -> str:
+    try:
+        an = _analyzer().analyze(_strip_tashkeel(w))
+        if an:
+            return _stem_wazn(max(an, key=lambda x: float(x.get("pos_lex_logprob", -99) or -99)))
+    except Exception:
+        pass
+    return ""
+
+
+@lru_cache(maxsize=1)
+def _quran_words():
+    """كلمات القرآن مرتبة: [(سورة، آية، الكلمة المجردة)]."""
+    words, _r, _t = _quran()
+    out = []
+    for (s_, a_, w_) in sorted(words):
+        form = "".join(seg[0] for seg in words[(s_, a_, w_)])
+        import re
+        form = re.sub("[\u06d6-\u06ed\u0670]", "", form).replace("ٱ", "ا")
+        out.append((s_, a_, _norm(_strip_tashkeel(form))))
+    return out
+
+
+def _iqtibas(text: str, n: int = 4) -> list:
+    """مواضع اتفاق النص مع القرآن في أربع كلمات متتالية فأكثر."""
+    qw = _quran_words()
+    idx = {}
+    for i in range(len(qw) - n + 1):
+        idx.setdefault(tuple(x[2] for x in qw[i:i + n]), []).append(i)
+    toks = _ntoks(text)
+    res, used = [], set()
+    for i in range(len(toks) - n + 1):
+        g = tuple(toks[i:i + n])
+        if g in idx and i not in used:
+            j = idx[g][0]
+            k = n
+            while i + k < len(toks) and j + k < len(qw) and toks[i + k] == qw[j + k][2]:
+                k += 1
+            used.update(range(i, i + k))
+            res.append({"النص المقتبس": " ".join(toks[i:i + k]), "الموضع": f"سورة {qw[j][0]}، الآية {qw[j][1]}", "عدد الكلمات": k})
+    return res
+
+
+
+# ───────────── قياس دقة الأدوات على بيانات معيارية ─────────────
+
+_METER_LABELS = {"الطويل": "taweel", "الكامل": "kamel", "البسيط": "baseet", "الوافر": "wafer", "الخفيف": "khafeef",
+                 "الرجز": "rajaz", "السريع": "saree", "الرمل": "ramal", "المتقارب": "mutakareb", "المنسرح": "munsareh",
+                 "المجتث": "mujtath", "الهزج": "hazaj", "المديد": "madeed", "المتدارك": "mutadarak"}
+
+
+def _bench_meter(n: int, seed: int):
+    import sqlite3, random, pyarud
+    _patch_pyarud()
+    con = sqlite3.connect(f"file:{POETRY_DB}?mode=ro", uri=True)
+    rnd = random.Random(seed)
+    per = max(1, n // len(_METER_LABELS))
+    rows = []
+    for ar, en in _METER_LABELS.items():
+        ids = [r[0] for r in con.execute("SELECT id FROM poems WHERE meter = ?", (ar,))]
+        for pid in rnd.sample(ids, min(per, len(ids))):
+            vs = con.execute("SELECT sadr, ajuz FROM verses WHERE poem_id = ? AND ajuz != '' LIMIT 3", (pid,)).fetchall()
+            if vs:
+                rows.append((en, *rnd.choice(vs)))
+    con.close()
+    st = {"base": [0, 0], "fit": [0, 0]}
+    for en, s_, a_ in rows:
+        ss, aa = _strip_tashkeel(s_), _strip_tashkeel(a_)
+        try:
+            bs, ba = _prepare_verse_text(ss)[0], _prepare_verse_text(aa)[0]
+        except Exception:
+            bs, ba = ss, aa
+        r = pyarud.analyze_verse(bs, ba)
+        st["base"][0] += (r.meter_key or "") == en
+        st["base"][1] += bool(r.is_valid)
+        f, ch, r2 = _fit_meter([ss, aa], [bs, ba], None)
+        r2 = r2 or r
+        st["fit"][0] += (r2.meter_key or "") == en
+        st["fit"][1] += bool(r2.is_valid)
+    k = len(rows) or 1
+    return {"العينة": len(rows), "البحور": len(_METER_LABELS),
+            "بالتشكيل الآلي وحده": {"دقة البحر": round(100 * st["base"][0] / k, 1), "الموزون": round(100 * st["base"][1] / k, 1)},
+            "مع الضبط الموجَّه بالوزن": {"دقة البحر": round(100 * st["fit"][0] / k, 1), "الموزون": round(100 * st["fit"][1] / k, 1)},
+            "المنهج": "أبيات من قصائد معلَّمة البحر في «أشعار»، يُنزع تشكيلها ثم تُشكَّل آليًّا وتُقطَّع؛ «دقة البحر» مطابقة البحر المستخرج للمعلَّم، و«الموزون» ما استقام على نحو PyArud بلا خلل. "
+                      "وفي «أشعار» أبيات مختلّة أو مقلوبة الشطرين، فالأرقام حدٌّ أدنى."}
+
+
+def _bench_root(n: int, seed: int):
+    import random
+    words, _r, _t = _quran()
+    keys = [k for k, segs in words.items() if any(f.startswith("ROOT:") for _, _, fs in segs for f in fs)]
+    rnd = random.Random(seed)
+    sample = rnd.sample(keys, min(n, len(keys)))
+    an = _analyzer()
+    ok = ok_any = cov = 0
+    for k in sample:
+        segs = words[k]
+        form = "".join(s_[0] for s_ in segs)
+        gold = next(f[5:] for _, _, fs in segs for f in fs if f.startswith("ROOT:"))
+        gold = gold.translate(HAMZA_FORMS)
+        import re
+        bare = _strip_tashkeel(re.sub("[ۖ-ٰۭ]", "", form).replace("ٱ", "ا"))
+        anal = an.analyze(bare)
+        if not anal:
+            continue
+        cov += 1
+
+        def m(r):
+            p = (r or "").split(".")
+            return len(p) == len(gold) and all(x == "#" or x.translate(HAMZA_FORMS) == y for x, y in zip(p, gold))
+        top = max(anal, key=lambda x: float(x.get("pos_lex_logprob", -99) or -99))
+        ok += m(top.get("root"))
+        ok_any += any(m(a.get("root")) for a in anal)
+    k = len(sample) or 1
+    return {"العينة": len(sample), "التغطية (كلمات حللها المحلل)": round(100 * cov / k, 1),
+            "دقة الجذر بأرجح تحليل بلا سياق": round(100 * ok / k, 1),
+            "الجذر الصحيح بين التحليلات الممكنة": round(100 * ok_any / k, 1),
+            "المنهج": "كلمات عشوائية من القرآن بجذورها في «المدوّنة القرآنية» (تحليل يدوي)، تُحلَّل برسمها الإملائي بلا تشكيل؛ ويُعدّ رمز «#» في جذر CAMeL مطابقًا لحرف العلة أو الهمزة."}
+
+
+def _bench_attr(n_poets: int, seed: int):
+    import sqlite3, random
+    con = sqlite3.connect(f"file:{POETRY_DB}?mode=ro", uri=True)
+    poets = [r[0] for r in con.execute("SELECT poet, COUNT(*) c FROM poems p WHERE era IS NOT NULL GROUP BY poet HAVING c >= 60 ORDER BY c DESC LIMIT 40")]
+    rnd = random.Random(seed)
+    poets = rnd.sample(poets, min(n_poets, len(poets)))
+    train, tests = {}, []
+    for p in poets:
+        ids = [r[0] for r in con.execute("SELECT id FROM poems WHERE poet = ?", (p,))]
+        rnd.shuffle(ids)
+        def verses_of(idl):
+            out = []
+            for i in idl:
+                out += [f"{s_} {a_}" for s_, a_ in con.execute("SELECT sadr, ajuz FROM verses WHERE poem_id = ?", (i,))]
+            return out
+        tt, k, test_keys = [], 0, set()
+        while k < len(ids) // 2 and len(tt) < 1500:  # قصائد كاملة للاختبار حتى 1500 كلمة، لا تدخل في بناء الأسلوب
+            for v in verses_of([ids[k]]):
+                test_keys.add(" ".join(_ntoks(v)))
+                tt += _ntoks(v)
+            k += 1
+        # في «أشعار» قصائد مكررة؛ فيُستبعد من بناء الأسلوب كل بيت ورد في نص الاختبار
+        tr = [v for v in verses_of(ids[k:]) if " ".join(_ntoks(v)) not in test_keys]
+        train[p] = _ntoks("\n".join(tr))[:60000]
+        if len(tt) >= 1000 and len(train[p]) >= 3000:
+            tests.append((p, tt[:1500]))
+    con.close()
+    import math
+    from collections import Counter
+    allc = Counter()
+    for t in train.values():
+        allc.update(t)
+    mfw = [w for w, _ in allc.most_common(150)]
+
+    def rel(toks):
+        c = Counter(toks)
+        nn = len(toks) or 1
+        return [c[w] / nn for w in mfw]
+    segs = [rel(t[i:i + 1500]) for t in train.values() for i in range(0, max(1, len(t) - 1500), 1500)]
+    mean = [sum(s_[j] for s_ in segs) / len(segs) for j in range(len(mfw))]
+    sd = [math.sqrt(sum((s_[j] - mean[j]) ** 2 for s_ in segs) / (len(segs) - 1)) or 1e-9 for j in range(len(mfw))]
+    z = lambda v: [(v[j] - mean[j]) / sd[j] for j in range(len(mfw))]
+    zc = {p: z(rel(t)) for p, t in train.items()}
+    ok = 0
+    for p, tt in tests:
+        zt = z(rel(tt))
+        def cosd(a, b):
+            d = sum(x * y for x, y in zip(a, b))
+            return 1 - d / (math.sqrt(sum(x * x for x in a)) * math.sqrt(sum(y * y for y in b)) or 1)
+        best = min(zc, key=lambda q: cosd(zt, zc[q]))
+        ok += best == p
+    return {"عدد الشعراء": len(poets), "عدد النصوص المختبرة": len(tests), "طول النص المختبر": "نحو 1500 كلمة",
+            "دقة النسبة (Cosine Delta)": round(100 * ok / (len(tests) or 1), 1),
+            "خط الأساس (التخمين)": round(100 / (len(poets) or 1), 1),
+            "المنهج": "لكل شاعر تُعزل قصائد كاملة (نحو 1500 كلمة) للاختبار، ويُبنى أسلوبه من باقي شعره بعد حذف كل بيت مكرر منها؛ ثم يُنسب كل نص مختبر إلى أقرب الشعراء بمقياس Cosine Delta على 150 لفظًا."}
+
+
+@mcp.tool()
+def benchmark(task: str = "meter", sample: int = 300, seed: int = 1) -> dict:
+    """قياس دقة الأدوات على بيانات معيارية محلية، ليعرف الباحث حدود الاعتماد عليها:
+    task: «meter» دقة التقطيع ومعرفة البحر (أبيات «أشعار» المعلَّمة)، أو «root» دقة استخراج الجذر (المدوّنة القرآنية)، أو «attribution» دقة نسبة النص إلى قائله (شعراء «أشعار»).
+    sample: حجم العينة (للبحر عدد الأبيات، وللجذر عدد الكلمات، وللنسبة عدد الشعراء). seed: بذرة العينة العشوائية لإعادة الإنتاج."""
+    t = task.strip().lower()
+    if t == "meter":
+        return _bench_meter(max(14, min(int(sample), 2000)), seed)
+    if t == "root":
+        return _bench_root(max(50, min(int(sample), 20000)), seed)
+    if t in ("attribution", "attr"):
+        return _bench_attr(max(3, min(int(sample), 40)), seed)
+    return {"تنبيه": "المهام: meter أو root أو attribution."}
 
 
 if __name__ == "__main__":
