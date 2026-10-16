@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software in your research, please cite it as below."
+title: "arabiyya: A Model Context Protocol server for Arabic linguistic research"
+abstract: "An MCP server exposing tools for Arabic morphology, prosody, phonology, classical lexicography, Quranic morphology, poetry retrieval, distributional semantics, corpus linguistics and stylometry."
+type: software
+authors:
+  - name: "Sayed Hassan"
+    alias: "Sayedforces2021"
+repository-code: "https://github.com/Sayedforces2021/arabiyya-mcp"
+license: MIT
+version: "1.0.0"
+date-released: "2026-10-16"
+keywords:
+  - Arabic
+  - computational linguistics
+  - morphology
+  - prosody
+  - corpus linguistics
+  - Model Context Protocol
