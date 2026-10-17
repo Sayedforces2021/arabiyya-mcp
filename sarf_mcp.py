@@ -3154,6 +3154,27 @@ def _irab_rules(doc):
                         _set_feat(w, "Mood", mood)
                     if _feats(w).get("Mood") == "Jus":
                         last_jus = k
+        # حالة الاسم من عامله القريب: اسم إنّ وأخواتها منصوب، والمضاف إليه مجرور، والمنادى المضاف منصوب
+        INNA = {"إن", "أن", "لكن", "كأن", "ليت", "لعل", "إنما", "أنما"}
+        NOMINAL = ("NOUN", "ADJ", "PROPN", "NUM", "X")
+        prev_nom = None
+        for k, tok in enumerate(toks):
+            praw = _strip_tashkeel(toks[k - 1].text).replace("ٱ", "ا") if k else ""
+            praw = praw[1:] if len(praw) > 2 and praw[0] in "وف" else praw
+            w0 = tok.words[0]
+            if w0.upos in NOMINAL and not getattr(w0, "zarf", None):
+                case = None
+                if praw in INNA:
+                    case = "Acc"
+                elif praw in ("يا", "أيها"):
+                    case = "Acc" if _feats(w0).get("Definite") == "Cons" else "Nom"
+                elif prev_nom is not None and (getattr(prev_nom, "zarf", None) or
+                        (_feats(prev_nom).get("Definite") == "Cons" and prev_nom.upos in ("NOUN", "NUM", "X"))):
+                    case = "Gen"
+                if case:
+                    _set_feat(w0, "Case", case)
+            nom = [x for x in tok.words if x.upos in NOMINAL]
+            prev_nom = nom[-1] if nom and tok.words[-1].upos != "PRON" else None
     return doc
 
 
@@ -4010,7 +4031,16 @@ def _bench_irab(n: int, seed: int, rules: bool = True):
     GOLD_V = {"MOOD:IND": "Ind", "MOOD:SUBJ": "Sub", "MOOD:JUS": "Jus"}
     NOMINAL = ("NOUN", "ADJ", "PROPN", "NUM", "X")
     def bare(form):
-        return _strip_tashkeel(re.sub("[\u06d6-\u06ed\u0670]", "", form).replace("\u0671", "\u0627"))
+        # من الرسم العثماني إلى الإملاء المعتاد في أظهر الفروق، لأن الباحث يُدخل النص بالإملاء المعتاد
+        t = re.sub("[\u064b-\u0652\u0653\u06d6-\u06ed]", "", form).replace("\u0671", "\u0627")
+        t = re.sub("(?<=[ىي])\u0670", "", t).replace("\u0670", "ا")  # الألف الخنجرية تُكتب ألفًا: بينٰت ← بينات
+        t = t.replace("\u0640\u0654\u0627", "آ").replace("\u0654\u0627", "آ").replace("\u0640\u0654", "ئ")
+        t = t.replace("\u0654", "ئ").replace("\u0640", "")
+        t = _strip_tashkeel(t).replace("ءا", "آ")
+        for x, y in (("ذالك", "ذلك"), ("هاذ", "هذ"), ("هاؤلاء", "هؤلاء"), ("لاكن", "لكن"), ("الرحمان", "الرحمن"),
+                     ("إلاه", "إله"), ("أولائك", "أولئك"), ("اللاه", "الله")):
+            t = t.replace(x, y)
+        return t
     stats = {"n": Counter(), "v": Counter()}
     conf = {"n": Counter(), "v": Counter()}
     feat_only = Counter()
