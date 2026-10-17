@@ -3162,6 +3162,8 @@ def _irab_rules(doc):
                     if mood == "Jus" and (pr in ("إن",) or (prev == "من" and mood == "Jus" and cond_k is None and pr not in _JAZM)):
                         cond_k = k  # فعل الشرط: يُنتظر جوابه
                     if mood:
+                        w.mood_rule = "jazm" if (pr in _JAZM or lam_amr) else "nasb" if pr in _NASB else \
+                            "la" if prev == "لا" else "man" if prev == "من" else "coord" if bare[:1] in "وف" else "jawab"
                         if w.upos == "X":
                             w.upos = "VERB"
                             _set_feat(w, "Aspect", "Imp")
@@ -3190,6 +3192,7 @@ def _irab_rules(doc):
                     x.feats = ""
                     _set_feat(x, "Aspect", "Imp")
                     _set_feat(x, "Mood", {"i": "Ind", "s": "Sub", "j": "Jus"}[an["mod"]])
+                    x.mood_rule = "bert"
             if need:
                 for k in need:
                     an = dis[k].analyses[0].analysis if dis[k].analyses else {}
