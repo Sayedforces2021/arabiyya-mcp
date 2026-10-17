@@ -1,7 +1,14 @@
 #!/bin/bash
 # تثبيت أداة العربية (arabiyya) وربطها بـ Claude Desktop
 set -e
-DIR="$(cd "$(dirname "$0")" && pwd)"
+SRC="$(cd "$(dirname "$0")" && pwd)"
+# تُنسخ الأداة إلى مجلد دائم، فلا تتعطل إذا نُقل مجلد التنزيل أو حُذف
+DIR="$HOME/.sarf/app"
+mkdir -p "$DIR"
+if [ "$SRC" != "$DIR" ]; then
+  cp "$SRC"/*.py "$SRC"/openiti_catalog.tsv "$DIR"/
+  mkdir -p "$DIR/brand" && cp "$SRC"/brand/*.svg "$DIR/brand/" 2>/dev/null || true
+fi
 SERVER="$DIR/sarf_mcp.py"
 CONFIG="$HOME/Library/Application Support/Claude/claude_desktop_config.json"
 
@@ -75,5 +82,6 @@ print("أُضيفت أداة العربية (arabiyya) إلى", path)
 EOF
 
 echo
-echo "تم. أغلق Claude تمامًا (⌘Q) ثم افتحه."
+echo "تم. نُسخت الأداة إلى $DIR، فيمكنك حذف مجلد التنزيل."
+echo "أغلق Claude تمامًا (⌘Q) ثم افتحه."
 read -p "اضغط Enter للإغلاق"
