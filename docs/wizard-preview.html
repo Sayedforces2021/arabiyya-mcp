@@ -1,0 +1,165 @@
+<title>معاينة معالج العربية</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* تخطيط: لوحة تبديل بين نافذتَي ويندوز وماك، كلٌّ تحاكي صفحات المعالج بنصوصه الفعلية */
+:root{
+  --ground:#121A24; --raised:#1A2430; --text:#E9D8B0; --muted:#9AA3AE; --gold:#C9A35C; --line:#2A3644; --code:#0E151E; --ok:#56B881;
+  --win-bg:#F0F0F0; --win-fg:#111; --win-line:#B9B9B9; --mac-bg:#ECECEC; --mac-fg:#1d1d1f;
+  --kufi:"Reem Kufi","Noto Kufi Arabic",sans-serif; --ui:"IBM Plex Sans Arabic",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--ground:#F6F0E2;--raised:#EDE4D0;--text:#121A24;--muted:#5B6573;--gold:#7A5C22;--line:#D9CCAF;--code:#FBF7EC}}
+:root[data-theme="light"]{--ground:#F6F0E2;--raised:#EDE4D0;--text:#121A24;--muted:#5B6573;--gold:#7A5C22;--line:#D9CCAF;--code:#FBF7EC}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--text);font-family:var(--ui);padding-block:28px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));line-height:1.7;font-size:16px}
+main{max-width:760px;margin:0 auto}
+h1{font-family:var(--kufi);font-weight:500;font-size:28px;margin:0 0 6px;text-wrap:balance}
+.note{color:var(--muted);margin:0 0 20px;font-size:15px}
+.tabs{display:flex;gap:8px;margin-bottom:18px}
+.tab{font:inherit;font-family:var(--kufi);padding:8px 20px;border-radius:10px;border:1px solid var(--gold);background:none;color:var(--gold);cursor:pointer}
+.tab[aria-selected="true"]{background:var(--gold);color:var(--ground)}
+.tab:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.restart{margin-inline-start:auto;font:inherit;font-size:14px;background:none;border:none;color:var(--muted);text-decoration:underline;cursor:pointer}
+
+/* ---- نافذة ويندوز ---- */
+.win{background:var(--win-bg);color:var(--win-fg);border:1px solid #777;box-shadow:0 10px 30px #0006;border-radius:6px;overflow:hidden;max-width:640px;margin:0 auto}
+.win .bar{display:flex;align-items:center;gap:8px;padding:6px 10px;background:#fff;border-bottom:1px solid var(--win-line);font-size:13px}
+.win .bar b{font-weight:400;flex:1}
+.win .body{display:flex;min-height:320px}
+.win .side{flex:0 0 164px;background:linear-gradient(#121A24,#0c121a);position:relative;display:flex;align-items:center;justify-content:center}
+.win .side::before,.win .side::after{content:"";position:absolute;inset-inline:22px;height:2px;background:#C9A35C}
+.win .side::before{top:46%}.win .side::after{top:50%;inset-inline:60px}
+.win .side span{font-family:var(--kufi);font-size:64px;color:#C9A35C;position:absolute;top:18%}
+.win .main{flex:1;padding:22px 20px;display:flex;flex-direction:column;min-width:0}
+.win h2{font-family:var(--kufi);font-weight:500;font-size:20px;margin:0 0 10px}
+.win p{margin:0 0 10px;font-size:14.5px;white-space:pre-line}
+.win .sub{color:#555;font-size:13px}
+.win label{display:block;font-size:14.5px;margin:0 0 10px}
+.win .prog{height:18px;border:1px solid #aaa;background:#E6E6E6;margin:12px 0 8px}
+.win .prog i{display:block;height:100%;width:0;background:#06B025;transition:width .4s}
+.win .foot{display:flex;gap:8px;justify-content:flex-start;padding:10px 14px;background:#F0F0F0;border-top:1px solid var(--win-line)}
+.btnw{font:inherit;font-size:14px;padding:4px 18px;border:1px solid #999;background:#E1E1E1;color:#111;border-radius:2px;cursor:pointer;min-width:84px}
+.btnw[disabled]{color:#888;cursor:default}
+.btnw.def{border-color:#0078D7;box-shadow:0 0 0 1px #0078D7}
+.chk{display:flex;gap:8px;align-items:center;margin-top:auto;font-size:14px}
+
+/* ---- ماك ---- */
+.mac{max-width:440px;margin:0 auto;background:var(--mac-bg);color:var(--mac-fg);border-radius:14px;box-shadow:0 14px 40px #0007;padding:22px 24px 18px;display:grid;gap:12px}
+.mac .ic{width:56px;height:56px;border-radius:13px;background:#121A24;display:grid;place-items:center;font-family:var(--kufi);font-size:34px;color:#C9A35C;border:1px solid #2A3644}
+.mac h2{font-size:15px;margin:0;font-weight:600}
+.mac p{margin:0;font-size:13.5px;white-space:pre-line}
+.mac .row{display:flex;gap:8px;justify-content:flex-start;margin-top:6px;flex-wrap:wrap}
+.btnm{font:inherit;font-size:13.5px;padding:5px 16px;border-radius:7px;border:1px solid #c4c4c4;background:#fff;color:#1d1d1f;cursor:pointer}
+.btnm.def{background:#0A7AFF;border-color:#0A7AFF;color:#fff}
+.mprog{height:6px;border-radius:3px;background:#d4d4d4;overflow:hidden}
+.mprog i{display:block;height:100%;width:0;background:#0A7AFF;transition:width .4s}
+.mac .sub{color:#6e6e73;font-size:12.5px}
+[hidden]{display:none!important}
+@media (max-width:520px){.win .side{flex-basis:60px}.win .side span{font-size:34px}}
+</style>
+
+<main>
+  <h1>معاينة معالج التثبيت</h1>
+  <p class="note">محاكاة للنافذتين بنصوصهما الفعلية، لتجرّب تسلسل الصفحات والتقدّم. لا تثبّت شيئًا على جهازك، ويجري الشريط بسرعة (نحو نصف دقيقة بدل ساعة).</p>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="t-win" aria-selected="true">ويندوز</button>
+    <button class="tab" role="tab" id="t-mac" aria-selected="false">ماك</button>
+    <button class="restart" id="restart">أعد من البداية</button>
+  </div>
+
+  <section id="winwrap">
+    <div class="win" dir="rtl">
+      <div class="bar"><b id="wtitle">العربية</b></div>
+      <div class="body">
+        <div class="side" aria-hidden="true"><span>ع</span></div>
+        <div class="main" id="wmain"></div>
+      </div>
+      <div class="foot" id="wfoot"></div>
+    </div>
+  </section>
+
+  <section id="macwrap" hidden>
+    <div class="mac" dir="rtl" id="mac"></div>
+  </section>
+</main>
+
+<script>
+const MSG = [
+  [10,'البحث عن بيئة Python'],[18,'إنشاء بيئة Python 3.11 للأداة'],[36,'تثبيت أدوات التحليل الصرفي (CAMeL Tools)'],
+  [46,'تثبيت أدوات العروض والتصريف والإعراب'],[54,'تنزيل بيانات التحليل الصرفي (قد يستغرق دقائق)']
+];
+const PACKS = {quran:'المدوّنة القرآنية',maajim:'المعاجم التراثية',poetry:'شواهد الشعر',corpus:'المدوّنة التراثية',
+  semantic:'النموذج الدلالي (يحسب دقائق)',lughawiyyat:'كتب الفروق والأضداد',catt:'مشكِّل النصوص',stanza:'محلل الإعراب'};
+const WELCOME = 'ستثبّت هذه النافذة أداة «العربية» وتربطها بتطبيق Claude تلقائيًّا، فيجيب Claude عن أسئلتك في النحو والصرف والعروض والمعاجم من مصادرها التراثية.\n\nما الذي سيحدث؟ تنزيل بيئة Python والمكتبات والبيانات، وتحتاج إلى نحو 4 غيغابايت من المساحة وإلى اتصال بالإنترنت. وتستغرق من 30 إلى 60 دقيقة بحسب سرعة الاتصال. ولا تحتاج أن تفعل شيئًا أثناء ذلك.\n\nلا تُغلق النافذة ولا تُطفئ الجهاز حتى ينتهي التثبيت.';
+const $ = id => document.getElementById(id);
+let timer = null, quick = false;
+
+// خطوات الشريط: الرسائل الخمس الأولى ثم الحزم (الكاملة أو السريعة)
+function steps(){
+  const keys = quick ? ['quran','maajim','poetry','corpus','lughawiyyat'] : Object.keys(PACKS);
+  const out = MSG.map(([p,t]) => [p,t]);
+  keys.forEach((k,i)=> out.push([62 + Math.floor(32*i/keys.length), `تجهيز ${PACKS[k]} (الحزمة ${i+1} من ${keys.length})`]));
+  out.push([96,'ربط الأداة بتطبيق Claude']);
+  return out;
+}
+function run(onTick, onDone){
+  const s = steps(); let i = 0;
+  clearInterval(timer);
+  timer = setInterval(()=>{ if(i>=s.length){clearInterval(timer);onDone();return;} onTick(s[i][0], s[i][1], i); i++; }, 1500);
+}
+
+/* ---------- ويندوز ---------- */
+function winPage(n){
+  const m=$('wmain'), f=$('wfoot'); $('wtitle').textContent='العربية';
+  if(n===0){
+    m.innerHTML=`<h2>مرحبًا بك في «العربية»</h2><p>${WELCOME}</p>`;
+    f.innerHTML=`<button class="btnw def" id="b1">التالي ←</button><button class="btnw" id="bc">إلغاء</button>`;
+    $('b1').onclick=()=>winPage(1); $('bc').onclick=()=>winPage(0);
+  } else if(n===1){
+    m.innerHTML=`<h2>اختيار الحزم</h2><p class="sub">اختر ما تنزّله من البيانات</p>
+      <label><input type="radio" name="p" id="rf" checked> كامل (موصى به): الأدوات السبع والثلاثون كلها — نحو 4 غيغابايت</label>
+      <label><input type="radio" name="p" id="rq"> سريع: القرآن والمعاجم والشعر والمدوّنة وكتب اللغة، بلا دلالة الألفاظ والتشكيل الآلي والإعراب — نحو 2.5 غيغابايت</label>
+      <p class="sub">الأدوات المتعلقة بما تتركه لا تعمل. وتستطيع إضافته في أي وقت بتشغيل المعالج من جديد؛ فهو يتخطى ما نُزّل ويكمل الناقص.</p>`;
+    f.innerHTML=`<button class="btnw def" id="b1">تثبيت</button><button class="btnw" id="b0">→ السابق</button>`;
+    $('b0').onclick=()=>winPage(0);
+    $('b1').onclick=()=>{quick=$('rq').checked;winPage(2)};
+  } else if(n===2){
+    $('wtitle').textContent='جارٍ التثبيت';
+    m.innerHTML=`<h2 id="wh">جارٍ التثبيت</h2><p class="sub" id="ws">نسخ ملفات الأداة</p><div class="prog"><i id="wp"></i></div><p class="sub" id="wm"></p>`;
+    f.innerHTML=`<button class="btnw" disabled>التالي ←</button><button class="btnw" disabled>إلغاء</button>`;
+    const t0=Date.now();
+    run((p,t,i)=>{ $('wp').style.width=((p-10)/89*100)+'%'; $('ws').textContent=t;
+      const mins=Math.floor(i*1.5/60); $('wh').textContent='جارٍ التثبيت'; $('wm').textContent='(في الواقع تستغرق الخطوات نصف ساعة إلى ساعة؛ هذه محاكاة سريعة)'; },
+      ()=>winPage(3));
+  } else {
+    $('wtitle').textContent='العربية';
+    m.innerHTML=`<h2>اكتمل التثبيت</h2><p>رُبطت أداة «العربية» بتطبيق Claude.\n\nافتح Claude وجرّب أن تكتب له: «أعرب: العلمُ نورٌ».\n\nلتظهر الأداة يلزم إعادة تشغيل Claude: اترك الخيار أدناه مفعّلًا، أو أغلقه تمامًا (من أيقونته بجانب الساعة: Quit) ثم افتحه.</p>
+      <div class="chk"><input type="checkbox" id="rs"><label for="rs" style="margin:0">أعد تشغيل Claude الآن (احفظ عملك فيه أولًا)</label></div>`;
+    f.innerHTML=`<button class="btnw def" id="b1">إنهاء</button>`;
+    $('b1').onclick=()=>winPage(0);
+  }
+}
+
+/* ---------- ماك ---------- */
+function macPage(n){
+  const el=$('mac');
+  const icon='<div class="ic">ع</div>';
+  if(n===0){
+    el.innerHTML=`${icon}<h2>العربية</h2><p>ستثبّت هذه النافذة أداة «العربية» وتربطها بتطبيق Claude تلقائيًّا.\n\nتنزيل بيئة Python والمكتبات والبيانات، وتحتاج إلى نحو 4 غيغابايت من المساحة وإلى اتصال بالإنترنت، وتستغرق من 30 إلى 60 دقيقة. لا تُغلق النافذة ولا تُطفئ الجهاز حتى ينتهي التثبيت.\n\nاختر ما تنزّله:\n• كامل: الأدوات السبع والثلاثون كلها، نحو 4 غيغابايت.\n• سريع: بلا دلالة الألفاظ والتشكيل الآلي والإعراب، نحو 2.5 غيغابايت (تضيفها لاحقًا بإعادة تشغيل المعالج).</p>
+      <div class="row"><button class="btnm def" id="mf">كامل</button><button class="btnm" id="mq">سريع</button><button class="btnm" id="mc">إلغاء</button></div>`;
+    $('mf').onclick=()=>{quick=false;macPage(1)}; $('mq').onclick=()=>{quick=true;macPage(1)}; $('mc').onclick=()=>macPage(0);
+  } else if(n===1){
+    el.innerHTML=`${icon}<h2>جارٍ تثبيت العربية</h2><div class="mprog"><i id="mp"></i></div><p class="sub" id="md">بدء التثبيت…</p>`;
+    run((p,t,i)=>{ $('mp').style.width=((p-10)/90*100)+'%'; $('md').textContent=t; }, ()=>macPage(2));
+  } else {
+    el.innerHTML=`${icon}<h2>العربية</h2><p>اكتمل التثبيت.\n\nلتظهر الأداة يلزم إعادة تشغيل Claude (احفظ عملك فيه أولًا). وبعدها جرّب أن تكتب له: «أعرب: العلمُ نورٌ».</p>
+      <div class="row"><button class="btnm def" id="mr">أعد تشغيل Claude</button><button class="btnm" id="ml">لاحقًا</button></div>`;
+    $('mr').onclick=()=>macPage(0); $('ml').onclick=()=>macPage(0);
+  }
+}
+
+function reset(){ clearInterval(timer); winPage(0); macPage(0); }
+function pick(w){ $('t-win').setAttribute('aria-selected',w); $('t-mac').setAttribute('aria-selected',!w);
+  $('winwrap').hidden=!w; $('macwrap').hidden=w; reset(); }
+$('t-win').onclick=()=>pick(true); $('t-mac').onclick=()=>pick(false); $('restart').onclick=reset;
+reset();
+</script>
