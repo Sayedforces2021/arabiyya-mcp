@@ -1,7 +1,10 @@
 name: release
+# يُنشأ الإصدار تلقائيًّا حين يُضاف ملف ملاحظات جديد في releases/vX.Y.Z.md
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+    paths: ["releases/v*.md"]
+  workflow_dispatch:
 permissions:
   contents: write
 jobs:
@@ -9,10 +12,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - id: v
+        run: echo "tag=$(ls releases/v*.md | sed 's#releases/##; s#\.md$##' | sort -V | tail -1)" >> "$GITHUB_OUTPUT"
       - uses: softprops/action-gh-release@v2
         with:
-          name: "العربية ${{ github.ref_name }}"
-          body_path: releases/${{ github.ref_name }}.md
+          tag_name: ${{ steps.v.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: "العربية ${{ steps.v.outputs.tag }}"
+          body_path: releases/${{ steps.v.outputs.tag }}.md
+          make_latest: true
           files: |
             arabiyya.mcpb
             releases/sarf-windows.zip
