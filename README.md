@@ -20,7 +20,7 @@
 
 **خادمٌ حاسوبي لعلوم العربية، يَصِل النماذجَ اللغوية بالمعاجم والمدوّنات والمحلّلات عبر بروتوكول سياق النموذج (MCP)، لتستند أجوبتها إلى مصدرٍ يُراجَع أو قاعدةٍ تُختبَر، لا إلى ما تستظهره.**
 
-[الملخّص](#الملخّص) · [ما الأداة وما ليست](#ما-الأداة-وما-ليست) · [مراتب الأحكام](#مراتب-الأحكام) · [الأدوات](#الأدوات-ومناهجها) · [قياس الدقة](#قياس-الدقة) · [حدود المنهج](#حدود-المنهج) · [خطة التطوير](#خطة-التطوير) · [التثبيت](#التثبيت) · [English](#english-summary)
+[الملخّص](#الملخّص) · [ما الأداة وما ليست](#ما-الأداة-وما-ليست) · [مراتب الأحكام](#مراتب-الأحكام) · [الأدوات](#الأدوات-ومناهجها) · [قياس الدقة](#قياس-الدقة) · [حدود المنهج](#حدود-المنهج) · [خطة التطوير](#خطة-التطوير) · [التثبيت](#التثبيت) · [شكر وتقدير](#شكر-وتقدير) · [English](#english-summary)
 
 ## الملخّص
 
@@ -541,6 +541,28 @@ flowchart LR
 | `openiti_catalog.tsv` | فهرس النسخ الأصلية العربية في OpenITI، مستخرج من بيانات `kitab-metadata-automation` |
 | `brand/` | هوية المشروع: الختم والشعار واللافتات |
 
+## شكر وتقدير
+
+قام هذا المشروع على أعمالٍ مفتوحة أتاحها أصحابها للباحثين، ولولاها ما كان. فالشكر لهم، والفضل في كل نتيجة صحيحة لما بنوه، وما وقع من خطأ فعلى هذا المشروع لا عليهم.
+
+| الجهة | ما استُعمل من عملها | الرابط |
+|---|---|---|
+| مختبر CAMeL، جامعة نيويورك أبوظبي | CAMeL Tools، وقاعدة CALIMA-Star الصرفية، ونماذج CAMeLBERT | [github.com/CAMeL-Lab/camel_tools](https://github.com/CAMeL-Lab/camel_tools) |
+| Abjad AI (فارس الأسمري وزملاؤه) | مشكِّل CATT | [github.com/abjadai/catt](https://github.com/abjadai/catt) |
+| فريق ARBML (زيد اليافعي وماجد الشيباني وزملاؤهما) | مدوّنة «أشعار» | [huggingface.co/datasets/arbml/ashaar](https://huggingface.co/datasets/arbml/ashaar) |
+| شعيب النمري (Chouaieb Nemri) | مكتبة PyArud للتقطيع العروضي | [pypi.org/project/pyarud](https://pypi.org/project/pyarud/) |
+| طه زروقي | قطرب لتصريف الأفعال، ومدوّنة Tashkeela | [github.com/linuxscout](https://github.com/linuxscout) |
+| علي فاضل وزملاؤه | التقسيم المعياري لـ Tashkeela للتدريب والاختبار | [github.com/AliOsm/arabic-text-diacritization](https://github.com/AliOsm/arabic-text-diacritization) |
+| مبادرة OpenITI ومشروع KITAB | المعاجم التراثية، ومدوّنة الكتب، وفهرس النصوص | [openiti.org](https://openiti.org) |
+| كايس دوكس، جامعة ليدز | المدوّنة القرآنية (Quranic Arabic Corpus)، في نسخة mustafa0x المصحّحة | [corpus.quran.com](https://corpus.quran.com) |
+| مجموعة ستانفورد لمعالجة اللغات الطبيعية | محلّل Stanza النحوي | [stanfordnlp.github.io/stanza](https://stanfordnlp.github.io/stanza/) |
+| مختبر MIND، الجامعة الأمريكية في بيروت | نموذج AraELECTRA | [github.com/aub-mind/arabert](https://github.com/aub-mind/arabert) |
+| إكرام هورامي | موقع The Arabic Lexicon | [arabiclexicon.hawramani.com](https://arabiclexicon.hawramani.com) |
+| Anthropic | بروتوكول سياق النموذج (MCP) وتطبيق Claude | [modelcontextprotocol.io](https://modelcontextprotocol.io) |
+| المكتبة الشاملة | أصل كثير من نصوص OpenITI | [shamela.ws](https://shamela.ws) |
+
+وكذلك المكتبات العامة التي تقوم عليها النماذج والفهارس: PyTorch، وHugging Face Transformers، وONNX Runtime، وSQLite.
+
 ## المراجع
 
 <div dir="ltr">
@@ -651,5 +673,7 @@ flowchart LR
 - Keyness, standardized TTR and Jaccard overlap, and authorship attribution with Burrows's Delta and Cosine Delta.
 
 **Roadmap.** Next come a poetry-specific diacritizer, hosted access as a remote connector, and a graphical Windows installer. After those, a hand-annotated *iʿrāb* test set, broader morphological gold cases, expert human evaluation, and a paper.
+
+**Acknowledgements.** This project stands on open work by CAMeL Lab (NYU Abu Dhabi), Abjad AI (CATT), ARBML (Ashaar), Chouaieb Nemri (PyArud), Taha Zerrouki (Qutrub, Tashkeela), Ali Fadel et al., OpenITI and the KITAB project, Kais Dukes (Quranic Arabic Corpus), the Stanford NLP Group (Stanza), AUB MIND Lab (AraELECTRA), Ikram Hawramani (The Arabic Lexicon), and Anthropic (MCP, Claude). Credit for what is right belongs to them; errors are this project's own.
 
 **Authorship.** Designed by Sayed Hassan, who also defined its methods and sources. The code was written with the assistance of Anthropic's Claude, under the author's direction and review.

@@ -165,6 +165,13 @@ td.v{font-family:var(--kufi);color:var(--gold);white-space:nowrap;font-variant-n
 .author > svg{width:96px;height:96px}
 .author .links{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px}
 
+.thanks{display:grid;grid-template-columns:repeat(3,1fr);gap:0 32px;margin-top:22px}
+.thanks a{display:block;padding:14px 0;border-bottom:1px solid var(--line);text-decoration:none;min-width:0}
+.thanks b{display:block;font-family:var(--kufi);font-weight:500;font-size:17px;color:var(--text)}
+.thanks span{display:block;font-size:15px;color:var(--muted);line-height:1.7}
+.thanks a:hover b{color:var(--gold)}
+@media (max-width:900px){.thanks{grid-template-columns:1fr 1fr}}
+@media (max-width:480px){.thanks{grid-template-columns:1fr}}
 footer .wrap{padding-block:30px 44px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-family:var(--ui);font-size:14px;color:var(--muted)}
 footer a{color:var(--muted)}
 
@@ -196,7 +203,7 @@ footer a{color:var(--muted)}
   <div class="wrap">
     <a class="brand" href="#top" aria-label="العربية"><svg viewBox="0 0 512 512" aria-hidden="true"><rect x="0" y="0" width="512" height="512" rx="88.0" fill="#121A24"/><rect x="34.0" y="34.0" width="444.0" height="444.0" rx="60.0" fill="none" stroke="#C9A35C" stroke-width="6.0"/><path d="M142 -200Q99 -186 66.5 -150.0Q34 -114 34 -59Q34 -22 44.0 4.5Q54 31 70 53Q40 81 29.5 116.0Q19 151 25.5 187.0Q32 223 52.5 253.0Q73 283 105.0 301.5Q137 320 178 320Q212 320 236.5 303.5Q261 287 275.5 264.5Q290 242 292 224Q267 243 244.0 250.5Q221 258 202 254Q185 252 171.5 236.5Q158 221 158 204Q158 187 169.0 172.5Q180 158 201.5 149.0Q223 140 256 140H359L299 0H236Q224 0 207.0 -7.5Q190 -15 177.5 -30.5Q165 -46 165 -72Q165 -104 182.0 -123.5Q199 -143 225.5 -151.5Q252 -160 282.5 -161.0Q313 -162 341.5 -158.0Q370 -154 389 -147Q372 -168 342.0 -182.0Q312 -196 276.5 -203.0Q241 -210 206.0 -209.5Q171 -209 142 -200Z" fill="#E9D8B0" transform="translate(139.29 293.29) scale(0.56654 -0.56654)"/></svg><span>العربية</span></a>
     <nav class="nav" aria-label="أقسام الصفحة">
-      <a href="#idea">الفكرة</a><a href="#tiers">مراتب الأحكام</a><a href="#tools">الأدوات</a><a href="#accuracy">الدقة</a><a href="#road">التطوير</a><a href="#install">التثبيت</a>
+      <a href="#idea">الفكرة</a><a href="#tiers">مراتب الأحكام</a><a href="#tools">الأدوات</a><a href="#accuracy">الدقة</a><a href="#road">التطوير</a><a href="#install">التثبيت</a><a href="#thanks">شكر وتقدير</a>
     </nav>
   </div>
 </header>
@@ -446,6 +453,29 @@ footer a{color:var(--muted)}
         <div class="row"><div class="lab">شاهد</div><div>خرّج «قفا نبكِ من ذكرى حبيبٍ ومنزلِ».</div></div>
         <div class="row"><div class="lab">دلالة</div><div>كيف تطوّر استعمال «الاستعارة» عبر القرون؟</div></div>
       </div>
+    </div>
+  </div>
+</section>
+
+<section id="thanks">
+  <div class="wrap">
+    <p class="eyebrow">شكر وتقدير</p>
+    <h2>قائمٌ على أعمال غيره</h2>
+    <p class="measure">قام هذا المشروع على أعمالٍ مفتوحة أتاحها أصحابها للباحثين، ولولاها ما كان. فالشكر لهم، والفضل في كل نتيجة صحيحة لما بنوه، وما وقع من خطأ فعلى هذا المشروع لا عليهم.</p>
+    <div class="thanks">
+      <a href="https://github.com/CAMeL-Lab/camel_tools" target="_blank" rel="noopener"><b>مختبر CAMeL، جامعة نيويورك أبوظبي</b><span>CAMeL Tools، وقاعدة CALIMA-Star الصرفية، ونماذج CAMeLBERT</span></a>
+      <a href="https://github.com/abjadai/catt" target="_blank" rel="noopener"><b>Abjad AI (فارس الأسمري وزملاؤه)</b><span>مشكِّل CATT</span></a>
+      <a href="https://huggingface.co/datasets/arbml/ashaar" target="_blank" rel="noopener"><b>فريق ARBML (زيد اليافعي وماجد الشيباني وزملاؤهما)</b><span>مدوّنة «أشعار»</span></a>
+      <a href="https://pypi.org/project/pyarud/" target="_blank" rel="noopener"><b>شعيب النمري (Chouaieb Nemri)</b><span>مكتبة PyArud للتقطيع العروضي</span></a>
+      <a href="https://github.com/linuxscout" target="_blank" rel="noopener"><b>طه زروقي</b><span>قطرب لتصريف الأفعال، ومدوّنة Tashkeela</span></a>
+      <a href="https://github.com/AliOsm/arabic-text-diacritization" target="_blank" rel="noopener"><b>علي فاضل وزملاؤه</b><span>التقسيم المعياري لـ Tashkeela للتدريب والاختبار</span></a>
+      <a href="https://openiti.org" target="_blank" rel="noopener"><b>مبادرة OpenITI ومشروع KITAB</b><span>المعاجم التراثية، ومدوّنة الكتب، وفهرس النصوص</span></a>
+      <a href="https://corpus.quran.com" target="_blank" rel="noopener"><b>كايس دوكس، جامعة ليدز</b><span>المدوّنة القرآنية (Quranic Arabic Corpus)، في نسخة mustafa0x المصحّحة</span></a>
+      <a href="https://stanfordnlp.github.io/stanza/" target="_blank" rel="noopener"><b>مجموعة ستانفورد لمعالجة اللغات الطبيعية</b><span>محلّل Stanza النحوي</span></a>
+      <a href="https://github.com/aub-mind/arabert" target="_blank" rel="noopener"><b>مختبر MIND، الجامعة الأمريكية في بيروت</b><span>نموذج AraELECTRA</span></a>
+      <a href="https://arabiclexicon.hawramani.com" target="_blank" rel="noopener"><b>إكرام هورامي</b><span>موقع The Arabic Lexicon</span></a>
+      <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener"><b>Anthropic</b><span>بروتوكول سياق النموذج (MCP) وتطبيق Claude</span></a>
+      <a href="https://shamela.ws" target="_blank" rel="noopener"><b>المكتبة الشاملة</b><span>أصل كثير من نصوص OpenITI</span></a>
     </div>
   </div>
 </section>
