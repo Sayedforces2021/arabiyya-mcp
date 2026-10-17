@@ -83,11 +83,22 @@ def stanza_models():
     import stanza
     stanza.download("ar", package="default_accurate", processors="tokenize,mwt,pos,lemma,depparse", verbose=False)
     stanza.download("ar", package="default", processors="tokenize,mwt,pos,lemma,depparse", verbose=False)
+    from transformers import AutoModel, AutoTokenizer  # يعتمد عليه النموذج الأدق، ولا يُنزّله Stanza وحده
+    AutoTokenizer.from_pretrained("aubmindlab/araelectra-base-discriminator")
+    AutoModel.from_pretrained("aubmindlab/araelectra-base-discriminator")
     nlp = stanza.Pipeline("ar", processors="tokenize,mwt,pos,lemma,depparse", package="default_accurate",
                           download_method=None, verbose=False, use_gpu=False)
     nlp("ذهب الطالب إلى المدرسة")  # يُنزّل نموذج المحوّل عند أول تشغيل
     open(os.path.join(HOME, "stanza.done"), "w").close()
     print("تم.")
+
+
+def catt_models():
+    """نموذج CATT للتشكيل (محوِّل على مستوى الحروف مدرَّب على النصوص التراثية)."""
+    from catt_tashkeel import CATTEncoderDecoder
+    ed = CATTEncoderDecoder()
+    print(ed.do_tashkeel("ذهب الطالب إلى المدرسة", verbose=False))
+    open(os.path.join(HOME, "catt.done"), "w").close()
 
 
 ok = [
@@ -98,6 +109,7 @@ ok = [
     step("نموذج العربية الكلاسيكية ومتجهات المفردات (تنزيل نحو 440 م.ب، وحساب دقائق)",
          os.path.join(HOME, "ca_vocab_emb_v2.npz"), semantic),
     step("كتب الفروق والأضداد والإبدال والمعرّب (تنزيل نحو 15 م.ب)", os.path.join(HOME, "lughawiyyat.done"), lughawiyyat),
+    step("مشكِّل النصوص التراثية CATT (تنزيل نحو 200 م.ب)", os.path.join(HOME, "catt.done"), catt_models),
     step("المحلل النحوي للإعراب: Stanza مع AraELECTRA (تنزيل نحو 700 م.ب)", os.path.join(HOME, "stanza.done"), stanza_models),
 ]
 print("\nتجهيز البيانات:", "اكتمل." if all(ok) else "اكتمل مع خطوات متعذّرة (انظر أعلاه).")

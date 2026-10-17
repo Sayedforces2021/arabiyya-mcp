@@ -199,7 +199,16 @@ def analyze_text(text: str, alternatives: int = 1) -> list[dict]:
     return out
 
 
-def _diacritize(text: str) -> str:
+@lru_cache(maxsize=1)
+def _catt():
+    """CATT: مشكِّل محوِّلي على مستوى الحروف مدرَّب على نصوص تراثية (Tashkeela)، يضبط أواخر الكلم أيضًا."""
+    import sys, contextlib
+    from catt_tashkeel import CATTEncoderDecoder
+    with contextlib.redirect_stdout(sys.stderr):  # المكتبة تطبع رسائل تفسد قناة MCP
+        return CATTEncoderDecoder()
+
+
+def _diacritize_camel(text: str) -> str:
     tokens = simple_word_tokenize(text)
     words = []
     for dw in _bert().disambiguate(tokens):
@@ -207,10 +216,67 @@ def _diacritize(text: str) -> str:
     return " ".join(words)
 
 
+def _diacritize_catt(text: str) -> str:
+    import re
+    lines = text.split("\n")
+    out = []
+    for line in lines:
+        if not line.strip():
+            out.append(line)
+            continue
+        # قطع الأسطر الطويلة عند علامات الترقيم حتى لا تتجاوز طاقة النموذج
+        parts = re.split(r"([.،؛!?؟:])", line)
+        buf, chunks = "", []
+        for p_ in parts:
+            if len(buf) + len(p_) > 400 and buf:
+                chunks.append(buf)
+                buf = ""
+            buf += p_
+        if buf:
+            chunks.append(buf)
+        out.append("".join(_catt().do_tashkeel(_strip_tashkeel(c), verbose=False) if re.search("[ء-ي]", c) else c for c in chunks))
+    return "\n".join(out)
+
+
+@lru_cache(maxsize=1)
+def _poetry_model():
+    """مشكِّل الشعر المدرَّب على الجهاز (train_diacritizer.py) إن وُجد وكان أدق من CATT في اختبار الشعر."""
+    try:
+        import sys, json
+        here = os.path.dirname(os.path.abspath(__file__))
+        if here not in sys.path:
+            sys.path.insert(0, here)
+        import diac_model
+        rep = os.path.join(diac_model.MODEL_DIR, "report.json")
+        if not os.path.exists(rep):
+            return None
+        with open(rep, encoding="utf-8") as f:
+            r = json.load(f)
+        mine = r.get("الموازنة: النموذج الجديد على الأبيات نفسها", {}).get("DER مع علامة الإعراب")
+        catt = r.get("الموازنة: CATT على الأبيات نفسها", {}).get("DER مع علامة الإعراب")
+        if mine is None or (catt is not None and mine >= catt):
+            return None
+        return diac_model.get()
+    except Exception:
+        return None
+
+
+def _diacritize(text: str, engine: str = "auto") -> str:
+    """التشكيل الآلي: CATT أولًا (أدق في النصوص التراثية وأواخر الكلم)، ثم CAMeL احتياطًا."""
+    if engine in ("auto", "catt"):
+        try:
+            return _diacritize_catt(text)
+        except Exception:
+            if engine == "catt":
+                raise
+    return _diacritize_camel(text)
+
+
 @mcp.tool()
-def diacritize(text: str) -> str:
-    """تشكيل نص عربي آليًّا بحسب السياق."""
-    return _diacritize(text)
+def diacritize(text: str, engine: str = "auto") -> str:
+    """تشكيل نص عربي آليًّا بحسب السياق، بأواخر الكلم.
+    engine: «catt» (الافتراضي: مشكِّل محوِّلي على مستوى الحروف مدرَّب على النصوص التراثية) أو «camel» (CAMeL BERT المدرَّب على الفصحى المعاصرة)."""
+    return _diacritize(text, engine)
 
 
 HARAKAT = set("ًٌٍَُِّْ")
@@ -329,6 +395,14 @@ def _word_candidates(orig: str, base: str, limit: int = 24) -> list:
             seen.add(c)
             out.append(c)
     add(base, check=False)
+    pm = _poetry_model()
+    if pm is not None:  # مرشحات مشكِّل الشعر مرتبةً باحتمالها
+        try:
+            for c, _p in pm.word_candidates(orig, 8)[0]:
+                add(c)
+                _CAND_TRUST[c] = True
+        except Exception:
+            pass
     try:
         anal = _analyzer().analyze(_strip_tashkeel(orig))
     except Exception:
@@ -1463,15 +1537,25 @@ def _prepare_verse_text(text: str):
     return " ".join(_sun_shadda(w) for w in t.split()), n
 
 
+def _diacritize_verse(text: str) -> str:
+    m = _poetry_model()
+    if m is not None:
+        try:
+            return m.diacritize(text)
+        except Exception:
+            pass
+    return _diacritize(text)
+
+
 def _prepare_verse_text0(text: str):
     letters = sum(1 for c in text if "ء" <= c <= "ي")
     marks = sum(1 for c in text if c in HARAKAT)
     ratio = marks / letters if letters else 0
     if ratio < 0.3:
-        return _diacritize(text), "البيت غير مشكول فشُكِّل آليًّا."
+        return _diacritize_verse(text), "البيت غير مشكول فشُكِّل آليًّا."
     if ratio < 0.85:
         try:
-            return _merge_tashkeel(text, _diacritize(_strip_tashkeel(text))), "التشكيل ناقص فأُكمل آليًّا مع إبقاء ضبط الأصل."
+            return _merge_tashkeel(text, _diacritize_verse(_strip_tashkeel(text))), "التشكيل ناقص فأُكمل آليًّا مع إبقاء ضبط الأصل."
         except Exception:
             return text, None
     return text, None
@@ -2629,7 +2713,7 @@ def mizan(word: str, context: str | None = None) -> dict:
             if ah:
                 r["باب الفعل"] = _BAB.get(ah, "")
                 r["الوزن"] = {"ضمة": "فَعَلَ", "كسرة": "فَعَلَ", "فتحة": "فَعِلَ"}[ah] if m["steps"] else r["الوزن"]
-        alts = [f"{x['wazn']} ({x['desc']})" for x in ms[1:4] if x["wazn"] != m["wazn"]]
+        alts = list(dict.fromkeys(f"{x['wazn']} ({x['desc']})" for x in ms[1:6] if x["wazn"] != m["wazn"]))[:3]
         if alts:
             r["أوزان أخرى تحتملها"] = alts
         if len(roots) > 1 and roots[0] == m["root"]:
@@ -2901,7 +2985,7 @@ def _role(w, sent, by_id, kids) -> tuple:
         cop = [k for k in kids.get(w.id, []) if k.deprel == "cop"]
         if cop:
             return f"خبر {_strip_tashkeel(cop[0].text)}", "Acc"
-        inna = [k for k in kids.get(w.id, []) if _bare_ar(k.text) in {_norm(x) for x in _NASIKH_INNA} and k.deprel in ("mark", "aux", "cop")]
+        inna = [k for k in kids.get(w.id, []) if _bare_ar(k.text) in {_norm(x) for x in _NASIKH_INNA} and k.id < w.id]
         if inna:
             return f"خبر {_NASIKH_INNA.get(_strip_tashkeel(inna[0].text), _strip_tashkeel(inna[0].text))}", "Nom"
         return "خبر", "Nom"
@@ -2926,6 +3010,10 @@ def _role(w, sent, by_id, kids) -> tuple:
         return "مفعول به ثانٍ", "Acc"
     if rel == "amod":
         return f"نعت لـ«{_strip_tashkeel(head.text)}»" if head else "نعت", hf.get("Case")
+    own_cop = [k for k in kids.get(w.id, []) if k.deprel == "cop" or (k.upos == "AUX" and _bare_ar(k.lemma) in {_norm(x) for x in _NASIKH_KANA})]
+    if own_cop and w.upos != "VERB":
+        n = _strip_tashkeel(own_cop[0].text)
+        return f"خبر {n}" + ("، والجملة معطوفة على ما قبلها" if rel == "conj" else ""), "Acc"
     if rel == "conj":
         return f"معطوف على «{_strip_tashkeel(head.text)}»" if head else "معطوف", hf.get("Case") if head and head.upos != "VERB" else None
     if rel == "appos":
@@ -2959,7 +3047,11 @@ def _role(w, sent, by_id, kids) -> tuple:
     if rel == "ccomp":
         return "جملة في محل نصب مفعول به", None
     if rel == "acl":
-        return "جملة صلة الموصول أو نعت جملة", None
+        if head is not None and (_bare_ar(head.lemma) in ("الذي", "التي", "الذين", "اللذان", "اللتان", "اللاتي", "اللواتي", "من", "ما") or (head.upos in ("PRON", "DET"))):
+            return "جملة صلة الموصول لا محل لها من الإعراب", None
+        if head is not None and hf.get("Definite") == "Ind":
+            return f"جملة {_CASE_MAHALL.get(hf.get('Case'), 'في محل')} نعت لـ«{_strip_tashkeel(head.text)}»", None
+        return f"جملة {_CASE_MAHALL.get(hf.get('Case'), 'في محل')} حال من «{_strip_tashkeel(head.text)}»" if head is not None else "جملة حالية أو نعت", None
     return "", f.get("Case")
 
 
@@ -2986,6 +3078,9 @@ def _irab_word(w, sent, by_id, kids) -> str:
         return f"{_NASIKH_INNA[t]}: حرف ناسخ (توكيد ونصب أو ما في معناه) مبني على الفتح لا محل له من الإعراب"
     if w.upos in ("PART", "SCONJ", "AUX") and t in _PARTICLES:
         return _PARTICLES[t]
+    if (w.upos == "AUX" or rel == "cop") and (_bare_ar(w.lemma) in {_norm(x) for x in _NASIKH_KANA} or _bare_ar(w.text) in {_norm(x) for x in _NASIKH_KANA}):
+        return _verb_desc(w, f).replace("ناقص (ناسخ) ", "").replace("فعل ماضٍ", "فعل ماضٍ ناقص (ناسخ)").replace("فعل مضارع", "فعل مضارع ناقص (ناسخ)") \
+            + "، يرفع الاسم وينصب الخبر"
     if w.upos == "VERB":
         d = _verb_desc(w, f)
         role, _ = _role(w, sent, by_id, kids)
@@ -3005,7 +3100,7 @@ def _irab_word(w, sent, by_id, kids) -> str:
     if case in _CASE_AR:
         sign = _sign(w, f, case)
         verb = {"Nom": "رفعه", "Acc": "نصبه", "Gen": "جره"}[case]
-        out = f"{role} {_CASE_AR[case]} وعلامة {verb} {sign}"
+        out = f"{role} وعلامة {verb} {sign}" if role.startswith("اسم مجرور") else f"{role} {_CASE_AR[case]} وعلامة {verb} {sign}"
         if f.get("Definite") == "Cons":
             out += "، وهو مضاف"
         return out
@@ -3016,7 +3111,7 @@ def _end_mark(w, case_or_mood) -> str:
     """حركة الآخر المقترحة: الضمة أو الفتحة أو الكسرة أو السكون، منوّنة للنكرة."""
     f = _feats(w)
     t = _strip_tashkeel(w.text)
-    if t.endswith(("ا", "ى", "و", "ي", "ون", "ين", "ان", "ات")) and w.upos != "VERB" and not t.endswith("ات"):
+    if t.endswith(("ا", "ى", "و", "ي", "ون", "ين", "ان")) or (t.endswith("ات") and w.upos == "VERB"):
         return ""
     ind = f.get("Definite") == "Ind"
     if w.upos == "VERB":
@@ -3797,19 +3892,47 @@ def _bench_attr(n_poets: int, seed: int):
             "المنهج": "لكل شاعر تُعزل قصائد كاملة (نحو 1500 كلمة) للاختبار، ويُبنى أسلوبه من باقي شعره بعد حذف كل بيت مكرر منها؛ ثم يُنسب كل نص مختبر إلى أقرب الشعراء بمقياس Cosine Delta على 150 لفظًا."}
 
 
+_BENCH_JOBS = {}
+
+
 @mcp.tool()
 def benchmark(task: str = "meter", sample: int = 300, seed: int = 1) -> dict:
     """قياس دقة الأدوات على بيانات معيارية محلية، ليعرف الباحث حدود الاعتماد عليها:
     task: «meter» دقة التقطيع ومعرفة البحر (أبيات «أشعار» المعلَّمة)، أو «root» دقة استخراج الجذر (المدوّنة القرآنية)، أو «attribution» دقة نسبة النص إلى قائله (شعراء «أشعار»).
-    sample: حجم العينة (للبحر عدد الأبيات، وللجذر عدد الكلمات، وللنسبة عدد الشعراء). seed: بذرة العينة العشوائية لإعادة الإنتاج."""
+    sample: حجم العينة (للبحر عدد الأبيات، وللجذر عدد الكلمات، وللنسبة عدد الشعراء). seed: بذرة العينة العشوائية لإعادة الإنتاج.
+    القياس يستغرق دقائق، فيعمل في الخلفية: أعد الطلب نفسه بعد قليل لتأخذ النتيجة."""
+    import json, threading, time
     t = task.strip().lower()
-    if t == "meter":
-        return _bench_meter(max(14, min(int(sample), 2000)), seed)
-    if t == "root":
-        return _bench_root(max(50, min(int(sample), 20000)), seed)
-    if t in ("attribution", "attr"):
-        return _bench_attr(max(3, min(int(sample), 40)), seed)
-    return {"تنبيه": "المهام: meter أو root أو attribution."}
+    t = "attribution" if t == "attr" else t
+    fns = {"meter": (_bench_meter, 14, 2000), "root": (_bench_root, 50, 20000), "attribution": (_bench_attr, 3, 40)}
+    if t not in fns:
+        return {"تنبيه": "المهام: meter أو root أو attribution."}
+    fn, lo, hi = fns[t]
+    n = max(lo, min(int(sample), hi))
+    path = os.path.join(SARF_HOME, f"benchmark_{t}_{n}_{seed}.json")
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    key = (t, n, seed)
+    job = _BENCH_JOBS.get(key)
+    if job and job.get("error"):
+        err = job["error"]
+        _BENCH_JOBS.pop(key, None)
+        return {"تنبيه": f"تعذّر القياس: {err}"}
+    if not job:
+        def run():
+            try:
+                r = fn(n, seed)
+                r["البذرة"] = seed
+                r["التاريخ"] = time.strftime("%Y-%m-%d")
+                with open(path, "w", encoding="utf-8") as f:
+                    json.dump(r, f, ensure_ascii=False, indent=1)
+            except Exception as e:
+                _BENCH_JOBS[key]["error"] = repr(e)
+        _BENCH_JOBS[key] = {"start": time.time()}
+        threading.Thread(target=run, daemon=True).start()
+        return {"الحال": "بدأ القياس في الخلفية", "أعد الطلب": f"benchmark(task='{t}', sample={n}, seed={seed}) بعد دقائق"}
+    return {"الحال": "القياس جارٍ", "مضى (ثانية)": int(time.time() - job["start"])}
 
 
 if __name__ == "__main__":
