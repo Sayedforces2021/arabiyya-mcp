@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="/banner.png" alt="Arabiyya MCP — Bridging Arabic Language with AI" width="100%">
+</p>
+
 <div dir="rtl">
 
 # العربية (arabiyya-mcp)
