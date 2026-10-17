@@ -2,228 +2,478 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" type="image/svg+xml" href="arabiyya-icon-small.svg">
+<meta property="og:image" content="https://raw.githubusercontent.com/Sayedforces2021/arabiyya-mcp/main/brand/social-preview.png">
 <title>العربية</title>
-<meta name="description" content="خادم MCP لعلوم العربية يعمل داخل Claude بلا إنترنت: الصرف والعروض والأصوات والمعاجم والقرآن والشعر والدلالة والمدوّنات.">
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="العربية: خادمٌ حاسوبي لعلوم العربية يصل النماذج اللغوية بالمعاجم والمدوّنات والمحلّلات، فيستند الجواب إلى مصدرٍ يُراجَع أو قاعدةٍ تُختبَر.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Aref+Ruqaa:wght@700&family=Reem+Kufi:wght@500;700&family=Cormorant+Garamond:wght@600&display=swap" rel="stylesheet">
-<link rel="icon" type="image/svg+xml" href="arabiyya-icon-small.svg">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Aref+Ruqaa:wght@700&family=Reem+Kufi:wght@500;700&family=IBM+Plex+Sans+Arabic:wght@400;500&family=Cormorant+Garamond:wght@600&display=swap">
 <style>
-/* هوية العربية: حبر الليل والرَّقّ والذهب؛ الختم الكوفي؛ الفصل بالخطوط لا بالظلال */
+/* Layout: a manuscript page under a lamp. Dark-first; one bold element (the hero's ghost ʿayn and the worked tool call); everything else quiet, separated by hairlines. */
 :root{
-  --paper:#F6F0E2; --ink:#121A24; --muted:#5B6573; --line:#D9CCAF;
-  --accent:#7A5C22; --accent-soft:#EDE4D0; --card:#FBF7EC; --code:#EDE4D0;
-  --kufi:"Reem Kufi","Noto Kufi Arabic",sans-serif; --naskh:Amiri,"Noto Naskh Arabic",serif;
-  --ruqaa:"Aref Ruqaa",Amiri,serif; --latin:"Cormorant Garamond",Georgia,serif;
+  --ground:#121A24; --raised:#1A2430; --text:#E9D8B0; --muted:#9AA3AE; --gold:#C9A35C; --line:#2A3644; --ghost:#17212C; --code:#0E151E;
+  --ruqaa:"Aref Ruqaa", Amiri, serif;
+  --kufi:"Reem Kufi", "Noto Kufi Arabic", sans-serif;
+  --naskh:Amiri, "Noto Naskh Arabic", serif;
+  --ui:"IBM Plex Sans Arabic", system-ui, sans-serif;
+  --latin:"Cormorant Garamond", Georgia, serif;
+  --mono:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme:dark;
 }
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --paper:#121A24; --ink:#E9D8B0; --muted:#9AA3AE; --line:#2A3644;
-    --accent:#C9A35C; --accent-soft:#1B2632; --card:#16202B; --code:#1B2632; color-scheme:dark;
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --ground:#F6F0E2; --raised:#EDE4D0; --text:#121A24; --muted:#5B6573; --gold:#7A5C22; --line:#D9CCAF; --ghost:#EEE6D3; --code:#FBF7EC;
+    color-scheme:light;
   }
 }
-:root[data-theme="dark"]{
-  --paper:#121A24; --ink:#E9D8B0; --muted:#9AA3AE; --line:#2A3644;
-  --accent:#C9A35C; --accent-soft:#1B2632; --card:#16202B; --code:#1B2632; color-scheme:dark;
+:root[data-theme="light"]{
+  --ground:#F6F0E2; --raised:#EDE4D0; --text:#121A24; --muted:#5B6573; --gold:#7A5C22; --line:#D9CCAF; --ghost:#EEE6D3; --code:#FBF7EC;
+  color-scheme:light;
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--naskh);font-size:19px;line-height:1.9}
-.wrap{max-width:980px;margin:0 auto;padding-block:0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-header{padding:64px 0 40px;border-bottom:1px solid var(--line);text-align:center}
-.seal{width:120px;height:120px;display:block;margin:0 auto 18px}
-.mark{font-family:var(--ruqaa);font-weight:700;font-size:clamp(64px,13vw,112px);line-height:1.1;color:var(--ink);margin:0}
-.latin{font-family:var(--latin);font-weight:600;font-size:18px;letter-spacing:.22em;color:var(--accent);direction:ltr;margin-top:6px}
-.lede{font-family:var(--naskh);font-size:clamp(21px,3.2vw,26px);max-width:720px;margin:24px auto 0;text-wrap:balance}
-.cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:30px}
-.btn{display:inline-block;padding:9px 22px;border:1px solid var(--accent);border-radius:12px;color:var(--accent);text-decoration:none;font-family:var(--kufi);font-weight:500}
-.btn.solid{background:var(--accent);color:var(--paper)}
-.btn:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-section{padding:48px 0;border-bottom:1px solid var(--line)}
-h2{font-family:var(--kufi);font-weight:700;font-size:30px;margin:0 0 6px;color:var(--ink)}
-.sub{color:var(--muted);margin:0 0 28px}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
-.stat{border-top:2px solid var(--accent);padding:14px 4px;text-align:center}
-.stat b{display:block;font-family:var(--kufi);font-size:32px;color:var(--accent);line-height:1.3;font-variant-numeric:tabular-nums}
-.stat span{color:var(--muted);font-size:16px}
-.fanun{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
-.fann{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;min-width:0}
-.fann h3{font-family:var(--kufi);font-weight:500;font-size:22px;margin:0 0 10px}
-.tool{margin:0 0 10px}
-.tool code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;background:var(--code);padding:1px 7px;border-radius:6px;direction:ltr;display:inline-block}
-.tool p{margin:2px 0 0;color:var(--muted);font-size:16px;line-height:1.7}
-.tier{display:inline-block;font-family:var(--kufi);font-size:12px;padding:0 8px;border:1px solid var(--line);border-radius:6px;color:var(--muted);margin-inline-start:6px;vertical-align:middle}
-.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
-ol.steps{padding-inline-start:22px;margin:0}
-ol.steps li{margin-bottom:10px}
-.os{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
-.ask{display:grid;gap:10px}
-.ask div{background:var(--accent-soft);border-radius:12px;padding:12px 16px;font-family:var(--naskh);font-size:20px}
-.notes li{margin-bottom:8px}
-footer{padding:36px 0 56px;color:var(--muted);font-size:15px;text-align:center}
-footer a,section a{color:var(--accent)}
+body{background:var(--ground);color:var(--text);font-family:var(--naskh);font-size:19px;line-height:1.95;direction:rtl}
+a{color:var(--gold)}
+a:focus-visible,.btn:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:6px}
+.wrap{max-width:1080px;margin:0 auto;padding-block:0;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+.measure{max-width:68ch}
+
+/* top bar */
+.bar{border-bottom:1px solid var(--line)}
+.bar .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:14px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
+.brand svg{width:34px;height:34px;flex:none}
+.brand span{font-family:var(--ruqaa);font-size:24px;line-height:1}
+.nav{display:flex;gap:18px;font-family:var(--ui);font-size:14px;flex-wrap:wrap}
+.nav a{color:var(--muted);text-decoration:none}
+.nav a:hover{color:var(--text)}
+
+/* hero */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.ghost{position:absolute;left:-90px;top:-40px;width:520px;height:520px;pointer-events:none}
+.ghost path{fill:var(--ghost)}
+.hero .wrap{position:relative;display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center;padding-block:64px 72px}
+.hero-text{min-width:0}
+.hero h1{font-family:var(--ruqaa);font-weight:700;font-size:clamp(68px,11vw,120px);line-height:1.05;margin:0}
+.latin{font-family:var(--latin);font-weight:600;font-size:17px;letter-spacing:.24em;color:var(--gold);direction:ltr;text-align:right;margin:4px 0 0}
+.thesis{font-family:var(--naskh);font-size:clamp(22px,2.6vw,27px);line-height:1.8;margin:26px 0 0;text-wrap:balance}
+.thesis b{color:var(--gold);font-weight:700}
+.cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px}
+.btn{display:inline-flex;align-items:center;gap:10px;padding:10px 20px;border-radius:12px;font-family:var(--kufi);font-weight:500;font-size:17px;text-decoration:none;border:1px solid var(--gold);color:var(--gold)}
+.btn svg{width:18px;height:18px;fill:currentColor;flex:none}
+.btn.solid{background:var(--gold);color:var(--ground)}
+.btn:hover{filter:brightness(1.08)}
+
+/* worked call */
+.call{background:var(--code);border:1px solid var(--line);border-radius:14px;padding:22px;min-width:0;font-size:17px}
+.call .row{display:grid;grid-template-columns:76px 1fr;gap:14px;padding-block:12px;border-bottom:1px dashed var(--line)}
+.call .row:last-child{border-bottom:0}
+.call .lab{font-family:var(--ui);font-size:12px;letter-spacing:.04em;color:var(--muted);padding-top:6px}
+.call .q{font-family:var(--naskh);font-size:21px}
+.call code{font-family:var(--mono);font-size:13px;direction:ltr;display:inline-block;color:var(--gold)}
+.call dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:2px 14px;font-size:17px}
+.call dt{color:var(--muted);font-family:var(--ui);font-size:13px;padding-top:5px}
+.call dd{margin:0}
+.call .ans{font-size:18px;line-height:1.85}
+.call .cap{font-family:var(--ui);font-size:12px;color:var(--muted);margin:10px 0 0}
+
+/* sections */
+section{border-bottom:1px solid var(--line)}
+section > .wrap{padding-block:64px}
+.eyebrow{font-family:var(--ui);font-size:13px;letter-spacing:.06em;color:var(--gold);margin:0 0 6px}
+h2{font-family:var(--kufi);font-weight:700;font-size:clamp(28px,3.4vw,36px);line-height:1.35;margin:0 0 18px;text-wrap:balance}
+h3{font-family:var(--kufi);font-weight:500;font-size:22px;line-height:1.45;margin:0 0 8px}
+p{margin:0 0 16px}
+.lead{font-size:21px}
+.muted{color:var(--muted)}
+
+.two{display:grid;grid-template-columns:1fr 1fr;gap:40px}
+.two > *{min-width:0}
+
+.errs{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid var(--line);margin-top:28px}
+.errs div{padding:20px 0 4px;padding-inline-start:18px;border-inline-start:1px solid var(--line);min-width:0}
+.errs div:first-child{border-inline-start:0;padding-inline-start:0}
+.errs b{display:block;font-family:var(--kufi);font-weight:500;font-size:19px;margin-bottom:4px}
+.errs p{font-size:17px;color:var(--muted);margin:0}
+
+/* flow diagram */
+.flow{overflow-x:auto;margin-top:26px}
+.flow svg{display:block;width:100%;min-width:640px;height:auto}
+.flow .box{fill:var(--raised);stroke:var(--line);stroke-width:1.5}
+.flow .boxg{fill:var(--code);stroke:var(--gold);stroke-width:1.5}
+.flow .t{fill:var(--text);font-family:var(--kufi);font-size:19px}
+.flow .s{fill:var(--muted);font-family:var(--ui);font-size:13px}
+.flow .ar{stroke:var(--gold);stroke-width:1.6;fill:none}
+.flow .ah{fill:var(--gold)}
+
+/* tiers */
+.tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:28px}
+.tier{background:var(--raised);border-radius:14px;padding:24px;min-width:0}
+.tier .n{font-family:var(--kufi);font-size:15px;color:var(--gold)}
+.tier p{font-size:17px}
+.tier .err{font-size:15px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px;margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 14px}
+.chips code{font-family:var(--mono);font-size:12px;direction:ltr;padding:2px 8px;border:1px solid var(--line);border-radius:6px;color:var(--text)}
+
+/* branches */
+.branches{display:grid;grid-template-columns:repeat(2,1fr);gap:0 40px;margin-top:20px}
+.br{padding:18px 0;border-bottom:1px solid var(--line);min-width:0}
+.br h3{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+.br h3 small{font-family:var(--ui);font-size:13px;color:var(--muted);font-weight:400}
+.br p{font-size:17px;margin:0}
+.br .chips{margin:10px 0 0}
+
+/* numbers */
+.nums{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-top:26px}
+.num{border-top:2px solid var(--gold);padding-top:12px;min-width:0}
+.num b{display:block;font-family:var(--kufi);font-size:30px;line-height:1.3;font-variant-numeric:tabular-nums}
+.num span{font-size:16px;color:var(--muted)}
+
+/* table */
+.tbl{overflow-x:auto;margin-top:22px}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:17px}
+th,td{text-align:right;padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--ui);font-size:13px;font-weight:500;color:var(--muted)}
+td.v{font-family:var(--kufi);color:var(--gold);white-space:nowrap;font-variant-numeric:tabular-nums}
+
+/* not list */
+.not{display:grid;grid-template-columns:1fr 1fr;gap:14px 40px;margin-top:22px}
+.not div{min-width:0;padding-inline-start:16px;border-inline-start:2px solid var(--line)}
+.not b{font-family:var(--kufi);font-weight:500;display:block;font-size:18px}
+.not p{font-size:17px;color:var(--muted);margin:2px 0 0}
+
+/* roadmap */
+.road{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;margin-top:24px}
+.road > div{min-width:0}
+.road h3{font-size:19px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.road ul{list-style:none;margin:0;padding:0}
+.road li{font-size:17px;padding:8px 0;padding-inline-start:22px;position:relative}
+.road li::before{content:"";position:absolute;inset-inline-start:0;top:19px;width:9px;height:9px;transform:rotate(45deg);border:1.5px solid var(--gold)}
+.road .done li::before{background:var(--gold)}
+
+/* install */
+.steps{counter-reset:s;list-style:none;margin:0;padding:0}
+.steps li{counter-increment:s;position:relative;padding-inline-start:44px;margin-bottom:14px}
+.steps li::before{content:counter(s, arabic-indic);position:absolute;inset-inline-start:0;top:2px;width:30px;height:30px;border:1px solid var(--gold);border-radius:8px;display:grid;place-items:center;font-family:var(--kufi);font-size:15px;color:var(--gold)}
+.steps code,p code{font-family:var(--mono);font-size:14px;direction:ltr;display:inline-block;background:var(--raised);padding:0 6px;border-radius:5px}
+
+/* author */
+.author{display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:start}
+.author > svg{width:96px;height:96px}
+.author .links{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px}
+
+footer .wrap{padding-block:30px 44px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-family:var(--ui);font-size:14px;color:var(--muted)}
+footer a{color:var(--muted)}
+
+@media (max-width:900px){
+  .hero .wrap{grid-template-columns:1fr;gap:36px;padding-block:44px 52px}
+  .two,.not{grid-template-columns:1fr;gap:20px}
+  .tiers,.road{grid-template-columns:1fr}
+  .errs{grid-template-columns:1fr 1fr}
+  .errs div:nth-child(3){border-inline-start:0;padding-inline-start:0}
+  .nums{grid-template-columns:repeat(2,1fr)}
+  .branches{grid-template-columns:1fr}
+  .nav{display:none}
+  .ghost{width:360px;height:360px;left:-120px}
+}
+@media (max-width:480px){
+  .errs{grid-template-columns:1fr}
+  .errs div{border-inline-start:0;padding-inline-start:0;border-bottom:1px solid var(--line);padding-bottom:16px}
+  .call .row{grid-template-columns:1fr;gap:4px}
+  .author{grid-template-columns:1fr}
+  body{font-size:18px}
+}
 </style>
+<style>body{margin:0}img{max-width:100%}</style>
 </head>
 <body>
-<header>
+
+
+<header class="bar">
   <div class="wrap">
-    <img class="seal" src="arabiyya-icon.svg" alt="">
-    <h1 class="mark">العربية</h1>
-    <div class="latin">ARABIYYA · MCP</div>
-    <p class="lede">علومُ العربيّة موصولةً بالنماذج اللغويّة: يصوغ النموذج الجواب، ويصدر الحكم عن معجمٍ يُراجَع أو قاعدةٍ تُختبَر.</p>
-    <div class="cta">
-      <a class="btn solid" href="#install">التثبيت</a>
-      <a class="btn" href="#tools">الأدوات</a>
-      <a class="btn" href="https://github.com/Sayedforces2021/arabiyya-mcp">المستودع</a>
-    </div>
+    <a class="brand" href="#top" aria-label="العربية"><svg viewBox="0 0 512 512" aria-hidden="true"><rect x="0" y="0" width="512" height="512" rx="88.0" fill="#121A24"/><rect x="34.0" y="34.0" width="444.0" height="444.0" rx="60.0" fill="none" stroke="#C9A35C" stroke-width="6.0"/><path d="M142 -200Q99 -186 66.5 -150.0Q34 -114 34 -59Q34 -22 44.0 4.5Q54 31 70 53Q40 81 29.5 116.0Q19 151 25.5 187.0Q32 223 52.5 253.0Q73 283 105.0 301.5Q137 320 178 320Q212 320 236.5 303.5Q261 287 275.5 264.5Q290 242 292 224Q267 243 244.0 250.5Q221 258 202 254Q185 252 171.5 236.5Q158 221 158 204Q158 187 169.0 172.5Q180 158 201.5 149.0Q223 140 256 140H359L299 0H236Q224 0 207.0 -7.5Q190 -15 177.5 -30.5Q165 -46 165 -72Q165 -104 182.0 -123.5Q199 -143 225.5 -151.5Q252 -160 282.5 -161.0Q313 -162 341.5 -158.0Q370 -154 389 -147Q372 -168 342.0 -182.0Q312 -196 276.5 -203.0Q241 -210 206.0 -209.5Q171 -209 142 -200Z" fill="#E9D8B0" transform="translate(139.29 293.29) scale(0.56654 -0.56654)"/></svg><span>العربية</span></a>
+    <nav class="nav" aria-label="أقسام الصفحة">
+      <a href="#idea">الفكرة</a><a href="#tiers">مراتب الأحكام</a><a href="#tools">الأدوات</a><a href="#accuracy">الدقة</a><a href="#road">التطوير</a><a href="#install">التثبيت</a>
+    </nav>
   </div>
 </header>
 
-<main class="wrap">
-  <section>
-    <div class="stats">
-      <div class="stat"><b>37</b><span>أداة</span></div>
-      <div class="stat"><b>15</b><span>معجمًا تراثيًّا</span></div>
-      <div class="stat"><b>3.8 ملايين</b><span>بيت من الشعر</span></div>
-      <div class="stat"><b>12 مليون</b><span>كلمة في المدوّنة</span></div>
-      <div class="stat"><b>8,800</b><span>كتاب يمكن إضافته</span></div>
+<main id="top">
+<div class="hero">
+  <svg class="ghost" viewBox="0 0 512 512" aria-hidden="true"><path d="M142 -200Q99 -186 66.5 -150.0Q34 -114 34 -59Q34 -22 44.0 4.5Q54 31 70 53Q40 81 29.5 116.0Q19 151 25.5 187.0Q32 223 52.5 253.0Q73 283 105.0 301.5Q137 320 178 320Q212 320 236.5 303.5Q261 287 275.5 264.5Q290 242 292 224Q267 243 244.0 250.5Q221 258 202 254Q185 252 171.5 236.5Q158 221 158 204Q158 187 169.0 172.5Q180 158 201.5 149.0Q223 140 256 140H359L299 0H236Q224 0 207.0 -7.5Q190 -15 177.5 -30.5Q165 -46 165 -72Q165 -104 182.0 -123.5Q199 -143 225.5 -151.5Q252 -160 282.5 -161.0Q313 -162 341.5 -158.0Q370 -154 389 -147Q372 -168 342.0 -182.0Q312 -196 276.5 -203.0Q241 -210 206.0 -209.5Q171 -209 142 -200Z" transform="translate(84.82 301.89) scale(0.83092 -0.83092)"/></svg>
+  <div class="wrap">
+    <div class="hero-text">
+      <h1>العربية</h1>
+      <p class="latin">ARABIYYA · MCP</p>
+      <p class="thesis">خادمٌ حاسوبي لعلوم العربية، يصل النماذج اللغوية بالمعاجم والمدوّنات والمحلّلات. <b>يصوغ النموذجُ الجواب، ويصدر الحكمُ عن مصدرٍ يُراجَع أو قاعدةٍ تُختبَر.</b></p>
+      <div class="cta">
+        <a class="btn solid" href="https://github.com/Sayedforces2021/arabiyya-mcp" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>المستودع على GitHub</a>
+        <a class="btn" href="https://x.com/ikagi07" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>@ikagi07</a>
+      </div>
     </div>
-  </section>
+    <figure class="call" aria-label="مثال على استدعاء أداة">
+      <div class="row"><div class="lab">السؤال</div><div class="q">ما وزن «اسْتَقامَ»؟ وما جرى فيه من إعلال؟</div></div>
+      <div class="row"><div class="lab">الاستدعاء</div><div><code>mizan(word="استقام")</code></div></div>
+      <div class="row"><div class="lab">مُخرَج الأداة</div><div>
+        <dl>
+          <dt>الجذر</dt><dd>ق و م (أجوف واوي)</dd>
+          <dt>الوزن</dt><dd>اسْتَفْعَلَ</dd>
+          <dt>الأصل</dt><dd>اسْتَقْوَمَ</dd>
+          <dt>الخطوة ١</dt><dd>نُقلت فتحة الواو إلى القاف الساكنة قبلها</dd>
+          <dt>الخطوة ٢</dt><dd>قُلبت الواو ألفًا لتحركها في الأصل وانفتاح ما قبلها الآن</dd>
+          <dt>التحقق</dt><dd>أعادت القواعدُ الأصلَ إلى الكلمة نفسها</dd>
+        </dl>
+      </div></div>
+      <div class="row"><div class="lab">الجواب</div><div class="ans">وزنها «اسْتَفْعَلَ»، وأصلها «اسْتَقْوَمَ»، أُعلّت بالنقل ثم بالقلب.</div></div>
+      <figcaption class="cap">مثال مبسَّط لما يجري: الحكم من محرّك الإعلال، والصياغة من النموذج.</figcaption>
+    </figure>
+  </div>
+</div>
 
-  <section id="tiers">
+<section id="problem">
+  <div class="wrap">
+    <p class="eyebrow">المشكلة</p>
+    <h2>نموذجٌ فصيح، لكنه يجيب من حفظه</h2>
+    <div class="measure">
+      <p class="lead">النماذج اللغوية الكبيرة تُحسن العربية عبارةً وفهمًا، لكنها في مسائل علومها تجيب من محفوظها الإحصائي، كعالمٍ واسع الحفظ بلا مكتبة يرجع إليها. فلا يتميّز في جوابها المنقولُ من المستنتَج، ولا الصحيحُ من الموهوم، ويقع الخطأ بنبرة الواثق.</p>
+      <p>ويظهر ذلك في أخصّ مواضع الصنعة، حيث لا يُغني حسنُ العبارة عن ضبط القاعدة وتوثيق النقل:</p>
+    </div>
+    <div class="errs">
+      <div><b>الميزان</b><p>وزن المعتلّ على لفظه لا على أصله، وإسقاط خطوات الإعلال أو تخليطها.</p></div>
+      <div><b>العروض</b><p>تعيين البحر بالتخمين حين يختلّ الضبط، وتقطيعٌ لا تتفق رموزه مع حروفه.</p></div>
+      <div><b>الشاهد</b><p>نسبة البيت إلى غير قائله، أو روايته بلفظٍ لم يُروَ به.</p></div>
+      <div><b>المعجم</b><p>نصٌّ يُنسب إلى «اللسان» أو «المقاييس» وليس فيهما بلفظه.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="idea">
+  <div class="wrap">
+    <p class="eyebrow">الفكرة</p>
+    <h2>الفصل بين الصياغة والحكم</h2>
+    <div class="two">
+      <div>
+        <p class="lead">يتولّى النموذج اللغوي فهمَ السؤال وصياغةَ الجواب، ويصدر الحكم نفسه عن أداةٍ معلومة المنهج.</p>
+        <p>والوسيط بينهما بروتوكول سياق النموذج (Model Context Protocol): صيغةٌ متفق عليها للرسائل بين النموذج والأدوات. فإذا سأل الباحث، اختار النموذج الأداة المناسبة وأرسل إليها المُدخَل، فأجابته بنتيجةٍ منظّمة، ثم صاغ منها الجواب.</p>
+      </div>
+      <div>
+        <p>ويعمل الخادم على جهاز الباحث: تُنزَّل البيانات مرة واحدة، ثم تعمل الأدوات بلا اتصال بالشبكة، فلا تخرج النصوص من الجهاز ولا كلفة استضافة.</p>
+        <p class="muted">وتعمل الأداة مع Claude ومع أي عميل يدعم البروتوكول. وهي لا تُدرّب النموذج ولا تُغيّره، وإنما يرجع إليها كما يرجع الباحث إلى كتاب.</p>
+      </div>
+    </div>
+    <div class="flow" role="img" aria-label="الباحث يسأل، والنموذج يستدعي الأداة، والأداة ترجع إلى المصدر أو القاعدة، ثم يصوغ النموذج الجواب">
+      <svg viewBox="0 0 980 190">
+        <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="ah" d="M0 0L10 5L0 10z"/></marker></defs>
+        <rect class="box" x="790" y="40" width="170" height="96" rx="12"/>
+        <text class="t" x="875" y="84" text-anchor="middle">الباحث</text>
+        <text class="s" x="875" y="110" text-anchor="middle">يسأل بالعربية</text>
+        <rect class="box" x="545" y="40" width="190" height="96" rx="12"/>
+        <text class="t" x="640" y="84" text-anchor="middle">النموذج اللغوي</text>
+        <text class="s" x="640" y="110" text-anchor="middle">يفهم ويختار ويصوغ</text>
+        <rect class="boxg" x="290" y="40" width="200" height="96" rx="12"/>
+        <text class="t" x="390" y="84" text-anchor="middle">خادم العربية</text>
+        <text class="s" x="390" y="110" text-anchor="middle">37 أداة</text>
+        <rect class="box" x="20" y="14" width="215" height="66" rx="12"/>
+        <text class="t" x="127" y="44" text-anchor="middle">المصادر</text>
+        <text class="s" x="127" y="66" text-anchor="middle">معاجم · قرآن · شعر · مدوّنة</text>
+        <rect class="box" x="20" y="98" width="215" height="66" rx="12"/>
+        <text class="t" x="127" y="128" text-anchor="middle">القواعد والنماذج</text>
+        <text class="s" x="127" y="150" text-anchor="middle">إعلال · عروض · إعراب</text>
+        <path class="ar" d="M788 76H737" marker-end="url(#ah)"/>
+        <path class="ar" d="M737 100H788" marker-end="url(#ah)"/>
+        <path class="ar" d="M543 76H492" marker-end="url(#ah)"/>
+        <path class="ar" d="M492 100H543" marker-end="url(#ah)"/>
+        <path class="ar" d="M288 70H237" marker-end="url(#ah)"/>
+        <path class="ar" d="M288 106H237" marker-end="url(#ah)"/>
+        <text class="s" x="762" y="66" text-anchor="middle">سؤال</text>
+        <text class="s" x="762" y="124" text-anchor="middle">جواب</text>
+        <text class="s" x="517" y="66" text-anchor="middle">MCP</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section id="tiers">
+  <div class="wrap">
+    <p class="eyebrow">المنهج</p>
     <h2>مراتب الأحكام</h2>
-    <p class="sub">ما تُخرجه الأدوات ليس من جنس واحد، فيُقدَّر الوثوق به بحسب مصدر الحكم.</p>
+    <p class="measure lead">ما تُخرجه الأدوات ليس من جنس واحد. فيُرتَّب بحسب مصدر الحكم، وبه تُقدَّر درجة الوثوق به وجهة الخطأ فيه.</p>
     <div class="tiers">
-      <div class="fann"><h3>١. النقل</h3><p>نصٌّ في مصدر معيّن يُنقل بلفظه مع موضعه، كالمعاجم والقرآن والشعر. وخطؤه خطأ النسخة الرقمية.</p></div>
-      <div class="fann"><h3>٢. القاعدة</h3><p>قواعد صريحة على مذهب أهل الصنعة، تُعطي النتيجة نفسها كلما أُعيدت، وتُختبر بحالات معيارية، كالإعلال والقافية والمخارج.</p></div>
-      <div class="fann"><h3>٣. الترجيح</h3><p>نموذج إحصائي يرجّح بين وجوه، كالتشكيل والإعراب والدلالة ونسبة النصوص. فيُعرض بوجوهه ولا يُجزم به.</p></div>
-    </div>
-  </section>
-
-  <section id="tools">
-    <h2>الأدوات</h2>
-    <p class="sub">يستعملها Claude من تلقاء نفسه متى احتاجها في المحادثة.</p>
-    <div class="fanun">
-      <div class="fann"><h3>الصرف</h3>
-        <div class="tool"><code>analyze_word</code><p>التحليلات المحتملة للكلمة: الجذر والوزن والنوع والسمات.</p></div>
-        <div class="tool"><code>analyze_text</code><p>تحليل الجملة بترجيح سياقي.</p></div>
-        <div class="tool"><code>root_family</code><p>أسرة الجذر بأوزانها.</p></div>
-        <div class="tool"><code>conjugate</code><p>تصريف الفعل في الأزمنة والضمائر.</p></div>
+      <div class="tier">
+        <div class="n">المرتبة الأولى</div>
+        <h3>النقل</h3>
+        <p>نصٌّ في مصدر معيّن يُنقل بلفظه، معزوًّا إلى موضعه بالجزء والصفحة.</p>
+        <div class="chips"><code>maajim</code><code>lughawiyyat</code><code>quran_word</code><code>quran_root</code><code>search_poetry</code><code>corpus_concordance</code></div>
+        <p class="err">جهة الخطأ: النسخة الرقمية، كالتصحيف ونقص النص، أو تقطيع المعجم إلى مواد.</p>
       </div>
-      <div class="fann"><h3>الميزان والإعلال</h3>
-        <div class="tool"><code>mizan</code><p>الأصل وخطوات الإعلال والإبدال والإدغام بعبارة الصرفيين، متحقَّقًا منها.</p></div>
-        <div class="tool"><code>mushtaqqat</code><p>المشتقات القياسية من الفعل بإعلالها.</p></div>
-        <div class="tool"><code>taqalib</code><p>تقاليب الجذر: المستعمل والمهمل.</p></div>
+      <div class="tier">
+        <div class="n">المرتبة الثانية</div>
+        <h3>القاعدة</h3>
+        <p>قواعد صريحة على مذهب أهل الصنعة، تُعطي النتيجة نفسها كلما أُعيدت، وتُختبر بحالات معيارية.</p>
+        <div class="chips"><code>mizan</code><code>mushtaqqat</code><code>taqalib</code><code>analyze_qafiya</code><code>huruf</code><code>phonetics</code><code>detect_badi</code></div>
+        <p class="err">جهة الخطأ: قاعدة ناقصة أو حالة لم تُستوعب، فتُصلَح القاعدة نفسها.</p>
       </div>
-      <div class="fann"><h3>النحو</h3>
-        <div class="tool"><code>irab</code><p>الإعراب كلمةً كلمة بالأبواب والعلامات الأصلية والفرعية، مع ضبط الأواخر.</p></div>
-      </div>
-      <div class="fann"><h3>القافية والبديع</h3>
-        <div class="tool"><code>analyze_qafiya</code><p>الروي والوصل والردف والتأسيس، وعيوب القافية.</p></div>
-        <div class="tool"><code>detect_badi</code><p>الجناس والطباق والمقابلة والتصريع والسجع والاقتباس.</p></div>
-      </div>
-      <div class="fann"><h3>الضبط والعروض</h3>
-        <div class="tool"><code>diacritize</code><p>التشكيل الآلي بمشكِّل CATT.</p></div>
-        <div class="tool"><code>scan_verse</code><p>تقطيع البيت وزحافاته وعلله وقافيته.</p></div>
-        <div class="tool"><code>scan_poem</code><p>تقطيع القصيدة والتنبيه على المختل، مع الضبط الموجَّه بالوزن.</p></div>
-      </div>
-      <div class="fann"><h3>الأصوات</h3>
-        <div class="tool"><code>phonetics</code><p>الكتابة الصوتية الدولية والمقاطع والنبر.</p></div>
-        <div class="tool"><code>huruf</code><p>المخارج والصفات على مذهب ابن الجزري، والموازنة بين حرفين.</p></div>
-      </div>
-      <div class="fann"><h3>المعجم</h3>
-        <div class="tool"><code>maajim</code><p>المادة من العين إلى التاج، بالجزء والصفحة.</p></div>
-        <div class="tool"><code>lughawiyyat</code><p>الفروق والأضداد والإبدال والمعرّب والمثلثات.</p></div>
-        <div class="tool"><code>lexicon_lookup</code><p>نحو 47 معجمًا من The Arabic Lexicon.</p></div>
-      </div>
-      <div class="fann"><h3>القرآن والشعر</h3>
-        <div class="tool"><code>quran_word</code><p>صرف كلمات الآية وإعرابها.</p></div>
-        <div class="tool"><code>quran_root</code><p>مواضع الجذر وصيغه.</p></div>
-        <div class="tool"><code>search_poetry</code><p>الشواهد بالشاعر والبحر والعصر.</p></div>
-        <div class="tool"><code>takhrij_shahid</code><p>تخريج البيت: نسبته ورواياته، ومن استشهد به من النحاة والبلاغيين.</p></div>
-      </div>
-      <div class="fann"><h3>الدلالة</h3>
-        <div class="tool"><code>semantic_neighbors</code><p>الألفاظ القريبة دلاليًّا.</p></div>
-        <div class="tool"><code>word_similarity</code><p>درجة التقارب بين لفظين.</p></div>
-        <div class="tool"><code>substitutes_in_context</code><p>ما يصلح مكان الكلمة في سياقها.</p></div>
-        <div class="tool"><code>semantic_change</code><p>التطور الدلالي للفظ عبر القرون.</p></div>
-      </div>
-      <div class="fann"><h3>المدوّنة التراثية</h3>
-        <div class="tool"><code>corpus_concordance</code><p>سياقات الكلمة في 57 كتابًا.</p></div>
-        <div class="tool"><code>corpus_usage</code><p>تطوّر اللفظ عبر القرون.</p></div>
-        <div class="tool"><code>corpus_collocates</code><p>المتلازمات اللفظية.</p></div>
-        <div class="tool"><code>corpus_add_book</code><p>إضافة أي كتاب من OpenITI، والبحث عنه وحذفه.</p></div>
-      </div>
-      <div class="fann"><h3>الأسلوب</h3>
-        <div class="tool"><code>text_profile</code><p>التحليل المعجمي لنص أو ديوان.</p></div>
-        <div class="tool"><code>compare_texts</code><p>الموازنة بين نصّين أو شاعرين أو كتابين.</p></div>
-        <div class="tool"><code>attribute_author</code><p>نسبة النص إلى قائله بمقياس Delta.</p></div>
-        <div class="tool"><code>usage_compare</code><p>موازنة التعابير في الاستعمال الفصيح.</p></div>
-        <div class="tool"><code>benchmark</code><p>قياس دقة الأدوات على بيانات معيارية.</p></div>
+      <div class="tier">
+        <div class="n">المرتبة الثالثة</div>
+        <h3>الترجيح</h3>
+        <p>نموذج إحصائي مدرَّب يرجّح بين وجوه بحسب ما رأى، فتُعرض نتيجته بوجوهها ولا يُجزم بها.</p>
+        <div class="chips"><code>diacritize</code><code>irab</code><code>scan_poem</code><code>semantic_change</code><code>attribute_author</code><code>takhrij_shahid</code></div>
+        <p class="err">جهة الخطأ: الخروج عن جنس بيانات التدريب، كالشعر والتراكيب النادرة.</p>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <section>
-    <h2>أمثلة لما تسأل عنه</h2>
-    <p class="sub">بالعربية، كما تسأل أستاذك.</p>
-    <div class="ask">
-      <div>قطّع هذه القصيدة وبيّن الأبيات المختلة.</div>
-      <div>ما مادة «ح ق ق» في مقاييس اللغة ولسان العرب؟</div>
-      <div>وازن بين «الصاحبي» لابن فارس و«الخصائص» لابن جني.</div>
-      <div>كيف تطوّر استعمال «الاستعارة» عبر القرون؟</div>
-      <div>ما الفرق بين الضاد والظاء مخرجًا وصفة؟</div>
-      <div>ما أصل «مَبِيع» وما خطوات إعلاله؟</div>
-      <div>أعرب: «إنّ العلمَ نورٌ يهدي إلى الحق».</div>
-      <div>خرّج «قفا نبك من ذكرى حبيب ومنزل»: ومن استشهد به من النحاة؟</div>
-      <div>ما عيوب القافية في هذه القصيدة؟</div>
+<section id="tools">
+  <div class="wrap">
+    <p class="eyebrow">الأدوات</p>
+    <h2>سبعٌ وثلاثون أداة في عشرة فروع</h2>
+    <div class="branches">
+      <div class="br"><h3>الصرف والميزان <small>6 أدوات</small></h3><p>التحليل الصرفي بلا سياق وبالسياق، وأسرة الجذر، والتصريف. والميزان بأصل الكلمة وخطوات الإعلال والإبدال والإدغام بعبارة الصرفيين، لا يُقبل إلا إذا أعاد الأصلَ إلى الكلمة نفسها.</p><div class="chips"><code>analyze_word</code><code>analyze_text</code><code>root_family</code><code>conjugate</code><code>mizan</code><code>mushtaqqat</code></div></div>
+      <div class="br"><h3>النحو والإعراب <small>أداة واحدة</small></h3><p>إعراب الجملة كلمةً كلمة بمحلّل التبعية، تُنقل علاقاته إلى أبواب النحو العربي، مع العلامات الأصلية والفرعية وضبط الأواخر.</p><div class="chips"><code>irab</code></div></div>
+      <div class="br"><h3>الضبط والعروض <small>3 أدوات</small></h3><p>التشكيل الآلي، وتقطيع البيت والقصيدة بالزحافات والعلل. وإذا لم يستقم البيت بُحث عن أقل تغيير في الضبط يقيم وزنه، ويُعرض على أنه ضبطٌ يقتضيه الوزن لا رواية محقّقة.</p><div class="chips"><code>diacritize</code><code>scan_verse</code><code>scan_poem</code></div></div>
+      <div class="br"><h3>القافية والبديع <small>أداتان</small></h3><p>عناصر القافية من الروي إلى التوجيه، وعيوبها من الإقواء إلى الإيطاء. ورصد مرشّحات الجناس والطباق والمقابلة والتصريع والسجع والاقتباس.</p><div class="chips"><code>analyze_qafiya</code><code>detect_badi</code></div></div>
+      <div class="br"><h3>الأصوات <small>أداتان</small></h3><p>المخارج والصفات على مذهب ابن الجزري، والموازنة بين حرفين. والكتابة الصوتية الدولية والمقاطع والنبر.</p><div class="chips"><code>huruf</code><code>phonetics</code></div></div>
+      <div class="br"><h3>المعجم وكتب اللغة <small>4 أدوات</small></h3><p>مادة الجذر من خمسة عشر معجمًا من العين إلى التاج، بالجزء والصفحة. والفروق والأضداد والإبدال والمعرّب. والتقاليب بالمستعمل والمهمل.</p><div class="chips"><code>maajim</code><code>lughawiyyat</code><code>taqalib</code><code>lexicon_lookup</code></div></div>
+      <div class="br"><h3>القرآن والشعر <small>4 أدوات</small></h3><p>صرف كلمات الآية وإعرابها ومواضع الجذر. والبحث في نحو أربعة ملايين بيت. وتخريج الشاهد: نسبته ورواياته، ومن استشهد به من أصحاب الكتب.</p><div class="chips"><code>quran_word</code><code>quran_root</code><code>search_poetry</code><code>takhrij_shahid</code></div></div>
+      <div class="br"><h3>الدلالة <small>4 أدوات</small></h3><p>التقارب الدلالي بين لفظين منفردين أو في سياقهما، وما يصلح مكان الكلمة، وأقرب الألفاظ إليها. والتطور الدلالي للفظ عبر القرون الهجرية.</p><div class="chips"><code>word_similarity</code><code>substitutes_in_context</code><code>semantic_neighbors</code><code>semantic_change</code></div></div>
+      <div class="br"><h3>لسانيات المدوّنة <small>7 أدوات</small></h3><p>سياقات اللفظ في سبعة وخمسين كتابًا تراثيًّا، وتوزّعه على القرون، ومتلازماته بنسبة الأرجحية، وموازنة التعابير في الاستعمال. وإضافة أي كتاب من فهرس OpenITI.</p><div class="chips"><code>corpus_concordance</code><code>corpus_usage</code><code>corpus_collocates</code><code>usage_compare</code><code>corpus_find_book</code><code>corpus_add_book</code><code>corpus_remove_book</code></div></div>
+      <div class="br"><h3>الأسلوب والقياس <small>4 أدوات</small></h3><p>الوصف المعجمي لنصٍّ أو ديوان، والموازنة بين نصّين بالإبانة الإحصائية، ونسبة النص إلى قائله بمقاييس Delta. وقياس دقة الأدوات على بيانات معيارية.</p><div class="chips"><code>text_profile</code><code>compare_texts</code><code>attribute_author</code><code>benchmark</code></div></div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <section id="install">
-    <h2>التثبيت</h2>
-    <p class="sub">يلزم تطبيق Claude Desktop، ونحو 3 غيغابايت، واتصال بالإنترنت مرة واحدة لتنزيل البيانات.</p>
-    <div class="os">
-      <div class="fann"><h3>ويندوز 11</h3>
-        <ol class="steps">
-          <li>نزّل المستودع (Code ← Download ZIP) وفكّ الضغط.</li>
-          <li>انقر مرتين على <code dir="ltr">install_sarf_windows.bat</code>.</li>
-          <li>أغلق Claude من أيقونته بجانب الساعة ثم افتحه.</li>
-        </ol>
-      </div>
-      <div class="fann"><h3>macOS</h3>
-        <ol class="steps">
-          <li>نزّل المستودع وفكّه في مجلد <code dir="ltr">~/claude</code>.</li>
-          <li>انقر مرتين على <code dir="ltr">install_sarf.command</code>.</li>
-          <li>أغلق Claude (Cmd+Q) ثم افتحه.</li>
-        </ol>
+<section id="sources">
+  <div class="wrap">
+    <p class="eyebrow">الموارد</p>
+    <h2>ما ترجع إليه الأدوات</h2>
+    <p class="measure">موارد مفتوحة معروفة لدى الباحثين، تُنزَّل من مصادرها عند التثبيت، ولكلٍّ منها رخصته وشروط ناشره.</p>
+    <div class="nums">
+      <div class="num"><b>15</b><span>معجمًا تراثيًّا من OpenITI</span></div>
+      <div class="num"><b>3.86 مليون</b><span>بيت في مدوّنة «أشعار»</span></div>
+      <div class="num"><b>57</b><span>مصنَّفًا في المدوّنة، نحو 12 مليون كلمة</span></div>
+      <div class="num"><b>8,792</b><span>نصًّا في فهرس OpenITI يمكن إضافتها</span></div>
+      <div class="num"><b>77,429</b><span>كلمة قرآنية محلَّلة صرفيًّا</span></div>
+    </div>
+    <p class="muted" style="margin-top:22px;font-size:16px">ومن المحلّلات والنماذج: CAMeL Tools وقاعدتها الصرفية CALIMA-Star، ونماذج CAMeLBERT، ومشكِّل CATT، ومحلّل Stanza بنموذج AraELECTRA، وPyArud للعروض، وقطرب للتصريف.</p>
+  </div>
+</section>
+
+<section id="accuracy">
+  <div class="wrap">
+    <p class="eyebrow">القياس</p>
+    <h2>الدقة بأرقام معلنة</h2>
+    <p class="measure">تقيس أداة <code>benchmark</code> الدقة على بيانات معيارية، ويُعاد إنتاج كل رقم ببذرة العينة. والأرقام لا تصدق إلا على جنس عيّنتها.</p>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>المهمة</th><th>البيانات</th><th>النتيجة</th></tr></thead>
+        <tbody>
+          <tr><td>الميزان والإعلال</td><td>43 حالة معيارية من كتب الصرف</td><td class="v">43 / 43</td></tr>
+          <tr><td>نسبة النص إلى قائله</td><td>30 شاعرًا من «أشعار»، ونصٌّ معزول من نحو 1500 كلمة</td><td class="v">96.7%</td></tr>
+          <tr><td>استخراج الجذر</td><td>2,000 كلمة عشوائية من القرآن، بأرجح تحليل بلا سياق</td><td class="v">78.8%</td></tr>
+          <tr><td>تشكيل النثر</td><td>40 سطرًا من قسم الاختبار في Tashkeela، نسبة الحروف المخطوءة</td><td class="v">1.1% خطأ</td></tr>
+          <tr><td>تشكيل الشعر</td><td>40 بيتًا مشكولًا من «أشعار»، نسبة الحروف المخطوءة</td><td class="v">15.2% خطأ</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted" style="margin-top:18px;font-size:16px">الفرق بين تشكيل النثر والشعر هو علّة الضبط الموجَّه بالعروض. ونسبة النصوص قيست على شعراء أكثرهم معاصرون، فلا تُعمَّم على الشعر القديم. والإعراب والبديع والدلالة لم تُقَس بعد لفقد مجموعات اختبار مصحّحة بمصطلح النحو العربي.</p>
+  </div>
+</section>
+
+<section id="not">
+  <div class="wrap">
+    <p class="eyebrow">دفع الإيهام</p>
+    <h2>ما ليست الأداة</h2>
+    <div class="not">
+      <div><b>ليست نموذجًا لغويًّا</b><p>ولا تُدرّب نموذجًا ولا تُغيّره؛ هي أدوات يستدعيها النموذج.</p></div>
+      <div><b>ليست معصومة</b><p>أحكامها على مراتب متفاوتة، وما كان ترجيحًا يُعرض بوجوهه.</p></div>
+      <div><b>ليست بديلًا عن المصادر</b><p>تختصر الطريق إلى الموضع، والتحقيق بعدها للباحث.</p></div>
+      <div><b>ليست ضامنةً لنقل النموذج</b><p>العبرة بمُخرَج الأداة، وهو ظاهر في تطبيق العميل لمن أراد مراجعته.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="road">
+  <div class="wrap">
+    <p class="eyebrow">خطة التطوير</p>
+    <h2>مشروعٌ قائم ومستمر</h2>
+    <p class="measure">غايته أن يبلغ في كل فرع درجةً يُعتمد عليها في البحث، بقياسٍ معلَن لا بدعوى.</p>
+    <div class="road">
+      <div class="done"><h3>أُنجز</h3><ul>
+        <li>سبع وثلاثون أداة بمناهجها وحدودها</li>
+        <li>محرّك للإعلال يتحقق من نتيجته بنفسه</li>
+        <li>التقطيع بالضبط الموجَّه، وعلم القافية بعيوبه</li>
+        <li>التخريج الآلي للشاهد، ونسبة النصوص</li>
+        <li>أداة قياس على بيانات معيارية معلنة</li>
+      </ul></div>
+      <div><h3>قيد العمل</h3><ul>
+        <li>مشكِّل خاص بالشعر، يُعتمد إن فاق المشكِّل الحالي</li>
+        <li>استضافة على الشبكة تُغني عن التثبيت</li>
+        <li>ملف تثبيت رسومي لويندوز</li>
+      </ul></div>
+      <div><h3>مخطط</h3><ul>
+        <li>مجموعة اختبار للإعراب مصحّحة يدويًّا</li>
+        <li>توسيع حالات الصرف المعيارية إلى أبوابه كلها</li>
+        <li>تقويم بشري يشارك فيه متخصصون</li>
+        <li>ورقة علمية تصف المنهج ونتائج القياس</li>
+      </ul></div>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap two">
+    <div>
+      <p class="eyebrow">التثبيت</p>
+      <h2>على جهازك في ثلاث خطوات</h2>
+      <ol class="steps">
+        <li>نزّل المستودع من GitHub (Code ← Download ZIP) وفكّ ضغطه في مجلد دائم.</li>
+        <li>شغّل <code>install_sarf_windows.bat</code> على ويندوز، أو <code>install_sarf.command</code> على ماك.</li>
+        <li>أعد تشغيل تطبيق Claude، فتظهر أدوات «العربية» فيه.</li>
+      </ol>
+      <p class="muted" style="font-size:16px">يلزم تطبيق Claude Desktop، ونحو 3 غيغابايت، واتصال بالشبكة عند التثبيت وحده.</p>
+    </div>
+    <div>
+      <p class="eyebrow">جرّب أن تسأل</p>
+      <h2>بالعربية، كما تسأل أستاذك</h2>
+      <div class="call" style="padding:8px 22px">
+        <div class="row"><div class="lab">صرف</div><div>ما أصل «مَبِيع» وما خطوات إعلاله؟</div></div>
+        <div class="row"><div class="lab">عروض</div><div>قطّع هذه القصيدة وبيّن الأبيات المختلّة.</div></div>
+        <div class="row"><div class="lab">معجم</div><div>ما مادة «ح ق ق» في المقاييس واللسان؟</div></div>
+        <div class="row"><div class="lab">شاهد</div><div>خرّج «قفا نبكِ من ذكرى حبيبٍ ومنزلِ».</div></div>
+        <div class="row"><div class="lab">دلالة</div><div>كيف تطوّر استعمال «الاستعارة» عبر القرون؟</div></div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <section>
-    <h2>تنبيهات منهجية</h2>
-    <ul class="notes">
-      <li>التحليل الآلي يقارب ولا يقطع؛ فما خالف المقرَّر عند أهل الفن يُراجَع في مظانّه.</li>
-      <li>المشكِّل الآلي يُحسن النثر ويضعف في الشعر، فالشعر يُعطى مشكولًا لصحة التقطيع، وما يضبطه الوزن «ضبط يقتضيه الوزن، لا رواية محقّقة».</li>
-      <li>العبرة بمُخرَج الأداة لا بصياغة النموذج له؛ ومُخرَج كل استدعاء ظاهر في تطبيق Claude لمن أراد مراجعته.</li>
-      <li>المدوّنة مختارة لا شاملة، والنسبة لكل مليون كلمة أدقّ من العدد المجرد.</li>
-    </ul>
-  </section>
+<section id="author">
+  <div class="wrap author">
+    <svg viewBox="0 0 512 512" aria-hidden="true"><rect x="0" y="0" width="512" height="512" rx="88.0" fill="#121A24"/><rect x="34.0" y="34.0" width="444.0" height="444.0" rx="60.0" fill="none" stroke="#C9A35C" stroke-width="6.0"/><path d="M142 -200Q99 -186 66.5 -150.0Q34 -114 34 -59Q34 -22 44.0 4.5Q54 31 70 53Q40 81 29.5 116.0Q19 151 25.5 187.0Q32 223 52.5 253.0Q73 283 105.0 301.5Q137 320 178 320Q212 320 236.5 303.5Q261 287 275.5 264.5Q290 242 292 224Q267 243 244.0 250.5Q221 258 202 254Q185 252 171.5 236.5Q158 221 158 204Q158 187 169.0 172.5Q180 158 201.5 149.0Q223 140 256 140H359L299 0H236Q224 0 207.0 -7.5Q190 -15 177.5 -30.5Q165 -46 165 -72Q165 -104 182.0 -123.5Q199 -143 225.5 -151.5Q252 -160 282.5 -161.0Q313 -162 341.5 -158.0Q370 -154 389 -147Q372 -168 342.0 -182.0Q312 -196 276.5 -203.0Q241 -210 206.0 -209.5Q171 -209 142 -200Z" fill="#E9D8B0" transform="translate(139.29 293.29) scale(0.56654 -0.56654)"/></svg>
+    <div class="measure">
+      <p class="eyebrow">صاحب المشروع</p>
+      <h2>سيد حسن</h2>
+      <p>صمّم المشروع وحدّد فروعه ومناهجه ومصادره، وكُتبت شيفرته بمعونة نموذج Claude بتوجيهه ومراجعته. ويُذكر ذلك لأن أداةً غايتها التمييز بين مصادر الأحكام أولى بأن تُبيّن مصدر صنعتها.</p>
+      <p>ويُرحَّب بملاحظات أهل الاختصاص: النص المُدخَل، والأداة، وما أخرجته، والصواب ومصدره.</p>
+      <div class="links">
+        <a class="btn solid" href="https://github.com/Sayedforces2021/arabiyya-mcp" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+        <a class="btn" href="https://github.com/Sayedforces2021/arabiyya-mcp/issues" target="_blank" rel="noopener">أرسل ملاحظة</a>
+        <a class="btn" href="https://x.com/ikagi07" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>@ikagi07</a>
+      </div>
+    </div>
+  </div>
+</section>
 </main>
 
 <footer>
   <div class="wrap">
-    البيانات من مصادرها ولكلٍّ رخصته:
-    <a href="https://github.com/CAMeL-Lab/camel_tools">CAMeL Tools</a> ·
-    <a href="https://huggingface.co/datasets/arbml/ashaar">أشعار</a> ·
-    <a href="https://github.com/mustafa0x/quran-morphology">المدوّنة القرآنية</a> ·
-    <a href="https://github.com/OpenITI">OpenITI</a> ·
-    <a href="https://pypi.org/project/pyarud/">PyArud</a> ·
-    <a href="https://github.com/linuxscout/qutrub">قطرب</a> ·
-    <a href="https://arabiclexicon.hawramani.com/">The Arabic Lexicon</a>
+    <span>العربية · شيفرة مفتوحة برخصة MIT</span>
+    <span><a href="https://github.com/Sayedforces2021/arabiyya-mcp" target="_blank" rel="noopener">github.com/Sayedforces2021/arabiyya-mcp</a></span>
   </div>
 </footer>
+
 </body>
 </html>
