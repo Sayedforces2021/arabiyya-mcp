@@ -30,11 +30,16 @@ if (!py || !server) {
   process.exit(1);
 }
 
+// تمرير صريح للمدخل والمخرج (لا inherit)، لأن Claude قد يشغّل الإضافة في عملية لا تملك واصفات ملفات حقيقية
 const child = spawn(py, [server], {
-  stdio: "inherit",
+  stdio: ["pipe", "pipe", "pipe"],
   cwd: path.dirname(server),
   env: { ...process.env, PYTHONUNBUFFERED: "1", PYTHONIOENCODING: "utf-8" },
 });
+process.stdin.pipe(child.stdin);
+child.stdout.pipe(process.stdout);
+child.stderr.on("data", (d) => process.stderr.write(d));
+process.stdin.on("end", () => { try { child.stdin.end(); } catch {} });
 child.on("error", (e) => { process.stderr.write(`[arabiyya] ${e.message}\n`); process.exit(1); });
 child.on("exit", (code) => process.exit(code ?? 0));
 for (const s of ["SIGINT", "SIGTERM"]) process.on(s, () => child.kill(s));
