@@ -1,4 +1,5 @@
 """تجهيز بيانات خادم sarf (يُشغَّل من سكربت التثبيت، ويتخطى ما سبق تجهيزه).
+خيارات اختيارية: --only quran,maajim  أو  --skip semantic,catt,stanza
 1) المدوّنة القرآنية  2) فهرس المعاجم التراثية  3) فهرس شواهد الشعر  4) المدوّنة التراثية  5) نموذج العربية الكلاسيكية ومتجهات مفرداته  6) كتب الفروق والأضداد  7) المحلل النحوي
 """
 import os, sys, subprocess, urllib.request
@@ -101,15 +102,31 @@ def catt_models():
     open(os.path.join(HOME, "catt.done"), "w").close()
 
 
-ok = [
-    step("المدوّنة القرآنية", os.path.join(HOME, "morphology-terms-ar.json"), quran),
-    step("المعاجم التراثية (تنزيل نحو 135 م.ب)", os.path.join(HOME, "maajim.db"), maajim),
-    step("شواهد الشعر (تنزيل نحو 280 م.ب)", os.path.join(HOME, "ashaar.db"), poetry),
-    step("المدوّنة التراثية: 57 كتابًا (تنزيل نحو 105 م.ب)", os.path.join(HOME, "corpus.db"), corpus),
-    step("نموذج العربية الكلاسيكية ومتجهات المفردات (تنزيل نحو 440 م.ب، وحساب دقائق)",
-         os.path.join(HOME, "ca_vocab_emb_v2.npz"), semantic),
-    step("كتب الفروق والأضداد والإبدال والمعرّب (تنزيل نحو 15 م.ب)", os.path.join(HOME, "lughawiyyat.done"), lughawiyyat),
-    step("مشكِّل النصوص التراثية CATT (تنزيل نحو 200 م.ب)", os.path.join(HOME, "catt.done"), catt_models),
-    step("المحلل النحوي للإعراب: Stanza مع AraELECTRA (تنزيل نحو 700 م.ب)", os.path.join(HOME, "stanza.done"), stanza_models),
+STEPS = [
+    ("quran", "المدوّنة القرآنية", "morphology-terms-ar.json", quran),
+    ("maajim", "المعاجم التراثية (تنزيل نحو 135 م.ب)", "maajim.db", maajim),
+    ("poetry", "شواهد الشعر (تنزيل نحو 280 م.ب)", "ashaar.db", poetry),
+    ("corpus", "المدوّنة التراثية: 57 كتابًا (تنزيل نحو 105 م.ب)", "corpus.db", corpus),
+    ("semantic", "نموذج العربية الكلاسيكية ومتجهات المفردات (تنزيل نحو 440 م.ب، وحساب دقائق)", "ca_vocab_emb_v2.npz", semantic),
+    ("lughawiyyat", "كتب الفروق والأضداد والإبدال والمعرّب (تنزيل نحو 15 م.ب)", "lughawiyyat.done", lughawiyyat),
+    ("catt", "مشكِّل النصوص التراثية CATT (تنزيل نحو 200 م.ب)", "catt.done", catt_models),
+    ("stanza", "المحلل النحوي للإعراب: Stanza مع AraELECTRA (تنزيل نحو 700 م.ب)", "stanza.done", stanza_models),
 ]
+
+
+def _csv(flag):
+    """--only a,b  أو  --skip a,b  (بلا معاملات: كل الحزم)."""
+    if flag in sys.argv:
+        i = sys.argv.index(flag)
+        if i + 1 < len(sys.argv):
+            return {x.strip() for x in sys.argv[i + 1].split(",") if x.strip()}
+    return set()
+
+
+only, skip = _csv("--only"), _csv("--skip")
+chosen = [s for s in STEPS if (not only or s[0] in only) and s[0] not in skip]
+ok = []
+for n, (key, title, done, fn) in enumerate(chosen, 1):
+    print(f"[ARABIYYA_STEP {n}/{len(chosen)} {key}]", flush=True)  # يقرؤه معالج التثبيت ليعرض التقدّم
+    ok.append(step(title, os.path.join(HOME, done), fn))
 print("\nتجهيز البيانات:", "اكتمل." if all(ok) else "اكتمل مع خطوات متعذّرة (انظر أعلاه).")

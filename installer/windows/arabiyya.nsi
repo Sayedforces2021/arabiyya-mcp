@@ -2,6 +2,7 @@
 Unicode True
 !include "MUI2.nsh"
 !include "LogicLib.nsh"
+!include "nsDialogs.nsh"
 
 !ifndef ROOT
   !define ROOT "../.."
@@ -35,9 +36,15 @@ VIAddVersionKey /LANG=1025 "LegalCopyright" "MIT — سيد حسن رجب"
 !define MUI_WELCOMEPAGE_TEXT "ستثبّت هذه النافذة أداة «العربية» وتربطها بتطبيق Claude تلقائيًّا، فيجيب Claude عن أسئلتك في النحو والصرف والعروض والمعاجم من مصادرها التراثية.$\r$\n$\r$\nما الذي سيحدث؟ تنزيل بيئة Python والمكتبات والبيانات، وتحتاج إلى نحو 4 غيغابايت من المساحة وإلى اتصال بالإنترنت. وتستغرق من 30 إلى 60 دقيقة بحسب سرعة الاتصال. ولا تحتاج أن تفعل شيئًا أثناء ذلك.$\r$\n$\r$\nلا تُغلق النافذة ولا تُطفئ الجهاز حتى ينتهي التثبيت."
 
 !define MUI_FINISHPAGE_TITLE "اكتمل التثبيت"
-!define MUI_FINISHPAGE_TEXT "رُبطت أداة «العربية» بتطبيق Claude.$\r$\n$\r$\nافتح Claude وجرّب أن تكتب له: «أعرب: العلمُ نورٌ».$\r$\n$\r$\nإن لم تظهر الأداة، فأغلق Claude تمامًا (من أيقونته بجانب الساعة: Quit) ثم افتحه من جديد."
+!define MUI_FINISHPAGE_TEXT "رُبطت أداة «العربية» بتطبيق Claude.$\r$\n$\r$\nافتح Claude وجرّب أن تكتب له: «أعرب: العلمُ نورٌ».$\r$\n$\r$\nلتظهر الأداة يلزم إعادة تشغيل Claude: اترك الخيار أدناه مفعّلًا، أو أغلقه تمامًا (من أيقونته بجانب الساعة: Quit) ثم افتحه."
+
+!define MUI_FINISHPAGE_RUN
+!define MUI_FINISHPAGE_RUN_NOTCHECKED
+!define MUI_FINISHPAGE_RUN_TEXT "أعد تشغيل Claude الآن (احفظ عملك فيه أولًا)"
+!define MUI_FINISHPAGE_RUN_FUNCTION RestartClaude
 
 !insertmacro MUI_PAGE_WELCOME
+Page custom PacksCreate PacksLeave
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
 
@@ -55,6 +62,37 @@ Var Pct
 Var Msg
 Var Bar
 Var Mins
+Var RbFull
+Var RbQuick
+Var SkipArg
+
+Function PacksCreate
+  !insertmacro MUI_HEADER_TEXT "اختيار الحزم" "اختر ما تنزّله من البيانات"
+  nsDialogs::Create 1018
+  Pop $0
+  ${NSD_CreateRadioButton} 0 6u 100% 12u "كامل (موصى به): الأدوات السبع والثلاثون كلها — نحو 4 غيغابايت"
+  Pop $RbFull
+  ${NSD_AddStyle} $RbFull ${WS_GROUP}
+  ${NSD_Check} $RbFull
+  ${NSD_CreateRadioButton} 0 26u 100% 24u "سريع: القرآن والمعاجم والشعر والمدوّنة وكتب اللغة، بلا دلالة الألفاظ والتشكيل الآلي والإعراب — نحو 2.5 غيغابايت"
+  Pop $RbQuick
+  ${NSD_CreateLabel} 0 62u 100% 36u "الأدوات المتعلقة بما تتركه لا تعمل. وتستطيع إضافته في أي وقت بتشغيل المعالج من جديد؛ فهو يتخطى ما نُزّل ويكمل الناقص."
+  Pop $0
+  nsDialogs::Show
+FunctionEnd
+
+Function PacksLeave
+  ${NSD_GetState} $RbQuick $0
+  ${If} $0 == ${BST_CHECKED}
+    StrCpy $SkipArg "semantic,catt,stanza"
+  ${Else}
+    StrCpy $SkipArg ""
+  ${EndIf}
+FunctionEnd
+
+Function RestartClaude
+  Exec 'powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\restart_claude.ps1"'
+FunctionEnd
 
 ; ----- يقرأ آخر سطر في ملف الحالة (UTF-16) إلى $Line -----
 Function ReadLastLine
@@ -126,6 +164,7 @@ Section "Install"
   File "${ROOT}/setup_sarf_data.py"
   File "${ROOT}/openiti_catalog.tsv"
   File "unregister.ps1"
+  File "restart_claude.ps1"
   SetOutPath "$INSTDIR\brand"
   File "${ROOT}/brand/arabiyya-icon.svg"
   File "${ROOT}/brand/arabiyya-icon-small.svg"
@@ -137,7 +176,7 @@ Section "Install"
 
   ; ---- 3) تشغيل التثبيت الصامت ومتابعة تقدّمه ----
   Delete "$TEMP\arabiyya_status.txt"
-  Exec 'wscript.exe //B "$PLUGINSDIR\run.vbs" "$PLUGINSDIR\install.ps1" "$TEMP\arabiyya_status.txt" "$INSTDIR"'
+  Exec 'wscript.exe //B "$PLUGINSDIR\run.vbs" "$PLUGINSDIR\install.ps1" "$TEMP\arabiyya_status.txt" "$INSTDIR" "$SkipArg"'
 
   FindWindow $Bar "#32770" "" $HWNDPARENT
   GetDlgItem $Bar $Bar 1004
@@ -201,6 +240,7 @@ Section "Uninstall"
   Delete "$INSTDIR\*.py"
   Delete "$INSTDIR\openiti_catalog.tsv"
   Delete "$INSTDIR\unregister.ps1"
+  Delete "$INSTDIR\restart_claude.ps1"
   RMDir /r "$INSTDIR\brand"
   Delete "$INSTDIR\uninstall-arabiyya.exe"
   RMDir "$INSTDIR"

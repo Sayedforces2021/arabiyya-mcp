@@ -1,8 +1,9 @@
 #!/bin/bash
 # تثبيت صامت تشغّله نافذة «العربية» على ماك. يكتب التقدّم في ملف حالة: "NN|رسالة" ثم DONE| أو FAIL|سبب
-# usage: install_wizard.sh STATUS_FILE APP_SRC_DIR
+# usage: install_wizard.sh STATUS_FILE APP_SRC_DIR [SKIP_PACKS]   مثل: semantic,catt,stanza
 STATUS="${1:-/tmp/arabiyya_status.txt}"
 SRC="${2:-$(cd "$(dirname "$0")" && pwd)}"
+SKIP="${3:-}"
 DIR="$HOME/.sarf/app"
 LOG="$HOME/.sarf/install_log.txt"
 mkdir -p "$HOME/.sarf"
@@ -67,7 +68,20 @@ say 54 "تنزيل بيانات التحليل الصرفي (قد يستغرق �
 "$BIN/camel_data" -i disambig-bert-unfactored-msa || fail "تعذّر تنزيل نموذج CAMeL"
 
 say 62 "تجهيز القرآن والمعاجم والشعر والمدوّنة (أطول خطوة، لا تُغلق النافذة)"
-"$PY" "$DIR/setup_sarf_data.py" || fail "تعذّر تجهيز البيانات"
+DATA_ARGS=("$DIR/setup_sarf_data.py")
+[ -n "$SKIP" ] && DATA_ARGS+=(--skip "$SKIP")
+"$PY" "${DATA_ARGS[@]}" | while IFS= read -r line; do
+  echo "$line"
+  if [[ "$line" =~ ^\[ARABIYYA_STEP\ ([0-9]+)/([0-9]+)\ ([a-z]+)\] ]]; then
+    i=${BASH_REMATCH[1]}; n=${BASH_REMATCH[2]}
+    case "${BASH_REMATCH[3]}" in
+      quran) nm="المدوّنة القرآنية";; maajim) nm="المعاجم التراثية";; poetry) nm="شواهد الشعر";;
+      corpus) nm="المدوّنة التراثية";; semantic) nm="النموذج الدلالي (يحسب دقائق)";;
+      lughawiyyat) nm="كتب الفروق والأضداد";; catt) nm="مشكِّل النصوص";; stanza) nm="محلل الإعراب";; *) nm="";;
+    esac
+    say $((62 + 32 * (i - 1) / n)) "تجهيز $nm (الحزمة $i من $n)"
+  fi
+done
 
 say 96 "ربط الأداة بتطبيق Claude"
 mkdir -p "$(dirname "$CONFIG")"

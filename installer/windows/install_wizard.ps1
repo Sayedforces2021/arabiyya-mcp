@@ -1,9 +1,10 @@
-# سكربت التثبيت الصامت الذي يشغّله معالج ويندوز (arabiyya-setup-windows.exe).
+﻿# سكربت التثبيت الصامت الذي يشغّله معالج ويندوز (arabiyya-setup-windows.exe).
 # لا يسأل المستخدم ولا يفتح نوافذ: يكتب تقدّمه في ملف حالة يقرؤه المعالج.
 # صيغة أسطر الملف: "NN|رسالة" (NN بين 10 و99)، وفي النهاية "DONE|" أو "FAIL|سبب".
 param(
   [string]$Status = (Join-Path $env:TEMP 'arabiyya_status.txt'),
-  [string]$AppDir = (Join-Path $env:USERPROFILE 'claude')
+  [string]$AppDir = (Join-Path $env:USERPROFILE 'claude'),
+  [string]$Skip = ''   # حزم بيانات تُترك، مثل: semantic,catt,stanza
 )
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -83,8 +84,20 @@ try {
   $Server = Join-Path $AppDir 'sarf_mcp.py'
   if (-not (Test-Path $Server)) { throw "Server file missing: $Server" }
   Say 62 'تجهيز القرآن والمعاجم والشعر والمدوّنة (أطول خطوة، لا تُغلق النافذة)'
-  & $Py (Join-Path $AppDir 'setup_sarf_data.py')
-  Check 'setup_sarf_data'
+  $names = @{ quran='المدوّنة القرآنية'; maajim='المعاجم التراثية'; poetry='شواهد الشعر'; corpus='المدوّنة التراثية';
+              semantic='النموذج الدلالي (يحسب دقائق)'; lughawiyyat='كتب الفروق والأضداد'; catt='مشكِّل النصوص'; stanza='محلل الإعراب' }
+  $dataArgs = @((Join-Path $AppDir 'setup_sarf_data.py'))
+  if ($Skip) { $dataArgs += @('--skip', $Skip) }
+  & $Py @dataArgs | ForEach-Object {
+    $line = "$_"
+    if ($line -match '^\[ARABIYYA_STEP (\d+)/(\d+) (\w+)\]') {
+      $i = [int]$Matches[1]; $n = [int]$Matches[2]
+      $pct = 62 + [int](32 * ($i - 1) / $n)
+      Say $pct ("تجهيز {0} (الحزمة {1} من {2})" -f $names[$Matches[3]], $i, $n)
+    }
+    $line
+  }
+  if ($LASTEXITCODE -ne 0) { throw "setup_sarf_data failed (exit code $LASTEXITCODE)" }
 
   # ---------- 4. الربط بـ Claude Desktop ----------
   Say 96 'ربط الأداة بتطبيق Claude'

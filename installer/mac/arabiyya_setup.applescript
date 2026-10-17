@@ -8,14 +8,16 @@ on run
 	set statusFile to "/tmp/arabiyya_status.txt"
 	
 	set welcome to "ستثبّت هذه النافذة أداة «العربية» وتربطها بتطبيق Claude تلقائيًّا." & return & return & "تنزيل بيئة Python والمكتبات والبيانات، وتحتاج إلى نحو 4 غيغابايت من المساحة وإلى اتصال بالإنترنت، وتستغرق من 30 إلى 60 دقيقة. لا تُغلق النافذة ولا تُطفئ الجهاز حتى ينتهي التثبيت."
+	set skipArg to ""
 	try
-		display dialog welcome with title "العربية" buttons {"إلغاء", "ابدأ التثبيت"} default button "ابدأ التثبيت" cancel button "إلغاء" with icon note
+		display dialog welcome & return & return & "اختر ما تنزّله:" & return & "• كامل: الأدوات السبع والثلاثون كلها، نحو 4 غيغابايت." & return & "• سريع: بلا دلالة الألفاظ والتشكيل الآلي والإعراب، نحو 2.5 غيغابايت (تضيفها لاحقًا بإعادة تشغيل المعالج)." with title "العربية" buttons {"إلغاء", "سريع", "كامل"} default button "كامل" cancel button "إلغاء" with icon note
+		if button returned of result is "سريع" then set skipArg to "semantic,catt,stanza"
 	on error
 		return
 	end try
 	
 	do shell script "rm -f " & quoted form of statusFile & "; touch " & quoted form of statusFile
-	do shell script "nohup bash " & quoted form of (payload & "/install_wizard.sh") & " " & quoted form of statusFile & " " & quoted form of payload & " >/dev/null 2>&1 &"
+	do shell script "nohup bash " & quoted form of (payload & "/install_wizard.sh") & " " & quoted form of statusFile & " " & quoted form of payload & " " & quoted form of skipArg & " >/dev/null 2>&1 &"
 	
 	set progress total steps to 90
 	set progress completed steps to 0
@@ -57,5 +59,12 @@ on run
 	end repeat
 	
 	set progress completed steps to 90
-	display dialog "اكتمل التثبيت." & return & return & "أغلق Claude تمامًا (⌘Q) ثم افتحه، وجرّب أن تكتب له: «أعرب: العلمُ نورٌ»." with title "العربية" buttons {"تم"} default button "تم" with icon note
+	display dialog "اكتمل التثبيت." & return & return & "لتظهر الأداة يلزم إعادة تشغيل Claude (احفظ عملك فيه أولًا). وبعدها جرّب أن تكتب له: «أعرب: العلمُ نورٌ»." with title "العربية" buttons {"لاحقًا", "أعد تشغيل Claude"} default button "أعد تشغيل Claude" with icon note
+	if button returned of result is "أعد تشغيل Claude" then
+		try
+			tell application "Claude" to quit
+			delay 3
+			do shell script "open -a Claude"
+		end try
+	end if
 end run
