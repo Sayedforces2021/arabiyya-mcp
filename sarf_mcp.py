@@ -3107,6 +3107,7 @@ def _irab_rules(doc):
     PREP = {"من", "في", "ب", "ل", "ك", "الي", "علي", "عن", "حتي", "منذ", "مذ"}
     for s_ in doc.sentences:
         toks = s_.tokens
+        last_jus = None
         for k, tok in enumerate(toks):
             prev = _norm(_strip_tashkeel(toks[k - 1].text)) if k else ""
             prev = prev[1:] if len(prev) > 2 and prev[0] in "وف" else prev
@@ -3125,15 +3126,34 @@ def _irab_rules(doc):
                         _set_feat(w, "Case", "Gen" if gen else "Acc")
                         w.lemma = w.lemma or w.text
                         w.zarf = "مكان" if t in _ZURUF_MAKAN else "زمان"
-                if w.upos in ("VERB", "AUX") and _feats(w).get("Aspect") == "Imp" and j == (1 if tok.words[0].upos in ("CCONJ", "PART") and len(tok.words) > 1 else 0):
-                    bare = _strip_tashkeel(tok.text)
-                    five = bare.endswith(("وا", "ا", "ي")) and not bare.endswith(("ون", "ين", "ان"))
-                    if praw in _JAZM:
-                        _set_feat(w, "Mood", "Jus")
-                    elif praw in _NASB:
-                        _set_feat(w, "Mood", "Sub")
-                    elif prev == "لا" and five and bare.startswith("ت"):
-                        _set_feat(w, "Mood", "Jus")
+                bare = _strip_tashkeel(tok.text).replace("ٓ", "")
+                core = bare[1:] if len(bare) > 3 and bare[0] in "وف" else bare
+                lam_amr = len(core) > 3 and core[0] == "ل" and core[1] in "يتن" and len(bare) > len(core)  # فَلْيَفْعَلْ، وَلْيَفْعَلْ
+                is_imp = (w.upos in ("VERB", "AUX") and _feats(w).get("Aspect") == "Imp") or \
+                         (w.upos == "X" and (core[:1] in "يتنأ" or lam_amr))
+                first = j == next((i_ for i_, x in enumerate(tok.words) if x.upos not in ("CCONJ", "PART") or x is w), 0)
+                if is_imp and (first or lam_amr):
+                    nun = core.endswith(("ون", "ين", "ان"))
+                    pr = praw[1:] if praw[:1] == "أ" and praw[1:] in ("لم", "فلم", "ولم") else praw
+                    pr = pr[1:] if len(pr) > 2 and pr[0] in "وف" else pr
+                    mood = None
+                    if pr in _JAZM or lam_amr:
+                        mood = "Jus"
+                    elif pr in _NASB:
+                        mood = "Sub"
+                    elif prev == "لا" and core.startswith("ت") and not nun:
+                        mood = "Jus"  # «لا» الناهية مع المخاطَب
+                    elif prev == "من" and not nun:
+                        mood = "Jus"  # «مَن» الشرطية
+                    elif bare[:1] in "وف" and last_jus is not None and k - last_jus <= 4 and not nun:
+                        mood = "Jus"  # المعطوف على مجزوم
+                    if mood:
+                        if w.upos == "X":
+                            w.upos = "VERB"
+                            _set_feat(w, "Aspect", "Imp")
+                        _set_feat(w, "Mood", mood)
+                    if _feats(w).get("Mood") == "Jus":
+                        last_jus = k
     return doc
 
 
