@@ -3088,6 +3088,55 @@ def _same_root(a: str, b: str) -> bool:
         return False
 
 
+_ZURUF_MAKAN = {"بين", "عند", "فوق", "تحت", "امام", "خلف", "وراء", "دون", "حول", "لدي", "لدن", "تلقاء", "حيال", "ازاء", "مع"}
+_ZURUF_ZAMAN = {"بعد", "قبل", "حين", "يوم", "ليله", "عشيه", "غدا", "صباح", "مساء", "ابدا", "قط", "عوض"}
+_JAZM = {"لم", "لما", "إن"}  # بالهمزة كما تُكتب: «إن» الشرطية غير «أن» الناصبة
+_NASB = {"لن", "أن", "كي", "لكي", "إذن", "لئلا"}
+
+
+def _set_feat(w, key, val):
+    fs = dict(x.split("=", 1) for x in (w.feats or "").split("|") if "=" in x)
+    fs[key] = val
+    w.feats = "|".join(f"{k}={v}" for k, v in sorted(fs.items()))
+
+
+def _irab_rules(doc):
+    """قواعد من كتب النحو تُصحَّح بها شجرة المحلل قبل الإعراب:
+    الظرف (بعد، قبل، بين، عند...) اسم منصوب على الظرفية، ومجرور إن سبقه حرف جر؛
+    والمضارع بعد «لم» و«لمّا» مجزوم، وبعد «لن» و«أن» و«كي» منصوب، وبعد «لا» الناهية مجزوم إذا كان من الأفعال الخمسة محذوف النون."""
+    PREP = {"من", "في", "ب", "ل", "ك", "الي", "علي", "عن", "حتي", "منذ", "مذ"}
+    for s_ in doc.sentences:
+        toks = s_.tokens
+        for k, tok in enumerate(toks):
+            prev = _norm(_strip_tashkeel(toks[k - 1].text)) if k else ""
+            prev = prev[1:] if len(prev) > 2 and prev[0] in "وف" else prev
+            praw = _strip_tashkeel(toks[k - 1].text).replace("ٱ", "ا") if k else ""
+            praw = praw[1:] if len(praw) > 2 and praw[0] in "وف" else praw
+            for j, w in enumerate(tok.words):
+                t = _norm(_strip_tashkeel(w.text))
+                t = t[1:] if len(t) > 3 and t[0] in "وف" and (t[1:] in _ZURUF_MAKAN or t[1:] in _ZURUF_ZAMAN) else t
+                if t in _ZURUF_MAKAN or t in _ZURUF_ZAMAN:
+                    before = [_norm(_strip_tashkeel(x.text)) for x in tok.words[:j]]
+                    gen = (j > 0 and before and before[-1] in PREP | {"ب", "ل", "ك"}) or (j == 0 and prev in PREP)
+                    if w.upos in ("ADP", "SCONJ", "X", "NOUN", "ADV") and not (w.upos == "NOUN" and _feats(w).get("Case")):
+                        w.upos = "NOUN"
+                        if (w.deprel or "").startswith("case") or not w.deprel:
+                            w.deprel = "obl"
+                        _set_feat(w, "Case", "Gen" if gen else "Acc")
+                        w.lemma = w.lemma or w.text
+                        w.zarf = "مكان" if t in _ZURUF_MAKAN else "زمان"
+                if w.upos in ("VERB", "AUX") and _feats(w).get("Aspect") == "Imp" and j == (1 if tok.words[0].upos in ("CCONJ", "PART") and len(tok.words) > 1 else 0):
+                    bare = _strip_tashkeel(tok.text)
+                    five = bare.endswith(("وا", "ا", "ي")) and not bare.endswith(("ون", "ين", "ان"))
+                    if praw in _JAZM:
+                        _set_feat(w, "Mood", "Jus")
+                    elif praw in _NASB:
+                        _set_feat(w, "Mood", "Sub")
+                    elif prev == "لا" and five and bare.startswith("ت"):
+                        _set_feat(w, "Mood", "Jus")
+    return doc
+
+
 def _irab_word(w, sent, by_id, kids) -> str:
     f = _feats(w)
     t = _strip_tashkeel(w.text)
@@ -3113,6 +3162,11 @@ def _irab_word(w, sent, by_id, kids) -> str:
         return d
     role, case = _role(w, sent, by_id, kids)
     case = f.get("Case") or case
+    if getattr(w, "zarf", None):
+        if case == "Acc":
+            return f"ظرف {w.zarf} منصوب وعلامة نصبه الفتحة الظاهرة" + ("، وهو مضاف" if kids.get(w.id) else "")
+        if case == "Gen":
+            return "اسم مجرور وعلامة جره الكسرة الظاهرة" + ("، وهو مضاف" if kids.get(w.id) else "")
     mabni = w.upos in ("PRON", "DET") or (w.xpos or "").startswith(("S", "D")) or _bare_ar(w.lemma) in ("الذي", "التي", "الذين", "هذا", "هذه", "ذلك", "تلك", "هؤلاء", "من", "ما")
     kind = {"PRON": "ضمير", "DET": "اسم إشارة"}.get(w.upos, "")
     if mabni and f.get("Number") != "Dual":
@@ -3159,7 +3213,7 @@ def irab(sentence: str, detail: bool = True) -> dict:
         nlp, pkg = _stanza()
     except Exception as e:
         return {"تنبيه": str(e)}
-    doc = nlp(_strip_tashkeel(sentence))
+    doc = _irab_rules(nlp(_strip_tashkeel(sentence)))
     out_sents = []
     for s_ in doc.sentences:
         by_id = {w.id: w for w in s_.words}
@@ -3919,7 +3973,7 @@ def _bench_attr(n_poets: int, seed: int):
 _AR_CM = {"Nom": "رفع", "Acc": "نصب", "Gen": "جر", "Ind": "رفع", "Sub": "نصب", "Jus": "جزم", "—": "بلا حكم"}
 
 
-def _bench_irab(n: int, seed: int):
+def _bench_irab(n: int, seed: int, rules: bool = True):
     """دقة الحالة الإعرابية: آيات عشوائية بلا تشكيل تُعرب بالمحلل، وتُقارن حالة كل اسم (رفع/نصب/جر)
     وحالة كل فعل مضارع (رفع/نصب/جزم) بوسم «المدوّنة القرآنية» المراجَع يدويًّا."""
     import random, re, difflib
@@ -3955,6 +4009,8 @@ def _bench_irab(n: int, seed: int):
                     g = next((("n", GOLD_N[x]) for x in fs if x in GOLD_N), g)
             gold.append(g)
         doc = nlp(" ".join(forms))
+        if rules:
+            doc = _irab_rules(doc)
         toks = [(tok, s_) for s_ in doc.sentences for tok in s_.tokens]
         sm = difflib.SequenceMatcher(None, [_norm(x) for x in forms], [_norm(_strip_tashkeel(t.text)) for t, _ in toks], autojunk=False)
         for op, i1, i2, j1, j2 in sm.get_opcodes():
