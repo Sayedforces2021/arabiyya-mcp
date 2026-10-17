@@ -5,8 +5,9 @@ abstract: "An MCP server exposing tools for Arabic morphology, prosody, phonolog
 type: software
 authors:
   - name: "Sayed Hassan"
-    alias: "Sayedforces2021"
-repository-code: "https://github.com/Sayedforces2021/arabiyya-mcp"
+    alias: "ikagi07"
+repository-code: "https://github.com/ikagi07/arabiyya-mcp"
+url: "https://ikagi07.github.io/arabiyya-mcp/"
 license: MIT
 version: "1.0.0"
 date-released: "2026-10-16"

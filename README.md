@@ -476,7 +476,7 @@ flowchart LR
 
 ## الإسهام والتواصل
 
-يُرحَّب بملاحظات أهل الاختصاص، فهي أنفع ما يُصلح الأداة. والملاحظة النافعة تُرسَل في [Issues](https://github.com/Sayedforces2021/arabiyya-mcp/issues) وفيها:
+يُرحَّب بملاحظات أهل الاختصاص، فهي أنفع ما يُصلح الأداة. والملاحظة النافعة تُرسَل في [Issues](https://github.com/ikagi07/arabiyya-mcp/issues) وفيها:
 
 1. النص المُدخَل كما هو.
 2. اسم الأداة.
@@ -616,7 +616,7 @@ flowchart LR
   title   = {arabiyya: A Model Context Protocol server for Arabic linguistic research},
   year    = {2026},
   version = {1.0.0},
-  url     = {https://github.com/Sayedforces2021/arabiyya-mcp},
+  url     = {https://github.com/ikagi07/arabiyya-mcp},
   license = {MIT}
 }
 ```
