@@ -3107,8 +3107,10 @@ def _irab_rules(doc):
     PREP = {"من", "في", "ب", "ل", "ك", "الي", "علي", "عن", "حتي", "منذ", "مذ"}
     for s_ in doc.sentences:
         toks = s_.tokens
-        last_jus = None
+        last_jus = cond_k = talab_k = None
         for k, tok in enumerate(toks):
+            if any(x.upos == "VERB" and _feats(x).get("Mood") == "Imp" for x in tok.words):
+                talab_k = k  # فعل أمر: ما بعده من مضارع جواب للطلب
             prev = _norm(_strip_tashkeel(toks[k - 1].text)) if k else ""
             prev = prev[1:] if len(prev) > 2 and prev[0] in "وف" else prev
             praw = _strip_tashkeel(toks[k - 1].text).replace("ٱ", "ا") if k else ""
@@ -3147,6 +3149,14 @@ def _irab_rules(doc):
                         mood = "Jus"  # «مَن» الشرطية في صدر الكلام أو بعد الواو والفاء، لا الموصولة
                     elif bare[:1] in "وف" and last_jus is not None and k - last_jus <= 4 and not nun:
                         mood = "Jus"  # المعطوف على مجزوم
+                    elif bare[:1] not in "وف" and not nun and cond_k is not None and 0 < k - cond_k <= 8:
+                        mood = "Jus"  # جواب الشرط
+                        cond_k = None
+                    elif bare[:1] not in "وف" and not nun and talab_k is not None and 0 < k - talab_k <= 4:
+                        mood = "Jus"  # جواب الطلب
+                        talab_k = None
+                    if mood == "Jus" and (pr in ("إن",) or (prev == "من" and mood == "Jus" and cond_k is None and pr not in _JAZM)):
+                        cond_k = k  # فعل الشرط: يُنتظر جوابه
                     if mood:
                         if w.upos == "X":
                             w.upos = "VERB"
@@ -3154,6 +3164,23 @@ def _irab_rules(doc):
                         _set_feat(w, "Mood", mood)
                     if _feats(w).get("Mood") == "Jus":
                         last_jus = k
+        # ما لم يُعيّن المحلل حالته يُستعان فيه بمُزيل الالتباس الصرفي (CAMeL BERT) قراءةً ثانية
+        try:
+            need = [k for k, tok in enumerate(toks) if any(x.upos in ("X", "NOUN", "ADJ", "PROPN") and not _feats(x).get("Case") for x in tok.words)]
+            if need:
+                dis = _bert().disambiguate([_strip_tashkeel(t.text) for t in toks])
+                for k in need:
+                    an = dis[k].analyses[0].analysis if dis[k].analyses else {}
+                    cas = {"n": "Nom", "a": "Acc", "g": "Gen"}.get(an.get("cas"))
+                    if cas and an.get("pos", "").startswith(("noun", "adj")):
+                        for x in toks[k].words:
+                            if x.upos in ("X", "NOUN", "ADJ", "PROPN") and not _feats(x).get("Case"):
+                                if x.upos == "X":
+                                    x.upos = "NOUN"
+                                _set_feat(x, "Case", cas)
+                                break
+        except Exception:
+            pass
         # حالة الاسم من عامله القريب: اسم إنّ وأخواتها منصوب، والمضاف إليه مجرور، والمنادى المضاف منصوب
         INNA = {"إن", "أن", "لكن", "كأن", "ليت", "لعل", "إنما", "أنما"}
         NOMINAL = ("NOUN", "ADJ", "PROPN", "NUM", "X")
