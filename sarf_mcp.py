@@ -3916,21 +3916,124 @@ def _bench_attr(n_poets: int, seed: int):
             "المنهج": "لكل شاعر تُعزل قصائد كاملة (نحو 1500 كلمة) للاختبار، ويُبنى أسلوبه من باقي شعره بعد حذف كل بيت مكرر منها؛ ثم يُنسب كل نص مختبر إلى أقرب الشعراء بمقياس Cosine Delta على 150 لفظًا."}
 
 
+_AR_CM = {"Nom": "رفع", "Acc": "نصب", "Gen": "جر", "Ind": "رفع", "Sub": "نصب", "Jus": "جزم", "—": "بلا حكم"}
+
+
+def _bench_irab(n: int, seed: int):
+    """دقة الحالة الإعرابية: آيات عشوائية بلا تشكيل تُعرب بالمحلل، وتُقارن حالة كل اسم (رفع/نصب/جر)
+    وحالة كل فعل مضارع (رفع/نصب/جزم) بوسم «المدوّنة القرآنية» المراجَع يدويًّا."""
+    import random, re, difflib
+    from collections import Counter
+    words, _r, _t = _quran()
+    ayat = {}
+    for (su, a, w), segs in words.items():
+        ayat.setdefault((su, a), []).append((w, segs))
+    keys = sorted(ayat)
+    rnd = random.Random(seed)
+    sample = rnd.sample(keys, min(n, len(keys)))
+    nlp, pkg = _stanza()
+    GOLD_N = {"NOM": "Nom", "ACC": "Acc", "GEN": "Gen"}
+    GOLD_V = {"MOOD:IND": "Ind", "MOOD:SUBJ": "Sub", "MOOD:JUS": "Jus"}
+    NOMINAL = ("NOUN", "ADJ", "PROPN", "NUM", "X")
+    def bare(form):
+        return _strip_tashkeel(re.sub("[\u06d6-\u06ed\u0670]", "", form).replace("\u0671", "\u0627"))
+    stats = {"n": Counter(), "v": Counter()}
+    conf = {"n": Counter(), "v": Counter()}
+    feat_only = Counter()
+    errors = []
+    for (su, a) in sample:
+        ws = sorted(ayat[(su, a)])
+        gold, forms = [], []
+        for w, segs in ws:
+            form = "".join(x[0] for x in segs)
+            forms.append(bare(form))
+            g = None
+            for _f, tag, fs in segs:
+                if tag == "V":
+                    g = next((("v", GOLD_V[x]) for x in fs if x in GOLD_V), g)
+                elif tag in ("N", "PN", "ADJ"):
+                    g = next((("n", GOLD_N[x]) for x in fs if x in GOLD_N), g)
+            gold.append(g)
+        doc = nlp(" ".join(forms))
+        toks = [(tok, s_) for s_ in doc.sentences for tok in s_.tokens]
+        sm = difflib.SequenceMatcher(None, [_norm(x) for x in forms], [_norm(_strip_tashkeel(t.text)) for t, _ in toks], autojunk=False)
+        for op, i1, i2, j1, j2 in sm.get_opcodes():
+            if op != "equal":
+                for i in range(i1, i2):
+                    if gold[i]:
+                        stats[gold[i][0]]["unaligned"] += 1
+                continue
+            for i, j in zip(range(i1, i2), range(j1, j2)):
+                g = gold[i]
+                if not g:
+                    continue
+                kind, gv = g
+                tok, s_ = toks[j]
+                by_id = {x.id: x for x in s_.words}
+                kids = {}
+                for x in s_.words:
+                    kids.setdefault(x.head, []).append(x)
+                if kind == "v":
+                    w = next((x for x in tok.words if x.upos in ("VERB", "AUX")), None)
+                    pv = (_feats(w).get("Mood") or "Ind") if w else None
+                else:
+                    w = next((x for x in tok.words if x.upos in NOMINAL), None)
+                    if w:
+                        fc = _feats(w).get("Case")
+                        _role_, rc = _role(w, s_, by_id, kids)
+                        pv = fc or rc
+                        feat_only["total"] += 1
+                        feat_only["ok"] += (fc == gv)
+                    else:
+                        pv = None
+                stats[kind]["total"] += 1
+                if pv is None:
+                    stats[kind]["no_pred"] += 1
+                stats[kind]["ok"] += (pv == gv)
+                conf[kind][(gv, pv or "—")] += 1
+                if pv != gv and len(errors) < 25:
+                    errors.append({"الموضع": f"{su}:{a}:{ws[i][0]}", "الكلمة": forms[i], "المدوّنة القرآنية": _AR_CM.get(gv, gv), "الأداة": _AR_CM.get(pv or "—", pv)})
+    AR = {"Nom": "رفع", "Acc": "نصب", "Gen": "جر", "Ind": "رفع", "Sub": "نصب", "Jus": "جزم", "—": "بلا حكم"}
+    def acc(k):
+        t = stats[k]["total"] or 1
+        return round(100 * stats[k]["ok"] / t, 1)
+    def matrix(k):
+        return {f"{AR[g]} ← {AR.get(p, p)}": c for (g, p), c in conf[k].most_common()}
+    gold_n = Counter(g for (g, _p), c in conf["n"].items() for _ in range(c))
+    base = round(100 * max(gold_n.values()) / max(1, sum(gold_n.values())), 1) if gold_n else 0
+    return {
+        "العينة (آيات)": len(sample),
+        "الأسماء: عدد المقيس": stats["n"]["total"],
+        "الأسماء: دقة الحالة الإعرابية": acc("n"),
+        "الأسماء: دقة حالة المحلل وحده قبل قواعد الأبواب": round(100 * feat_only["ok"] / max(1, feat_only["total"]), 1),
+        "الأسماء: خط الأساس (الحالة الأكثر)": base,
+        "الأفعال المضارعة: عدد المقيس": stats["v"]["total"],
+        "الأفعال المضارعة: دقة الحالة": acc("v"),
+        "لم تُطابَق كلماتها (اختلاف التقطيع)": stats["n"]["unaligned"] + stats["v"]["unaligned"],
+        "مصفوفة الالتباس في الأسماء (الصواب ← حكم الأداة)": matrix("n"),
+        "مصفوفة الالتباس في الأفعال": matrix("v"),
+        "أمثلة من الأخطاء": errors,
+        "المنهج": f"آيات عشوائية تُعطى للمحلل Stanza ({pkg}) بلا تشكيل، وتُقارن الحالة التي تحكم بها أداة irab "
+                  "(سمة المحلل، ثم حالة الباب النحوي إن خلت) بوسم «المدوّنة القرآنية» المراجَع يدويًّا. "
+                  "ويقاس الحكم وحده لا الباب؛ والرسم عثماني منزوع التشكيل، فقد يختلف عن الإملاء المعتاد في كلمات قليلة.",
+    }
+
+
 _BENCH_JOBS = {}
 
 
 @mcp.tool()
 def benchmark(task: str = "meter", sample: int = 300, seed: int = 1) -> dict:
     """قياس دقة الأدوات على بيانات معيارية محلية، ليعرف الباحث حدود الاعتماد عليها:
-    task: «meter» دقة التقطيع ومعرفة البحر (أبيات «أشعار» المعلَّمة)، أو «root» دقة استخراج الجذر (المدوّنة القرآنية)، أو «attribution» دقة نسبة النص إلى قائله (شعراء «أشعار»).
-    sample: حجم العينة (للبحر عدد الأبيات، وللجذر عدد الكلمات، وللنسبة عدد الشعراء). seed: بذرة العينة العشوائية لإعادة الإنتاج.
+    task: «meter» دقة التقطيع ومعرفة البحر (أبيات «أشعار» المعلَّمة)، أو «root» دقة استخراج الجذر (المدوّنة القرآنية)، أو «attribution» دقة نسبة النص إلى قائله (شعراء «أشعار»)، أو «irab» دقة الحالة الإعرابية (آيات «المدوّنة القرآنية»).
+    sample: حجم العينة (للبحر عدد الأبيات، وللجذر عدد الكلمات، وللنسبة عدد الشعراء، وللإعراب عدد الآيات). seed: بذرة العينة العشوائية لإعادة الإنتاج.
     القياس يستغرق دقائق، فيعمل في الخلفية: أعد الطلب نفسه بعد قليل لتأخذ النتيجة."""
     import json, threading, time
     t = task.strip().lower()
     t = "attribution" if t == "attr" else t
-    fns = {"meter": (_bench_meter, 14, 2000), "root": (_bench_root, 50, 20000), "attribution": (_bench_attr, 3, 40)}
+    fns = {"meter": (_bench_meter, 14, 2000), "root": (_bench_root, 50, 20000), "attribution": (_bench_attr, 3, 40), "irab": (_bench_irab, 20, 2000)}
     if t not in fns:
-        return {"تنبيه": "المهام: meter أو root أو attribution."}
+        return {"تنبيه": "المهام: meter أو root أو attribution أو irab."}
     fn, lo, hi = fns[t]
     n = max(lo, min(int(sample), hi))
     path = os.path.join(SARF_HOME, f"benchmark_{t}_{n}_{seed}.json")
