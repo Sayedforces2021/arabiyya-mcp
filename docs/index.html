@@ -3,55 +3,63 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>العربية — عُدّة باحث في علوم العربية</title>
+<title>العربية</title>
 <meta name="description" content="خادم MCP لعلوم العربية يعمل داخل Claude بلا إنترنت: الصرف والعروض والأصوات والمعاجم والقرآن والشعر والدلالة والمدوّنات.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Noto+Naskh+Arabic:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Aref+Ruqaa:wght@700&family=Reem+Kufi:wght@500;700&family=Cormorant+Garamond:wght@600&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="arabiyya-icon-small.svg">
 <style>
+/* هوية العربية: حبر الليل والرَّقّ والذهب؛ الختم الكوفي؛ الفصل بالخطوط لا بالظلال */
 :root{
-  --paper:#f6f1e7; --ink:#231d16; --muted:#6b5f50; --line:#d9cdb8;
-  --accent:#7a2e1f; --accent-soft:#efe1d2; --card:#fbf8f2; --code:#efe7da;
+  --paper:#F6F0E2; --ink:#121A24; --muted:#5B6573; --line:#D9CCAF;
+  --accent:#7A5C22; --accent-soft:#EDE4D0; --card:#FBF7EC; --code:#EDE4D0;
+  --kufi:"Reem Kufi","Noto Kufi Arabic",sans-serif; --naskh:Amiri,"Noto Naskh Arabic",serif;
+  --ruqaa:"Aref Ruqaa",Amiri,serif; --latin:"Cormorant Garamond",Georgia,serif;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --paper:#17140f; --ink:#ece4d6; --muted:#a89a86; --line:#3a3227;
-    --accent:#d98b6a; --accent-soft:#2a211a; --card:#1e1a14; --code:#2a241c;
+    --paper:#121A24; --ink:#E9D8B0; --muted:#9AA3AE; --line:#2A3644;
+    --accent:#C9A35C; --accent-soft:#1B2632; --card:#16202B; --code:#1B2632; color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
-  --paper:#17140f; --ink:#ece4d6; --muted:#a89a86; --line:#3a3227;
-  --accent:#d98b6a; --accent-soft:#2a211a; --card:#1e1a14; --code:#2a241c;
+  --paper:#121A24; --ink:#E9D8B0; --muted:#9AA3AE; --line:#2A3644;
+  --accent:#C9A35C; --accent-soft:#1B2632; --card:#16202B; --code:#1B2632; color-scheme:dark;
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--paper);color:var(--ink);font-family:"Noto Naskh Arabic",serif;font-size:18px;line-height:1.9}
-.wrap{max-width:980px;margin:0 auto;padding:0 16px}
-header{padding:72px 0 40px;border-bottom:1px solid var(--line);text-align:center}
-.mark{font-family:Amiri,serif;font-size:clamp(64px,14vw,120px);line-height:1;color:var(--accent);margin:0}
-.latin{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;letter-spacing:.12em;color:var(--muted);direction:ltr;margin-top:10px}
-.lede{font-family:Amiri,serif;font-size:clamp(22px,3.4vw,28px);max-width:720px;margin:28px auto 0}
-.cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:32px}
-.btn{display:inline-block;padding:10px 22px;border:1px solid var(--accent);border-radius:999px;color:var(--accent);text-decoration:none;font-weight:600}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--naskh);font-size:19px;line-height:1.9}
+.wrap{max-width:980px;margin:0 auto;padding-block:0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{padding:64px 0 40px;border-bottom:1px solid var(--line);text-align:center}
+.seal{width:120px;height:120px;display:block;margin:0 auto 18px}
+.mark{font-family:var(--ruqaa);font-weight:700;font-size:clamp(64px,13vw,112px);line-height:1.1;color:var(--ink);margin:0}
+.latin{font-family:var(--latin);font-weight:600;font-size:18px;letter-spacing:.22em;color:var(--accent);direction:ltr;margin-top:6px}
+.lede{font-family:var(--naskh);font-size:clamp(21px,3.2vw,26px);max-width:720px;margin:24px auto 0;text-wrap:balance}
+.cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:30px}
+.btn{display:inline-block;padding:9px 22px;border:1px solid var(--accent);border-radius:12px;color:var(--accent);text-decoration:none;font-family:var(--kufi);font-weight:500}
 .btn.solid{background:var(--accent);color:var(--paper)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 section{padding:48px 0;border-bottom:1px solid var(--line)}
-h2{font-family:Amiri,serif;font-size:32px;margin:0 0 6px;color:var(--accent)}
+h2{font-family:var(--kufi);font-weight:700;font-size:30px;margin:0 0 6px;color:var(--ink)}
 .sub{color:var(--muted);margin:0 0 28px}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
-.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;text-align:center}
-.stat b{display:block;font-family:Amiri,serif;font-size:34px;color:var(--accent);line-height:1.2}
-.stat span{color:var(--muted);font-size:15px}
+.stat{border-top:2px solid var(--accent);padding:14px 4px;text-align:center}
+.stat b{display:block;font-family:var(--kufi);font-size:32px;color:var(--accent);line-height:1.3;font-variant-numeric:tabular-nums}
+.stat span{color:var(--muted);font-size:16px}
 .fanun{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
-.fann{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px}
-.fann h3{font-family:Amiri,serif;font-size:24px;margin:0 0 10px}
+.fann{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;min-width:0}
+.fann h3{font-family:var(--kufi);font-weight:500;font-size:22px;margin:0 0 10px}
 .tool{margin:0 0 10px}
-.tool code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;background:var(--code);padding:1px 7px;border-radius:5px;direction:ltr;display:inline-block}
+.tool code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;background:var(--code);padding:1px 7px;border-radius:6px;direction:ltr;display:inline-block}
 .tool p{margin:2px 0 0;color:var(--muted);font-size:16px;line-height:1.7}
+.tier{display:inline-block;font-family:var(--kufi);font-size:12px;padding:0 8px;border:1px solid var(--line);border-radius:6px;color:var(--muted);margin-inline-start:6px;vertical-align:middle}
+.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
 ol.steps{padding-inline-start:22px;margin:0}
 ol.steps li{margin-bottom:10px}
 .os{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
 .ask{display:grid;gap:10px}
-.ask div{background:var(--accent-soft);border-radius:10px;padding:12px 16px;font-family:Amiri,serif;font-size:20px}
+.ask div{background:var(--accent-soft);border-radius:12px;padding:12px 16px;font-family:var(--naskh);font-size:20px}
 .notes li{margin-bottom:8px}
 footer{padding:36px 0 56px;color:var(--muted);font-size:15px;text-align:center}
 footer a,section a{color:var(--accent)}
@@ -60,12 +68,14 @@ footer a,section a{color:var(--accent)}
 <body>
 <header>
   <div class="wrap">
+    <img class="seal" src="arabiyya-icon.svg" alt="">
     <h1 class="mark">العربية</h1>
     <div class="latin">ARABIYYA · MCP</div>
-    <p class="lede">عُدّة باحث في علوم العربية، تعمل داخل Claude على جهازك وبلا إنترنت في أكثر أدواتها.</p>
+    <p class="lede">علومُ العربيّة موصولةً بالنماذج اللغويّة: يصوغ النموذج الجواب، ويصدر الحكم عن معجمٍ يُراجَع أو قاعدةٍ تُختبَر.</p>
     <div class="cta">
       <a class="btn solid" href="#install">التثبيت</a>
       <a class="btn" href="#tools">الأدوات</a>
+      <a class="btn" href="https://github.com/Sayedforces2021/arabiyya-mcp">المستودع</a>
     </div>
   </div>
 </header>
@@ -78,6 +88,16 @@ footer a,section a{color:var(--accent)}
       <div class="stat"><b>3.8 ملايين</b><span>بيت من الشعر</span></div>
       <div class="stat"><b>12 مليون</b><span>كلمة في المدوّنة</span></div>
       <div class="stat"><b>8,800</b><span>كتاب يمكن إضافته</span></div>
+    </div>
+  </section>
+
+  <section id="tiers">
+    <h2>مراتب الأحكام</h2>
+    <p class="sub">ما تُخرجه الأدوات ليس من جنس واحد، فيُقدَّر الوثوق به بحسب مصدر الحكم.</p>
+    <div class="tiers">
+      <div class="fann"><h3>١. النقل</h3><p>نصٌّ في مصدر معيّن يُنقل بلفظه مع موضعه، كالمعاجم والقرآن والشعر. وخطؤه خطأ النسخة الرقمية.</p></div>
+      <div class="fann"><h3>٢. القاعدة</h3><p>قواعد صريحة على مذهب أهل الصنعة، تُعطي النتيجة نفسها كلما أُعيدت، وتُختبر بحالات معيارية، كالإعلال والقافية والمخارج.</p></div>
+      <div class="fann"><h3>٣. الترجيح</h3><p>نموذج إحصائي يرجّح بين وجوه، كالتشكيل والإعراب والدلالة ونسبة النصوص. فيُعرض بوجوهه ولا يُجزم به.</p></div>
     </div>
   </section>
 
@@ -104,7 +124,7 @@ footer a,section a{color:var(--accent)}
         <div class="tool"><code>detect_badi</code><p>الجناس والطباق والمقابلة والتصريع والسجع والاقتباس.</p></div>
       </div>
       <div class="fann"><h3>الضبط والعروض</h3>
-        <div class="tool"><code>diacritize</code><p>التشكيل الآلي بحسب السياق.</p></div>
+        <div class="tool"><code>diacritize</code><p>التشكيل الآلي بمشكِّل CATT.</p></div>
         <div class="tool"><code>scan_verse</code><p>تقطيع البيت وزحافاته وعلله وقافيته.</p></div>
         <div class="tool"><code>scan_poem</code><p>تقطيع القصيدة والتنبيه على المختل، مع الضبط الموجَّه بالوزن.</p></div>
       </div>
@@ -186,7 +206,8 @@ footer a,section a{color:var(--accent)}
     <h2>تنبيهات منهجية</h2>
     <ul class="notes">
       <li>التحليل الآلي يقارب ولا يقطع؛ فما خالف المقرَّر عند أهل الفن يُراجَع في مظانّه.</li>
-      <li>المشكِّل الآلي مبني على الفصحى المعاصرة، فالشعر القديم يُعطى مشكولًا لصحة التقطيع.</li>
+      <li>المشكِّل الآلي يُحسن النثر ويضعف في الشعر، فالشعر يُعطى مشكولًا لصحة التقطيع، وما يضبطه الوزن «ضبط يقتضيه الوزن، لا رواية محقّقة».</li>
+      <li>العبرة بمُخرَج الأداة لا بصياغة النموذج له؛ ومُخرَج كل استدعاء ظاهر في تطبيق Claude لمن أراد مراجعته.</li>
       <li>المدوّنة مختارة لا شاملة، والنسبة لكل مليون كلمة أدقّ من العدد المجرد.</li>
     </ul>
   </section>

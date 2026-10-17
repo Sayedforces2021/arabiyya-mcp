@@ -1,58 +1,90 @@
 <p align="center">
-  <img src="/banner.png" alt="Arabiyya MCP — Bridging Arabic Language with AI" width="100%">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="brand/banner-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="brand/banner-light.svg">
+    <img src="brand/banner-dark.svg" alt="العربية — علوم العربية موصولةً بالنماذج اللغوية" width="100%">
+  </picture>
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-C9A35C?style=flat-square&labelColor=121A24"></a>
+  <img alt="Python 3.11" src="https://img.shields.io/badge/python-3.11-C9A35C?style=flat-square&labelColor=121A24">
+  <img alt="MCP tools" src="https://img.shields.io/badge/MCP-37_tools-C9A35C?style=flat-square&labelColor=121A24">
+  <a href="tests/test_ilal.py"><img alt="i'lal tests" src="https://img.shields.io/badge/i%CA%BFl%C4%81l_tests-43%2F43-C9A35C?style=flat-square&labelColor=121A24"></a>
+  <a href="CITATION.cff"><img alt="Cite" src="https://img.shields.io/badge/cite-CITATION.cff-C9A35C?style=flat-square&labelColor=121A24"></a>
 </p>
 
 <div dir="rtl">
 
-# العربية (arabiyya-mcp)
+# العربية
 
-**بيئة حاسوبية لعلوم العربية تتصل بالنماذج اللغوية عبر بروتوكول MCP**
+**خادمٌ حاسوبي لعلوم العربية، يَصِل النماذجَ اللغوية بالمعاجم والمدوّنات والمحلّلات عبر بروتوكول سياق النموذج (MCP)، لتستند أجوبتها إلى مصدرٍ يُراجَع أو قاعدةٍ تُختبَر، لا إلى ما تستظهره.**
 
-[English summary](#english-summary)
+[الملخّص](#الملخّص) · [ما الأداة وما ليست](#ما-الأداة-وما-ليست) · [مراتب الأحكام](#مراتب-الأحكام) · [الأدوات](#الأدوات-ومناهجها) · [قياس الدقة](#قياس-الدقة) · [حدود المنهج](#حدود-المنهج) · [خطة التطوير](#خطة-التطوير) · [التثبيت](#التثبيت) · [English](#english-summary)
 
 ## الملخّص
 
-يجمع هذا المشروع في خادم واحد، يعمل وفق بروتوكول سياق النموذج (Model Context Protocol)، أدواتٍ حاسوبية تغطي أبرز فروع الدرس اللغوي العربي، وهي:
+النماذج اللغوية الكبيرة (Large Language Models) فصيحة العبارة في العربية، لكنها تجيب في مسائل علومها من محفوظها الإحصائي، فلا يتميّز في جوابها المنقولُ من المستنتَج ولا الصحيحُ من الموهوم. ويظهر ذلك في أخصّ مواضع الصنعة: وزنِ المعتلّ وبيانِ ما جرى فيه من إعلال، وتعيينِ البحر حين يختلّ الضبط، ونسبةِ الشاهد إلى قائله، ونقلِ نصّ المعجم بلفظه.
 
-- الصرف والتصريف، والميزان الصرفي مع خطوات الإعلال والإبدال.
+ويقوم هذا المشروع على **الفصل بين الصياغة والحكم**: يتولّى النموذج اللغوي فهمَ السؤال وصياغةَ الجواب، ويصدر الحكم نفسه عن أداةٍ معلومة المنهج. فالخادم يعرض على النموذج سبعًا وثلاثين أداةً في عشرة فروع من الدرس اللغوي، هي:
+
+- الصرف والتصريف، والميزان الصرفي بخطوات الإعلال والإبدال والإدغام.
 - النحو والإعراب.
-- الضبط والعروض وعلم القافية.
-- الأصوات.
-- البلاغة (البديع).
+- الضبط بالشكل، والعروض، وعلم القافية.
+- الأصوات: المخارج والصفات، والكتابة الصوتية، والمقاطع.
+- البديع.
 - المعجم التراثي وكتب اللغة المتخصصة.
 - الصرف القرآني.
 - الشواهد الشعرية وتخريجها.
 - الدلالة التوزيعية والتطور الدلالي.
 - لسانيات المدوّنة والأسلوبية الإحصائية ونسبة النصوص.
 
-**الغرض:** أن يستند النموذج اللغوي في جوابه إلى مصادر ومحلّلات يمكن التحقق منها، لا إلى ما يستظهره. فكل نتيجة تُعزى إلى مصدرها بالجزء والصفحة، أو إلى الأداة التي أنتجتها. ويصحب كل أداة بيانُ حدودها المنهجية.
+وكل نتيجة تُعزى إلى مصدرها بالجزء والصفحة، أو إلى الأداة التي أنتجتها، ويصحب كل أداة بيانُ منهجها وحدودها. ويعمل الخادم على جهاز الباحث: تُنزَّل البيانات مرة واحدة، ثم تعمل الأدوات بلا اتصال بالشبكة، إلا أداتين تنصّان على ذلك.
 
-**طريقة العمل:** يعمل الخادم على جهاز الباحث. تُنزَّل البيانات مرة واحدة، ثم تعمل الأدوات بلا اتصال بالشبكة، عدا أداة `lexicon_lookup` وأداة `corpus_add_book` عند تنزيل كتاب جديد.
+## ما الأداة وما ليست
 
-## المحتويات
+دفعًا لما قد يُتوهَّم من اسمها أو من صلتها بالذكاء الاصطناعي:
 
-1. [البنية](#البنية)
-2. [الموارد اللغوية](#الموارد-اللغوية)
-3. [الأدوات ومناهجها](#الأدوات-ومناهجها)
-4. [حدود المنهج](#حدود-المنهج)
-5. [قياس الدقة](#قياس-الدقة)
-6. [التثبيت](#التثبيت)
-7. [قابلية إعادة الإنتاج](#قابلية-إعادة-الإنتاج)
-8. [المراجع](#المراجع)
+| ما قد يُتوهَّم | التحقيق |
+|---|---|
+| أنها نموذج لغوي عربي، أو تدريبٌ لـ Claude على العربية | ليست نموذجًا ولا تُغيّر نموذجًا. هي خادم أدوات يستدعيه النموذج كما يرجع الباحث إلى كتاب، وتعمل مع أي عميل يدعم البروتوكول |
+| أن كل ما يقوله النموذج بعد ربطها صحيح | العبرة بمُخرَج الأداة لا بصياغة النموذج له. والنموذج قد يُجمِل النتيجة أو يُسيء نقلها، ومُخرَج كل استدعاء ظاهرٌ في تطبيق العميل لمن أراد مراجعته |
+| أن نتائجها قطعية | أحكامها على ثلاث مراتب متفاوتة في الوثوق، مبيّنة في [مراتب الأحكام](#مراتب-الأحكام). وما كان منها ترجيحًا إحصائيًّا يُقدَّم بوجوهه ولا يُجزم به |
+| أنها تُغني عن الرجوع إلى المصادر | هي أداة تقريب وكشف تختصر الطريق إلى الموضع، والتحقيق بعدها للباحث. فالمعاجم مثلًا تُنقل من نسخ OpenITI الرقمية، وهي غير محقّقة يدويًّا |
+| أن أرقام الدقة المنشورة تصدق على كل نص | قيست على عينات محدودة معلنة، ويُعاد إنتاجها ببذرة العينة. ولا تُعمَّم على غير جنسها، كالشعر القديم إذا قيست على النثر |
+| أن نصوص الباحث تُرسَل إلى خادم خارجي | تعمل الأدوات على جهازه. ويتصل بالشبكة `lexicon_lookup` (البحث في معاجم موقع خارجي) و`corpus_add_book` (تنزيل كتاب جديد) وحدهما |
+| أن `sarf` في أسماء الملفات اسمٌ آخر للمشروع | هو الاسم الأول للمشروع حين اقتصر على الصرف، وبقي في أسماء الملفات ومجلد البيانات (`~/.sarf`) حفظًا للتوافق مع التثبيتات السابقة |
+
+## مراتب الأحكام
+
+ما تُخرجه الأدوات ليس من جنس واحد، فيُرتَّب بحسب مصدر الحكم، وبه تُقدَّر درجة الوثوق به وجهة الخطأ فيه:
+
+| المرتبة | مصدر الحكم | جهة الخطأ | الأدوات |
+|---|---|---|---|
+| **١. النقل** | نصٌّ في مصدر معيّن، يُنقل بلفظه مع موضعه | خطأ النسخة الرقمية (التصحيف، ونقص النص)، أو خطأ تقطيع المعجم إلى مواد | `maajim` · `lughawiyyat` · `quran_word` · `quran_root` · `search_poetry` · `corpus_concordance` · `corpus_find_book` · `lexicon_lookup` |
+| **٢. القاعدة** | قواعد صريحة على مذهب أهل الصنعة، تُعطي النتيجة نفسها كلما أُعيدت، وتُختبر بحالات معيارية | قاعدة ناقصة أو حالة لم تُستوعب، فتُصلَح القاعدة نفسها | `mizan` · `mushtaqqat` · `taqalib` · `conjugate` · `analyze_qafiya` · `huruf` · `phonetics` · `analyze_word` · `root_family` · `corpus_usage` · `corpus_collocates` · `usage_compare` · `text_profile` · `compare_texts` · `detect_badi` |
+| **٣. الترجيح** | نموذج إحصائي مدرَّب، يرجّح بين وجوه بحسب ما رأى من بيانات | الخروج عن جنس بيانات التدريب (الشعر، والتراكيب النادرة)، فتُعرض النتيجة بوجوهها | `analyze_text` · `diacritize` · `scan_verse` · `scan_poem` · `irab` · `word_similarity` · `substitutes_in_context` · `semantic_neighbors` · `semantic_change` · `attribute_author` · `takhrij_shahid` |
+
+**تنبيهات على التقسيم:**
+
+- **الأدوات المركّبة:** بعض الأدوات يجمع مرتبتين. فالتقطيع العروضي قاعدةٌ إذا كان البيت مشكولًا شكلًا تامًّا، وترجيحٌ إذا شُكِّل آليًّا. والتخريج نقلٌ في نصوص الأبيات، وترجيحٌ في المطابقة بينها.
+- **مرتبة القاعدة في الإحصاء:** ما في هذه المرتبة من أدوات المدوّنة حسابٌ معلوم الصيغة، لكن مدخلاته الصرفية (الجذر والوزن) قد تكون ترجيحًا. فيُنبَّه على ذلك في موضعه.
+- **أدوات خارج المراتب:** ثلاث أدوات لا تُصدر حكمًا لغويًّا. فأداة `benchmark` تقيس دقة غيرها، وأداتا `corpus_add_book` و`corpus_remove_book` تُضيفان الكتب إلى المدوّنة وتحذفانها.
 
 ## البنية
 
 ```mermaid
 flowchart LR
-    U[الباحث] --> C[نموذج لغوي<br/>Claude]
-    C <-->|MCP| S[خادم arabiyya]
-    S --> M[المحلّل الصرفي<br/>CAMeL Tools]
-    S --> B[نماذج BERT<br/>MSA / CA]
+    U[الباحث] --> C[نموذج لغوي<br/>Claude أو غيره]
+    C <-->|MCP| S[خادم العربية]
+    S --> M[المحلّل الصرفي<br/>CAMeL Tools · CALIMA-Star]
+    S --> I[محرّك الإعلال<br/>sarf_ilal.py]
+    S --> D[التشكيل<br/>CATT · CAMeLBERT]
     S --> P[العروض والتصريف<br/>PyArud · Qutrub]
+    S --> N[المحلّل النحوي<br/>Stanza · AraELECTRA]
+    S --> B[الدلالة<br/>CAMeLBERT-CA]
     S --> R[(فهارس SQLite FTS5<br/>المعاجم · الشعر · المدوّنة)]
     S --> Q[(المدوّنة القرآنية)]
-    S --> X[قواعد صوتية وصرفية<br/>الإعلال · المقاطع · القافية]
-    S --> N[المحلل النحوي<br/>Stanza · AraELECTRA]
 ```
 
 البيانات كلها في قواعد SQLite محلية، وفيها فهرسة نصية كاملة (FTS5) على نصوص موحّدة الرسم:
@@ -66,15 +98,17 @@ flowchart LR
 | المورد | المحتوى | الاستعمال |
 |---|---|---|
 | CALIMA-Star (calima-msa-r13) | قاعدة صرفية للفصحى المعاصرة فيها السوابق والجذوع واللواحق وسماتها | التحليل والتوليد الصرفي |
-| CAMeLBERT-MSA (BERT unfactored) | نموذج إزالة الالتباس الصرفي بالسياق | الترجيح السياقي والتشكيل |
+| CAMeLBERT-MSA (BERT unfactored) | نموذج إزالة الالتباس الصرفي بالسياق | الترجيح السياقي |
+| CATT | مشكِّل على مستوى الحرف بمعمارية المحوِّل (Transformer)، رخصة Apache-2.0 | التشكيل |
 | CAMeLBERT-CA | نموذج BERT مدرَّب على العربية الكلاسيكية | الدلالة التوزيعية |
-| المدوّنة القرآنية (Quranic Arabic Corpus) | تحليل صرفي ونحوي لكلمات القرآن مقسّمة إلى أجزاء | الصرف القرآني ومواضع الجذور |
-| مدوّنة «أشعار» (Ashaar) | 254,630 قصيدة و3,863,406 أبيات، بالشاعر والبحر والعصر والغرض | الشواهد والتحليل الأسلوبي |
+| المدوّنة القرآنية (Quranic Arabic Corpus) | تحليل صرفي ونحوي لكلمات القرآن مقسّمة إلى أجزاء | الصرف القرآني، ومواضع الجذور، والقياس |
+| مدوّنة «أشعار» (Ashaar) | 254,630 قصيدة و3,863,406 أبيات، بالشاعر والبحر والعصر والغرض | الشواهد، والتحليل الأسلوبي، والقياس |
+| Tashkeela (Fadel et al., 2019) | نصوص تراثية مشكولة مقسومة للتدريب والاختبار | قياس التشكيل وتدريب مشكِّل الشعر |
 | OpenITI: المعاجم | 15 معجمًا من العين (ت 170هـ) إلى تاج العروس (ت 1205هـ) | مادة الجذر بالجزء والصفحة |
 | OpenITI: المدوّنة | 57 مصنَّفًا في النحو واللغة والبلاغة والشعر والأدب، من القرن الثاني إلى الحادي عشر، نحو 11.9 مليون كلمة | لسانيات المدوّنة |
 | فهرس OpenITI | 8,792 نسخة أصلية (primary version) من نصوص عربية، بعناوينها ومؤلفيها | توسيع المدوّنة |
 | OpenITI: كتب اللغة المتخصصة | الفروق اللغوية للعسكري، والأضداد لابن الأنباري، والقلب والإبدال لابن السكيت، والإبدال والإتباع لأبي الطيب، والتعريب لابن بري، والمهذب للسيوطي، والمثلثات للمهلبي | الفروق والأضداد والإبدال والمعرّب |
-| Stanza + AraELECTRA | محلل نحوي (تبعية) مدرَّب على شجرة PADT في Universal Dependencies (Qi et al., 2020؛ Antoun et al., 2021) | الإعراب |
+| Stanza + AraELECTRA | محلل نحوي بطريقة التبعية (dependency parsing) مدرَّب على شجرة PADT في Universal Dependencies (Qi et al., 2020؛ Antoun et al., 2021) | الإعراب |
 
 **المعاجم الخمسة عشر:** العين، وجمهرة اللغة، وتهذيب اللغة، والصحاح، ومقاييس اللغة، ومجمل اللغة، والمحكم، والمفردات، وأساس البلاغة، والنهاية، ومختار الصحاح، ولسان العرب، والمصباح المنير، والقاموس المحيط، وتاج العروس.
 
@@ -88,7 +122,7 @@ flowchart LR
 
 ## الأدوات ومناهجها
 
-### ١. الصرف
+### ١. الصرف والنحو
 
 | الأداة | المنهج |
 |---|---|
@@ -188,11 +222,11 @@ flowchart LR
 
 ثم يُقترح ضبط أواخر الكلمات بحسب مواقعها، وبهذا تُصحَّح علامات الإعراب في التشكيل الآلي.
 
-### ٢. الضبط والعروض
+### ٢. الضبط والعروض والقافية
 
 | الأداة | المنهج |
 |---|---|
-| `diacritize` | التشكيل بالتحليل الأرجح سياقيًّا لكل كلمة |
+| `diacritize` | التشكيل بمشكِّل CATT على مستوى الحرف، ويُرجَع إلى التحليل الأرجح سياقيًّا (CAMeL) عند تعذّره |
 | `scan_verse` | التقطيع العروضي عبر PyArud: البحر، والتفعيلات، والزحافات والعلل، والقافية والروي |
 | `scan_poem` | تقطيع القصيدة بيتًا بيتًا، وتحديد البحر والروي الغالبين، والتنبيه على كل بيت خالفهما أو اختل وزنه |
 
@@ -239,7 +273,7 @@ flowchart LR
 - **سناد التأسيس، وسناد الإشباع، وسناد الحذو، وسناد التوجيه.**
 - **الإيطاء:** تكرار كلمة القافية، مع حساب المسافة بين التكرارين وحدّ السبعة الأبيات.
 
-### ٢ب. البلاغة
+### ٣. البلاغة
 
 **`detect_badi`:** يرصد مرشحات المحسنات البديعية:
 
@@ -259,7 +293,7 @@ flowchart LR
 | السجع المطرَّف والمتوازي | اتفاق الفاصلتين رويًّا، واتفاقهما وزنًا في المتوازي |
 | الاقتباس | اتفاق أربع كلمات متتالية فأكثر مع النص القرآني |
 
-### ٣. الأصوات
+### ٤. الأصوات
 
 **`phonetics`: تحويل الحروف إلى أصوات بالقواعد.** يحوّل النص المشكول إلى كتابة صوتية وظيفية (phonemic) بالأبجدية الصوتية الدولية (IPA)، مع مراعاة:
 
@@ -302,7 +336,7 @@ flowchart LR
   - متباعدان.
 - **الخلاف بين الوصفين القديم والحديث:** يُنبَّه عليه، كجهر الطاء والقاف عند سيبويه، وجانبية الضاد القديمة.
 
-### ٤. المعجم والقرآن والشعر
+### ٥. المعجم والقرآن والشعر
 
 | الأداة | المنهج |
 |---|---|
@@ -314,7 +348,7 @@ flowchart LR
 | `takhrij_shahid` | تخريج البيت: يُبحث عنه بفهرس «أشعار» ثم يُرتَّب بالتطابق اللفظي (SequenceMatcher على الكلمات الموحّدة الرسم)، فتُذكر نسبته، واختلاف روايته كلمةً كلمة، واختلاف نسبته، ويُفصل ذلك عن المعارضات والتضمين. ثم تُطلب مواضعه في كتب المدوّنة بثلاثيات الكلمات، ويُتحقق من كل موضع بنسبة ما يغطيه من ألفاظ البيت، ويُستخرج قول المؤلف «والشاهد فيه...» إن وُجد |
 | `lughawiyyat` | البحث في كتب الفروق والأضداد والإبدال والإتباع والمعرّب والمثلثات وفقه اللغة، بالجزء والصفحة |
 
-### ٥. الدلالة التوزيعية
+### ٦. الدلالة التوزيعية
 
 تعتمد على نموذج CAMeLBERT-CA (Inoue et al., 2021). وتمثيل الكلمة هو متوسط الطبقات الأربع الأخيرة من النموذج، على الأجزاء التي يقطّعها إليها، مُطبَّعًا (normalized).
 
@@ -343,7 +377,7 @@ flowchart LR
 
 **معالجة تقارب الاتجاهات في `semantic_neighbors`:** تمثيلات نماذج BERT خارج السياق تتجه كلها إلى جهة واحدة تقريبًا (anisotropy)، فيتقارب جيب التمام بين أي كلمتين. ويُخفَّف ذلك بطرح متوسط المتجهات (mean-centering) على نحو ما في Mu & Viswanath (2018).
 
-### ٦. لسانيات المدوّنة
+### ٧. لسانيات المدوّنة
 
 | الأداة | المنهج |
 |---|---|
@@ -354,7 +388,7 @@ flowchart LR
 | `corpus_add_book` / `corpus_remove_book` | تنزيل نص من OpenITI وتقطيعه إلى فقرات وفهرسته وتحديث جدول التكرار، أو حذفه وحذف أثره من الفهرس والتكرار |
 | `usage_compare` | موازنة تعبيرين أو أكثر (مسائل التعدية والاستعمال): الورود، والنسبة لكل مليون كلمة، والتوزع على الفنون والقرون، والشواهد |
 
-### ٧. الأسلوبية الإحصائية
+### ٨. الأسلوبية الإحصائية
 
 **`text_profile`:** يصف نصًّا أو ديوانًا بـ:
 
@@ -376,35 +410,80 @@ flowchart LR
 
 والنتيجة قرينة إحصائية تُضمّ إلى أدلة النسبة الأخرى.
 
+## قياس الدقة
+
+أداة `benchmark` تقيس الدقة على بيانات معيارية محلية، ويُعاد إنتاج كل رقم ببذرة العينة. وفي التشكيل مقياسان:
+
+- **DER** (Diacritic Error Rate): نسبة الحروف التي أخطأ المشكِّل حركتها.
+- **WER** (Word Error Rate): نسبة الكلمات التي فيها خطأ واحد على الأقل.
+
+| المهمة | البيانات | المقياس | النتيجة |
+|---|---|---|---|
+| الميزان والإعلال | 43 حالة معيارية من كتب الصرف (`tests/test_ilal.py`) | مطابقة الأصل والصورة | 43/43 |
+| استخراج الجذر | 2,000 كلمة عشوائية من القرآن (المدوّنة القرآنية) | الجذر بأرجح تحليل بلا سياق | 78.8% (والصحيح بين التحليلات الممكنة 81.7%) |
+| التشكيل (CATT) | 40 سطرًا نثريًّا من قسم الاختبار في Tashkeela | DER / WER | 1.1% / 2.9% |
+| التشكيل (CATT) | 40 بيتًا مشكولًا من «أشعار» | DER / WER | 15.2% / 33.9% |
+| التقطيع بالضبط الموجَّه | 210 أبيات من 14 بحرًا، منزوعة التشكيل ومشكولة بأرجح تحليل بلا سياق | الأبيات الموزونة | من 1.9% إلى 31.4% |
+| نسبة النص إلى قائله | 30 شاعرًا من «أشعار»، ونص مختبر من نحو 1500 كلمة معزول عن شعر صاحبه بعد حذف المكرر | Cosine Delta على 150 لفظًا | 96.7% (خط الأساس 3.3%) |
+
+**قراءة الأرقام:**
+
+- **التشكيل بين النثر والشعر:** الفرق بينهما في التشكيل هو علّة الضبط الموجَّه بالعروض. فالمشكِّل يُحسن النثر ويضعف في الشعر، فيُكمَّل ضبطُ الأبيات بما يقتضيه الوزن. وقياس التقطيع بالمشكِّل الحالي يُجرى بـ `benchmark("meter")`.
+- **نسبة النصوص:** قيست على شعراء أكثرهم معاصرون متمايزو المعجم، فلا تُعمَّم على الشعر القديم.
+- **التقطيع:** في «أشعار» قصائد مكررة وأبيات مختلّة، فأرقام التقطيع حدٌّ أدنى.
+- **الإعراب والبديع والدلالة:** لم تُقَس بعدُ لفقد مجموعات اختبار عربية مصحّحة على مصطلح النحو العربي. وهذا من أول ما في [خطة التطوير](#خطة-التطوير).
+
+**مشكِّل الشعر:** في المشروع نموذج اختياري لتشكيل الشعر (BiLSTM على مستوى الحرف)، يُدرَّب على جهاز الباحث على Tashkeela وأبيات «أشعار» المشكولة، بـ `train_diacritizer.py` أو `train_diacritizer.bat` على ويندوز. ولا يستعمله الخادم إلا إذا كان خطؤه على أبيات الاختبار أقل من خطأ CATT، ويُكتب تقرير الموازنة في `~/.sarf/models/diac_ca/report.txt`.
+
 ## حدود المنهج
 
 1. **أصل القاعدة الصرفية:** CALIMA-Star مبنية للفصحى المعاصرة، فقد يغيب عنها بعض الغريب التراثي، أو يُرجَّح فيه معنى معاصر.
-2. **التشكيل الآلي:** مدرَّب على نصوص معاصرة، فيقلّ ضبطه في الشعر الجاهلي والعباسي. والأولى إدخال الشعر مشكولًا لصحة التقطيع والتحليل الصوتي.
+2. **التشكيل الآلي:** يُحسن النثر ويضعف في الشعر (انظر القياس)، والأولى إدخال الشعر مشكولًا لصحة التقطيع والتحليل الصوتي. وما يُضبط بمقتضى الوزن يُعرض على أنه «ضبط يقتضيه الوزن، لا رواية محقّقة».
 3. **التحليل في الإحصاءات الأسلوبية:** الجذور والأوزان فيها هي أرجح تحليل لكل نوع (type) منفردًا بلا سياق، فالأرقام تقديرية تصلح للمقارنة النسبية دون العدّ القاطع.
 4. **نصوص OpenITI:** أكثرها غير مشكول ولم يُراجَع يدويًّا، وبعض نسخها ناقص. والجزء والصفحة بحسب الطبعة التي في المكتبة الشاملة.
 5. **تمثيل المدوّنة:** المدوّنة مختارة لا شاملة، وأحجام القرون فيها متفاوتة. فالتطبيع لكل مليون كلمة أدقّ من العدد المجرد، ولا يُعمَّم الحكم على العربية كلها.
 6. **عدّ الألفاظ:** يُعدّ اللفظ في المدوّنة بصورته بعد توحيد الرسم، دون تجريد سوابقه.
 7. **الكتابة الصوتية:** وظيفية لا نطقية، فلا تُظهر التفخيم في الحركات ولا الإخفاء والإقلاب ونحوهما من أحكام التجويد. والنبر لم يصفه القدماء، فهو تقريب بقاعدة معاصرة.
 8. **الإعراب:** المحلل النحوي مدرَّب على لغة الصحافة المعاصرة (PADT)، فتقلّ دقته في الشعر والتقديم والتأخير. وتمييز الحال من التمييز ومن المفعول لأجله يتوقف على المعنى، فيُذكر بوجوهه.
-9. **البديع:** ما يقوم على المعنى الخفي، كالتورية والاستخدام، لا يُرصد. والطباق محصور في معجم الأضداد المختار.
-10. **نسبة النصوص:** تضعف إذا قصر النص عن ألف كلمة، أو اختلف عصر المرشحين أو فنّهم.
+9. **البديع:** ما يقوم على المعنى الخفي، كالتورية والاستخدام، لا يُرصد. والطباق محصور في معجم الأضداد المختار، والمرصود مرشّحات يُنظر فيها لا أحكام.
+10. **نسبة النصوص:** تضعف إذا قصر النص عن ألف كلمة، أو اختلف عصر المرشحين أو فنّهم. ونتيجتها قرينة تُضمّ إلى غيرها من أدلة النسبة.
 
-## قياس الدقة
+## خطة التطوير
 
-أداة `benchmark` تقيس الدقة على بيانات معيارية محلية، ويُعاد إنتاج كل رقم ببذرة العينة:
+المشروع قائم ومستمر، وغايته أن يبلغ في كل فرع درجةً يُعتمد عليها في البحث، بقياسٍ معلَن لا بدعوى. وهذه مراحله:
 
-| المهمة | البيانات | المقياس | النتيجة |
-|---|---|---|---|
-| استخراج الجذر | 2,000 كلمة عشوائية من القرآن (المدوّنة القرآنية) | الجذر بأرجح تحليل بلا سياق | 78.8% (والصحيح بين التحليلات الممكنة 81.7%) |
-| نسبة النص إلى قائله | 30 شاعرًا من «أشعار»، ونص مختبر من نحو 1500 كلمة معزول عن شعر صاحبه بعد حذف المكرر | Cosine Delta على 150 لفظًا | 96.7% (خط الأساس 3.3%) |
-| الميزان والإعلال | 43 حالة معيارية من كتب الصرف (`tests/test_ilal.py`) | مطابقة الأصل والصورة | 43/43 |
-| التشكيل (CATT) | 40 سطرًا نثريًا من اختبار Tashkeela (Fadel et al., 2019) | DER / WER | 1.1% / 2.9% |
-| التشكيل (CATT) | 40 بيتًا مشكولًا من «أشعار» | DER / WER | 15.2% / 33.9% (فيُكمَّل في الشعر بالضبط الموجَّه بالعروض) |
-| التقطيع بالضبط الموجَّه | 210 أبيات من 14 بحرًا، منزوعة التشكيل ومشكولة بأرجح تحليل بلا سياق | الأبيات الموزونة | من 1.9% إلى 31.4% (مع المشكِّل السياقي تُقاس بـ `benchmark("meter")`) |
+**أُنجز:**
 
-التشكيل بمحرك CATT (Abjad AI، رخصة Apache-2.0)، ويُرجَع إلى مشكِّل CAMeL عند تعذّره. ولتحسين تشكيل الشعر نموذج اختياري (BiLSTM على مستوى الحرف) يُدرَّب محليًا على Tashkeela وأبيات «أشعار» المشكولة بـ `train_diacritizer.py` (أو `train_diacritizer.bat` على ويندوز)، ولا يُستعمل إلا إذا كان خطؤه على أبيات الاختبار أقل من CATT، ويُكتب تقريره في `~/.sarf/models/diac_ca/report.txt`.
+- [x] سبع وثلاثون أداة في عشرة فروع، بمناهجها وحدودها.
+- [x] محرّك قواعدي للإعلال والإبدال والإدغام يتحقق من نتيجته بنفسه، مع 43 حالة معيارية.
+- [x] التقطيع بالضبط الموجَّه بالعروض، وعلم القافية بعيوبه.
+- [x] التخريج الآلي للشاهد الشعري، ونسبة النصوص بمقاييس Delta.
+- [x] أداة قياس الدقة على بيانات معيارية معلنة.
 
-تنبيه: نسبة النصوص قيست على شعراء أكثرهم معاصرون متمايزو المعجم، فلا تُعمَّم على الشعر القديم. وفي «أشعار» قصائد مكررة وأبيات مختلّة، فأرقام التقطيع حدٌّ أدنى.
+**قيد العمل:**
+
+- [ ] تدريب مشكِّل خاص بالشعر، يُعتمد إن فاق CATT في القياس.
+- [ ] استضافة الخادم على الشبكة، ليُستعمل موصلًا دون تثبيت.
+- [ ] ملف تثبيت رسومي لويندوز يربط الأداة بـ Claude تلقائيًّا.
+
+**مخطط:**
+
+- [ ] مجموعة اختبار للإعراب مصحّحة يدويًّا بمصطلح النحو العربي، تُقاس عليها الأداة ويُنشر القياس.
+- [ ] توسيع حالات الإعلال المعيارية إلى أبواب الصرف كلها (التصغير، والنسب، والجموع).
+- [ ] قياس التقطيع على أبيات مشكولة محقّقة، وقياس الرصد البديعي على شواهد كتب البلاغة.
+- [ ] تقويم بشري للنتائج يشارك فيه متخصصون في النحو والصرف والعروض.
+- [ ] ورقة علمية تصف المنهج ونتائج القياس.
+
+## الإسهام والتواصل
+
+يُرحَّب بملاحظات أهل الاختصاص، فهي أنفع ما يُصلح الأداة. والملاحظة النافعة تُرسَل في [Issues](https://github.com/Sayedforces2021/arabiyya-mcp/issues) وفيها:
+
+1. النص المُدخَل كما هو.
+2. اسم الأداة.
+3. ما أخرجته.
+4. الصواب، ومصدره من كتب الصنعة إن أمكن.
+
+وكل خطأ قاعدي يُبلَّغ عنه يُضاف بعد إصلاحه إلى الحالات المعيارية، فلا يعود.
 
 ## التثبيت
 
@@ -433,6 +512,8 @@ flowchart LR
 
 **التشغيل اليدوي في أي عميل MCP:**
 
+<div dir="ltr">
+
 ```json
 {
   "mcpServers": {
@@ -441,31 +522,37 @@ flowchart LR
 }
 ```
 
-ويعمل الخادم بنقل HTTP المتدفّق (streamable HTTP) إذا عُيِّن متغير البيئة `SARF_SECRET`.
+</div>
+
+ويعمل الخادم بنقل HTTP المتدفّق (streamable HTTP) إذا عُيِّن متغير البيئة `SARF_SECRET`، وبه تكون الاستضافة.
 
 ## قابلية إعادة الإنتاج
 
 | الملف | عمله |
 |---|---|
 | `sarf_mcp.py` | الخادم والأدوات |
+| `sarf_ilal.py` | محرّك الميزان الصرفي وقواعد الإعلال والإبدال والإدغام وقوالب الصيغ |
 | `setup_sarf_data.py` | تجهيز البيانات بخطوات مستقلة يتخطى كلٌّ منها ما سبق إنجازه |
 | `build_lexicon_index.py` | بناء فهرس المعاجم وقواعد تقطيع كل معجم |
 | `build_poetry_index.py` | بناء فهرس «أشعار» |
 | `build_corpus_index.py` | قائمة كتب المدوّنة بفنونها ومعرّفاتها في OpenITI، وبناء فهرسها |
-| `sarf_ilal.py` | محرّك الميزان الصرفي وقواعد الإعلال والإبدال والإدغام وقوالب الصيغ |
+| `diac_model.py` · `train_diacritizer.py` | نموذج مشكِّل الشعر وتدريبه وقياسه بالموازنة مع CATT |
 | `tests/test_ilal.py` | الحالات المعيارية لمحرّك الإعلال |
 | `openiti_catalog.tsv` | فهرس النسخ الأصلية العربية في OpenITI، مستخرج من بيانات `kitab-metadata-automation` |
+| `brand/` | هوية المشروع: الختم والشعار واللافتات |
 
 ## المراجع
 
 <div dir="ltr">
 
+- Alasmary, F., Zaafarani, O., & Ghannam, A. (2024). CATT: Character-based Arabic Tashkeel Transformer. *arXiv:2407.03236*.
 - Alyafeai, Z., Al-Shaibani, M. S., & Ahmed, M. (2023). Ashaar: Automatic analysis and generation of Arabic poetry using deep learning approaches. *arXiv:2307.06218*.
+- Antoun, W., Baly, F., & Hajj, H. (2021). AraELECTRA: Pre-training text discriminators for Arabic language understanding. *Proceedings of WANLP 2021*.
+- Burrows, J. (2002). 'Delta': A measure of stylistic difference and a guide to likely authorship. *Literary and Linguistic Computing*, 17(3), 267–287.
 - Church, K. W., & Hanks, P. (1990). Word association norms, mutual information, and lexicography. *Computational Linguistics*, 16(1), 22–29.
 - Dukes, K., & Habash, N. (2010). Morphological annotation of Quranic Arabic. *Proceedings of LREC 2010*.
 - Dunning, T. (1993). Accurate methods for the statistics of surprise and coincidence. *Computational Linguistics*, 19(1), 61–74.
-- Antoun, W., Baly, F., & Hajj, H. (2021). AraELECTRA: Pre-training text discriminators for Arabic language understanding. *Proceedings of WANLP 2021*.
-- Burrows, J. (2002). 'Delta': A measure of stylistic difference and a guide to likely authorship. *Literary and Linguistic Computing*, 17(3), 267–287.
+- Fadel, A., Tuffaha, I., Al-Jawarneh, B., & Al-Ayyoub, M. (2019). Arabic text diacritization using deep neural networks. *Proceedings of ICCAIS 2019*.
 - Giulianelli, M., Del Tredici, M., & Fernández, R. (2020). Analysing lexical semantic change with contextualised word representations. *Proceedings of ACL 2020*.
 - Hardie, A. (2014). Log Ratio – an informal introduction. ESRC Centre for Corpus Approaches to Social Science (CASS).
 - Inoue, G., Alhafni, B., Baimukan, N., Bouamor, H., & Habash, N. (2021). The interplay of variant, size, and task type in Arabic pre-trained language models. *Proceedings of WANLP 2021*.
@@ -478,6 +565,7 @@ flowchart LR
 - Ryding, K. C. (2005). *A Reference Grammar of Modern Standard Arabic*. Cambridge University Press.
 - Smith, P. W. H., & Aldridge, W. (2011). Improving authorship attribution: Optimizing Burrows' Delta method. *Journal of Quantitative Linguistics*, 18(1), 63–88.
 - Taji, D., Khalifa, S., Obeid, O., Eryani, F., & Habash, N. (2018). An Arabic morphological analyzer and generator with copious features. *Proceedings of SIGMORPHON 2018*.
+- Zerrouki, T., & Balla, A. (2017). Tashkeela: Novel corpus of Arabic vocalized texts, data for auto-diacritization systems. *Data in Brief*, 11, 147–151.
 - Zerrouki, T. *Qutrub: Arabic verb conjugator*. https://github.com/linuxscout/qutrub
 - *PyArud*: Arabic prosody analyzer. https://pypi.org/project/pyarud/
 
@@ -485,12 +573,16 @@ flowchart LR
 
 **ومن المصادر التراثية:**
 
-- سيبويه، *الكتاب*، باب الإدغام (في مخارج الحروف وصفاتها).
-- ابن جني، *سر صناعة الإعراب*.
-- سيبويه، *الكتاب*، أبواب الإعلال والإبدال؛ وابن جني، *المنصف شرح التصريف*؛ ورضي الدين الأستراباذي، *شرح الشافية* (في الإعلال والإدغام).
+- سيبويه، *الكتاب*: باب الإدغام (في مخارج الحروف وصفاتها)، وأبواب الإعلال والإبدال.
+- ابن جني، *سر صناعة الإعراب*، و*المنصف شرح التصريف*، و*الخصائص* (باب الاشتقاق الأكبر).
+- رضي الدين الأستراباذي، *شرح الشافية* (في الإعلال والإدغام).
 - الأخفش، *القوافي*؛ والتبريزي، *الكافي في العروض والقوافي* (في عناصر القافية وعيوبها).
-- الخليل، *العين* (في التقاليب)؛ وابن جني، *الخصائص*، باب الاشتقاق الأكبر.
+- الخليل، *العين* (في التقاليب).
 - ابن الجزري، *المقدمة الجزرية*، و*النشر في القراءات العشر*.
+
+## المؤلف والإفصاح
+
+صمّم المشروعَ وحدّد فروعه ومناهجه ومصادره سيد حسن، وكُتبت شيفرته بمعونة نموذج Claude من Anthropic، بتوجيه المؤلف ومراجعته. ويُذكر ذلك لأن أداةً غايتها التمييز بين مصادر الأحكام أولى بأن تُبيّن مصدر صنعتها.
 
 ## طريقة الاستشهاد
 
@@ -516,6 +608,7 @@ flowchart LR
 - **الشيفرة:** مرخّصة برخصة MIT (انظر `LICENSE`).
 - **البيانات:** لا تتضمن الشيفرة شيئًا من البيانات، وإنما تنزّلها من مصادرها عند التثبيت.
 - **النماذج والمدوّنات:** تخضع لشروط ناشريها، وأكثرها للاستعمال البحثي غير التجاري.
+- **الهوية:** الختم والشعار في `brand/` خاصّان بالمشروع، ويُستعملان للإشارة إليه.
 
 </div>
 
@@ -523,43 +616,40 @@ flowchart LR
 
 ## English summary
 
-**arabiyya** is a Model Context Protocol (MCP) server that exposes 37 tools for Arabic linguistic research to LLM clients such as Claude Desktop. It runs locally and, after a one-time data download, works offline.
+**arabiyya** is a Model Context Protocol (MCP) server that exposes 37 tools for Arabic linguistic research to LLM clients such as Claude Desktop. Its premise is a separation of *phrasing* from *judgement*: the language model reads the question and words the answer, while each judgement comes from a tool with a stated method. Outputs are cited to a source (volume and page) or to the tool that produced them. The server runs locally and, after a one-time data download, works offline.
+
+**What it is not.** It is not a language model and does not fine-tune one. Its outputs are not infallible, and a client model may still misreport them; the raw output of every call is visible in the client. Published accuracy figures hold for the stated samples only.
+
+**Three tiers of evidence.** Every tool is classed by where its judgement comes from:
+1. **Transmission**: verbatim text from a located source (dictionaries, specialized lexical works, the Qur'an, poetry, the corpus).
+2. **Rule**: deterministic rules after the classical grammarians, tested against gold cases (*i'lāl*, derivation, rhyme, phonetics).
+3. **Inference**: trained statistical models whose output is offered with alternatives (contextual analysis, diacritization, *i'rāb*, semantics, attribution).
 
 **Morphology**
 - Context-free and BERT-disambiguated analysis (CAMeL Tools, CALIMA-Star), root families, and verb conjugation (Qutrub).
-- A rule-based *i'lāl/ibdāl/idghām* engine (`sarf_ilal.py`) that reconstructs the underlying form (*aṣl*) of a word and derives its surface form step by step, using the terminology of classical grammarians. Each derivation is self-verified: it is accepted only if it reproduces the input word.
+- A rule-based *i'lāl/ibdāl/idghām* engine (`sarf_ilal.py`) that reconstructs the underlying form (*aṣl*) of a word and derives its surface form step by step, in the terminology of classical grammarians. Each derivation is self-verified, and the engine passes 43/43 gold cases.
 - Qiyāsī derivatives, and root permutations (*taqālīb*).
 
 **Syntax**
-- *Iʿrāb* via the Stanza dependency parser (AraELECTRA, PADT). UD relations and features are mapped to traditional grammatical functions and case/mood markers, and case endings are proposed from the parse.
+- *Iʿrāb* via the Stanza dependency parser (AraELECTRA, PADT). UD relations and features are mapped to traditional grammatical functions and case/mood markers.
 
-**Prosody and rhyme**
-- Verse and poem scansion (PyArud), with **prosody-guided diacritization**: a pruned search over each word's candidate vocalizations finds the minimal change that fits the meter's grammar.
-- Full *ʿilm al-qāfiya*: rhyme letter and elements, rhyme types, and rhyme defects (*iqwāʾ, ikfāʾ, sinād, īṭāʾ*).
+**Diacritization, prosody and rhyme**
+- Diacritization with CATT (DER 1.1% on Tashkeela prose and 15.2% on verse), with CAMeL as a fallback. An optional character-level BiLSTM for poetry trains locally and is used only if it beats CATT on held-out verse.
+- Verse and poem scansion (PyArud), with **prosody-guided diacritization**: a pruned search over each word's candidate vocalizations finds the minimal change that fits the meter.
+- Full *ʿilm al-qāfiya*: rhyme letter and elements, and rhyme defects (*iqwāʾ, ikfāʾ, sinād, īṭāʾ*).
 
-**Phonology**
-- Rule-based grapheme-to-phoneme conversion to IPA, syllabification, and approximate stress.
-- Articulation points and features of letters after Ibn al-Jazarī.
+**Phonology and rhetoric**
+- Rule-based grapheme-to-phoneme conversion to IPA, syllabification and approximate stress, and the articulation points and features of letters after Ibn al-Jazarī.
+- Candidate detection of *jinās, ṭibāq, muqābala, taṣrīʿ, radd al-ʿajuz, sajʿ* and Qurʾānic quotation.
 
-**Rhetoric**
-- Candidate detection of *jinās, ṭibāq, muqābala, taṣrīʿ, radd al-ʿajuz, sajʿ*, and Qurʾānic quotation (*iqtibās*).
-
-**Lexicography**
-- 15 classical dictionaries from OpenITI, segmented into entries and cited by volume and page.
-- Specialized works on synonym distinctions, *aḍdād*, *ibdāl* and loanwords.
-
-**Poetry**
-- Search over 3.86M verses (Ashaar).
-- Verse attribution and variant readings, and the grammar and rhetoric books that cite a verse as evidence (*takhrīj al-shāhid*).
-
-**Corpus linguistics and semantics**
-- KWIC concordances, diachronic frequency, log-likelihood/PMI collocations and expression comparison.
-- Diachronic semantic change via collocate shift and contextual-embedding drift (CAMeLBERT-CA).
-- The default corpus is 57 classical works (~12M tokens), extensible with any of ~8.8k OpenITI texts.
+**Lexicography, poetry and corpus**
+- 15 classical dictionaries from OpenITI, segmented into entries and cited by volume and page, plus specialized works on synonym distinctions, *aḍdād*, *ibdāl* and loanwords.
+- Search over 3.86M verses (Ashaar), and verse *takhrīj*: attribution, variant readings, and the books that cite a verse as evidence.
+- KWIC concordances, diachronic frequency, log-likelihood/PMI collocations, and diachronic semantic change, over 57 classical works (~12M tokens), extensible with ~8.8k OpenITI texts.
 
 **Stylometry**
-- Keyness, standardized TTR and Jaccard overlap.
-- Authorship attribution with Burrows's Delta and Cosine Delta.
+- Keyness, standardized TTR and Jaccard overlap, and authorship attribution with Burrows's Delta and Cosine Delta.
 
-**Evaluation**
-- A `benchmark` tool reports accuracy on local gold data: meter labels from Ashaar, roots from the Quranic Arabic Corpus, and held-out authorship attribution.
+**Roadmap.** Next come a poetry-specific diacritizer, hosted access as a remote connector, and a graphical Windows installer. After those, a hand-annotated *iʿrāb* test set, broader morphological gold cases, expert human evaluation, and a paper.
+
+**Authorship.** Designed by Sayed Hassan, who also defined its methods and sources. The code was written with the assistance of Anthropic's Claude, under the author's direction and review.
