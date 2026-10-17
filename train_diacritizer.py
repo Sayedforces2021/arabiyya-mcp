@@ -10,6 +10,7 @@
 يُستأنف التدريب من آخر نقطة محفوظة إن انقطع.
 """
 import os, sys, json, time, random, sqlite3, urllib.request
+os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")  # عمليةٌ لا يدعمها كرت أبل تُنفَّذ على المعالج بدل أن يتوقف
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -186,8 +187,15 @@ def main():
     import torch
     quick = "--quick" in sys.argv
     epochs = 1 if quick else int(os.environ.get("DIAC_EPOCHS", "25"))
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    log("الجهاز:", device, torch.cuda.get_device_name(0) if device == "cuda" else "(بلا كرت شاشة: التدريب سيكون بطيئًا جدًّا)")
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+        device = "mps"  # كرت شاشة أبل (M1 وما بعده)
+    else:
+        device = "cpu"
+    names = {"cuda": lambda: torch.cuda.get_device_name(0), "mps": lambda: "Apple GPU (MPS)",
+             "cpu": lambda: "(بلا كرت شاشة: التدريب سيكون بطيئًا جدًّا)"}
+    log("الجهاز:", device, names[device]())
     rnd = random.Random(1)
     tr, va, te = fetch("train"), fetch("val"), fetch("test")
     ptr, pte = poetry(max_verses=300 if quick else 400000)
@@ -222,7 +230,7 @@ def main():
         for b in batches(train, 128, True, rnd):
             x, y = to_tensor(train, b, device)
             opt.zero_grad(set_to_none=True)
-            with torch.autocast(device_type=device, dtype=torch.float16, enabled=(device == "cuda")):
+            with torch.autocast(device_type=("cuda" if device == "cuda" else "cpu"), dtype=torch.float16, enabled=(device == "cuda")):
                 loss = lossf(model(x).float().reshape(-1, len(D.CLASSES)), y.reshape(-1))
             scaler.scale(loss).backward()
             scaler.unscale_(opt)
