@@ -3100,6 +3100,10 @@ def _set_feat(w, key, val):
     w.feats = "|".join(f"{k}={v}" for k, v in sorted(fs.items()))
 
 
+def kids_of(sent, w):
+    return [x for x in sent.words if x.head == w.id]
+
+
 def _irab_rules(doc):
     """قواعد من كتب النحو تُصحَّح بها شجرة المحلل قبل الإعراب:
     الظرف (بعد، قبل، بين، عند...) اسم منصوب على الظرفية، ومجرور إن سبقه حرف جر؛
@@ -3167,8 +3171,26 @@ def _irab_rules(doc):
         # ما لم يُعيّن المحلل حالته يُستعان فيه بمُزيل الالتباس الصرفي (CAMeL BERT) قراءةً ثانية
         try:
             need = [k for k, tok in enumerate(toks) if any(x.upos in ("X", "NOUN", "ADJ", "PROPN") and not _feats(x).get("Case") for x in tok.words)]
+            dis = _bert().disambiguate([_strip_tashkeel(t.text) for t in toks])
+            # إذا خالف مُزيلُ الالتباس المحللَ في نوع الكلمة المفردة (اسم أو فعل مضارع) قُدِّم حكمه في نوعها وحالتها
+            for k, tok in enumerate(toks):
+                an = dis[k].analyses[0].analysis if dis[k].analyses else {}
+                pos = an.get("pos", "")
+                core = [x for x in tok.words if x.upos not in ("CCONJ", "ADP", "PRON", "PART", "DET", "PUNCT")]
+                if len(core) != 1:
+                    continue
+                x = core[0]
+                if x.upos == "VERB" and pos.startswith(("noun", "adj")) and an.get("cas") in ("n", "a", "g") \
+                        and not any(c.deprel in ("nsubj", "obj") for c in kids_of(s_, x)):
+                    x.upos = "NOUN"
+                    x.feats = ""
+                    _set_feat(x, "Case", {"n": "Nom", "a": "Acc", "g": "Gen"}[an["cas"]])
+                elif x.upos in ("NOUN", "X") and pos == "verb" and an.get("asp") == "i" and an.get("mod") in ("i", "s", "j"):
+                    x.upos = "VERB"
+                    x.feats = ""
+                    _set_feat(x, "Aspect", "Imp")
+                    _set_feat(x, "Mood", {"i": "Ind", "s": "Sub", "j": "Jus"}[an["mod"]])
             if need:
-                dis = _bert().disambiguate([_strip_tashkeel(t.text) for t in toks])
                 for k in need:
                     an = dis[k].analyses[0].analysis if dis[k].analyses else {}
                     cas = {"n": "Nom", "a": "Acc", "g": "Gen"}.get(an.get("cas"))
