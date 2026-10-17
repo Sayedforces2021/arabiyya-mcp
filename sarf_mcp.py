@@ -3143,8 +3143,8 @@ def _irab_rules(doc):
                         mood = "Sub"
                     elif prev == "لا" and core.startswith("ت") and not nun:
                         mood = "Jus"  # «لا» الناهية مع المخاطَب
-                    elif prev == "من" and not nun:
-                        mood = "Jus"  # «مَن» الشرطية
+                    elif prev == "من" and not nun and (k == 1 or praw != _strip_tashkeel(toks[k - 1].text)):
+                        mood = "Jus"  # «مَن» الشرطية في صدر الكلام أو بعد الواو والفاء، لا الموصولة
                     elif bare[:1] in "وف" and last_jus is not None and k - last_jus <= 4 and not nun:
                         mood = "Jus"  # المعطوف على مجزوم
                     if mood:
