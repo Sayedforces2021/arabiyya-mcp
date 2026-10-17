@@ -3139,7 +3139,17 @@ def _irab_rules(doc):
                          (w.upos == "X" and (core[:1] in "يتنأ" or lam_amr))
                 first = j == next((i_ for i_, x in enumerate(tok.words) if x.upos not in ("CCONJ", "PART") or x is w), 0)
                 if is_imp and (first or lam_amr):
-                    nun = core.endswith(("ون", "ين", "ان"))
+                    stem = core
+                    for suf in ("هما", "كما", "هم", "هن", "كم", "كن", "نا", "ني", "ها", "ه", "ك"):
+                        if stem.endswith(suf) and len(stem) - len(suf) >= 3:
+                            stem = stem[: -len(suf)]
+                            break
+                    # ما ثبتت نونه (الأفعال الخمسة) أو أُكِّد بالنون بعد لام القسم أو ثبت حرف علته في آخره لا يكون مجزومًا
+                    nun = stem.endswith(("ون", "ين", "ان"))
+                    emph = stem.endswith("ن") and core[:1] == "ل" and len(stem) > 4
+                    weak = stem.endswith(("ى", "و")) and not stem.endswith("وا")
+                    no_jus = nun or emph or weak
+                    lam_amr = lam_amr and core[1:2] in "يت" and not emph
                     pr = praw[1:] if praw[:1] == "أ" and praw[1:] in ("لم", "فلم", "ولم") else praw
                     pr = pr[1:] if len(pr) > 2 and pr[0] in "وف" else pr
                     mood = None
@@ -3159,6 +3169,8 @@ def _irab_rules(doc):
                     elif bare[:1] not in "وف" and not nun and talab_k is not None and 0 < k - talab_k <= 4:
                         mood = "Jus"  # جواب الطلب
                         talab_k = None
+                    if mood == "Jus" and no_jus:
+                        mood = None
                     if mood == "Jus" and (pr in ("إن",) or (prev == "من" and mood == "Jus" and cond_k is None and pr not in _JAZM)):
                         cond_k = k  # فعل الشرط: يُنتظر جوابه
                     if mood:
