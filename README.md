@@ -497,6 +497,15 @@ flowchart LR
 - نحو 3 غيغابايت من المساحة.
 - اتصال بالشبكة عند التثبيت لتنزيل البيانات.
 
+**الأسهل: معالج التثبيت الرسومي** (بالعربية، بلا سطر أوامر):
+
+- [ويندوز: arabiyya-setup-windows.exe](https://ikagi07.github.io/arabiyya-mcp/downloads/arabiyya-setup-windows.exe)
+- [macOS: arabiyya-setup-mac.zip](https://ikagi07.github.io/arabiyya-mcp/downloads/arabiyya-setup-mac.zip)
+
+الملفان غير موقَّعين، فقد يُحذّرك النظام: على ويندوز «مزيد من المعلومات ← تشغيل على أي حال»، وعلى ماك زر الفأرة الأيمن ← «فتح».
+
+**البديل بالسكربت:**
+
 | النظام | الخطوات |
 |---|---|
 | ويندوز | نزّل المستودع (Code ← Download ZIP)، ثم شغّل `install_sarf_windows.bat`، ثم أعد تشغيل Claude |
@@ -679,7 +688,7 @@ flowchart LR
 **Stylometry**
 - Keyness, standardized TTR and Jaccard overlap, and authorship attribution with Burrows's Delta and Cosine Delta.
 
-**Roadmap.** Next come a poetry-specific diacritizer, hosted access as a remote connector, and a graphical Windows installer. After those, a hand-annotated *iʿrāb* test set, broader morphological gold cases, expert human evaluation, and a paper.
+**Roadmap.** Next come a poetry-specific diacritizer and hosted access as a remote connector. After those, a hand-annotated *iʿrāb* test set, broader morphological gold cases, expert human evaluation, and a paper.
 
 **Acknowledgements.** This project stands on open work by CAMeL Lab (NYU Abu Dhabi), Abjad AI (CATT), ARBML (Ashaar), Chouaieb Nemri (PyArud), Taha Zerrouki (Qutrub, Tashkeela), Ali Fadel et al., OpenITI and the KITAB project, Kais Dukes (Quranic Arabic Corpus), the Stanford NLP Group (Stanza), AUB MIND Lab (AraELECTRA), Ikram Hawramani (The Arabic Lexicon), and Anthropic (MCP, Claude). Credit for what is right belongs to them; errors are this project's own.
 

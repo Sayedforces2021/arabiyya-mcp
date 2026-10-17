@@ -155,6 +155,16 @@ td.v{font-family:var(--kufi);color:var(--gold);white-space:nowrap;font-variant-n
 .road .done li::before{background:var(--gold)}
 
 /* install */
+.dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin:26px 0}
+.dlc{display:grid;gap:4px;padding:20px 22px;border:1px solid var(--line);border-radius:14px;background:var(--raised);text-decoration:none;color:var(--text);transition:border-color .15s,transform .15s}
+.dlc:hover{border-color:var(--gold);transform:translateY(-2px)}
+.dlc .os{font-family:var(--kufi);font-size:22px;color:var(--gold)}
+.dlc .fn{font-family:var(--mono);font-size:13px;direction:ltr;text-align:start;color:var(--muted)}
+.dlc .sz{font-size:14px;color:var(--muted)}
+.dlc .go{margin-top:8px;font-family:var(--kufi);font-size:17px}
+.warn{margin:20px 0;border:1px solid var(--line);border-radius:12px;padding:12px 18px;background:var(--ghost)}
+.warn summary{cursor:pointer;font-family:var(--kufi)}
+.warn p{margin:.7em 0 0;font-size:16px}
 .steps{counter-reset:s;list-style:none;margin:0;padding:0}
 .steps li{counter-increment:s;position:relative;padding-inline-start:44px;margin-bottom:14px}
 .steps li::before{content:counter(s, arabic-indic);position:absolute;inset-inline-start:0;top:2px;width:30px;height:30px;border:1px solid var(--gold);border-radius:8px;display:grid;place-items:center;font-family:var(--kufi);font-size:15px;color:var(--gold)}
@@ -410,6 +420,7 @@ footer a{color:var(--muted)}
     <p class="measure">غايته أن يبلغ في كل فرع درجةً يُعتمد عليها في البحث، بقياسٍ معلَن لا بدعوى.</p>
     <div class="road">
       <div class="done"><h3>أُنجز</h3><ul>
+        <li>معالج تثبيت رسومي لويندوز وماك</li>
         <li>سبع وثلاثون أداة بمناهجها وحدودها</li>
         <li>محرّك للإعلال يتحقق من نتيجته بنفسه</li>
         <li>التقطيع بالضبط الموجَّه، وعلم القافية بعيوبه</li>
@@ -419,7 +430,7 @@ footer a{color:var(--muted)}
       <div><h3>قيد العمل</h3><ul>
         <li>مشكِّل خاص بالشعر، يُعتمد إن فاق المشكِّل الحالي</li>
         <li>استضافة على الشبكة تُغني عن التثبيت</li>
-        <li>ملف تثبيت رسومي لويندوز</li>
+        
       </ul></div>
       <div><h3>مخطط</h3><ul>
         <li>مجموعة اختبار للإعراب مصحّحة يدويًّا</li>
@@ -432,27 +443,48 @@ footer a{color:var(--muted)}
 </section>
 
 <section id="install">
-  <div class="wrap two">
-    <div>
-      <p class="eyebrow">التثبيت</p>
-      <h2>على جهازك في ثلاث خطوات</h2>
-      <ol class="steps">
-        <li>نزّل المستودع من GitHub (Code ← Download ZIP) وفكّ ضغطه في مجلد دائم.</li>
-        <li>شغّل <code>install_sarf_windows.bat</code> على ويندوز، أو <code>install_sarf.command</code> على ماك.</li>
-        <li>أعد تشغيل تطبيق Claude، فتظهر أدوات «العربية» فيه.</li>
-      </ol>
-      <p class="muted" style="font-size:16px">يلزم تطبيق Claude Desktop، ونحو 3 غيغابايت، واتصال بالشبكة عند التثبيت وحده.</p>
+  <div class="wrap">
+    <p class="eyebrow">التثبيت</p>
+    <h2>نزّل، وافتح، وانتظر</h2>
+    <p class="measure">معالج رسومي بالعربية يتولّى كل شيء، ولا تحتاج إلى سطر أوامر. يقيس تقدّمه أمامك، ويربط الأداة بـ Claude في آخره.</p>
+    <div class="dl">
+      <a class="dlc" href="downloads/arabiyya-setup-windows.exe" download>
+        <span class="os">ويندوز 10 / 11</span>
+        <span class="fn">arabiyya-setup-windows.exe</span>
+        <span class="sz">٦٢٥ ك.ب</span>
+        <span class="go">تنزيل ↓</span>
+      </a>
+      <a class="dlc" href="downloads/arabiyya-setup-mac.zip" download>
+        <span class="os">macOS</span>
+        <span class="fn">arabiyya-setup-mac.zip</span>
+        <span class="sz">١٫١ م.ب</span>
+        <span class="go">تنزيل ↓</span>
+      </a>
     </div>
-    <div>
-      <p class="eyebrow">جرّب أن تسأل</p>
-      <h2>بالعربية، كما تسأل أستاذك</h2>
-      <div class="call" style="padding:8px 22px">
-        <div class="row"><div class="lab">صرف</div><div>ما أصل «مَبِيع» وما خطوات إعلاله؟</div></div>
-        <div class="row"><div class="lab">عروض</div><div>قطّع هذه القصيدة وبيّن الأبيات المختلّة.</div></div>
-        <div class="row"><div class="lab">معجم</div><div>ما مادة «ح ق ق» في المقاييس واللسان؟</div></div>
-        <div class="row"><div class="lab">شاهد</div><div>خرّج «قفا نبكِ من ذكرى حبيبٍ ومنزلِ».</div></div>
-        <div class="row"><div class="lab">دلالة</div><div>كيف تطوّر استعمال «الاستعارة» عبر القرون؟</div></div>
-      </div>
+    <ol class="steps">
+      <li>شغّل الملف (على ماك فكّ الضغط أولًا) واضغط «ابدأ التثبيت».</li>
+      <li>انتظر من نصف ساعة إلى ساعة؛ تُنزَّل البيئة والبيانات (نحو 4 غيغابايت)، ولا شيء مطلوب منك.</li>
+      <li>أعد تشغيل Claude، فتظهر أدوات «العربية» فيه.</li>
+    </ol>
+    <details class="warn">
+      <summary>ظهرت رسالة تحذير عند الفتح؟</summary>
+      <p>الملفان غير موقَّعين رقميًّا (التوقيع يكلّف مئات الدولارات سنويًّا)، فيُنبّهك النظام. الملف مفتوح المصدر في <a href="https://github.com/ikagi07/arabiyya-mcp/tree/main/installer" target="_blank" rel="noopener">المستودع</a> لتفحصه.</p>
+      <p><b>ويندوز:</b> اضغط «مزيد من المعلومات» ثم «تشغيل على أي حال».<br><b>ماك:</b> انقر بزر الفأرة الأيمن على التطبيق واختر «فتح»؛ وإن لم يظهر الخيار ففي «إعدادات النظام ← الخصوصية والأمان» اضغط «فتح على أي حال».</p>
+    </details>
+    <p class="muted" style="font-size:16px">يلزم تطبيق <a href="https://claude.ai/download" target="_blank" rel="noopener">Claude Desktop</a> واتصال بالشبكة أثناء التثبيت وحده. للحذف: «التطبيقات المثبّتة» في ويندوز، أو احذف التطبيق من ماك.</p>
+  </div>
+</section>
+
+<section id="try">
+  <div class="wrap">
+    <p class="eyebrow">جرّب أن تسأل</p>
+    <h2>بالعربية، كما تسأل أستاذك</h2>
+    <div class="call" style="padding:8px 22px">
+      <div class="row"><div class="lab">صرف</div><div>ما أصل «مَبِيع» وما خطوات إعلاله؟</div></div>
+      <div class="row"><div class="lab">عروض</div><div>قطّع هذه القصيدة وبيّن الأبيات المختلّة.</div></div>
+      <div class="row"><div class="lab">معجم</div><div>ما مادة «ح ق ق» في المقاييس واللسان؟</div></div>
+      <div class="row"><div class="lab">شاهد</div><div>خرّج «قفا نبكِ من ذكرى حبيبٍ ومنزلِ».</div></div>
+      <div class="row"><div class="lab">دلالة</div><div>كيف تطوّر استعمال «الاستعارة» عبر القرون؟</div></div>
     </div>
   </div>
 </section>
