@@ -75,6 +75,7 @@ NAMES = {
     "0792IbnCumarTaftazani.MukhtasarMacani": ("مختصر المعاني", "سعد الدين التفتازاني"),
     "0284Buhturi.Hamasa": ("الحماسة", "البحتري"),
     "0436SharifMurtada.Amali": ("أمالي المرتضى (غرر الفوائد ودرر القلائد)", "الشريف المرتضى"),
+    "0351AbuTayyibLughawi.Ibdal": ("الإبدال", "أبو الطيب اللغوي"),
 }
 
 HARAKAT = re.compile("[ً-ْـٰ]")

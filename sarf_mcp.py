@@ -1348,6 +1348,25 @@ def semantic_neighbors(word: str, k: int = 20) -> dict:
 # ───────────── المدوّنة التراثية للتحليل الحاسوبي ─────────────
 
 CORPUS_DB = os.path.join(os.path.expanduser("~"), ".sarf", "corpus.db")
+
+
+def _fix_corpus_names():
+    """تعريب عناوين الكتب التي خلت بياناتها في OpenITI فبقيت بالحرف اللاتيني في فهارس قديمة."""
+    try:
+        if not os.path.exists(CORPUS_DB):
+            return
+        import sqlite3
+        from build_corpus_index import NAMES
+        con = sqlite3.connect(CORPUS_DB, timeout=5)
+        for uri, (title, author) in NAMES.items():
+            con.execute("UPDATE books SET title=?, author=? WHERE uri=? AND title GLOB '*[A-Za-z]*'", (title, author, uri))
+        con.commit()
+        con.close()
+    except Exception:
+        pass
+
+
+_fix_corpus_names()
 _PROCLITICS = ["", "و", "ف", "ب", "ك", "ل"]
 _AL_PROCLITICS = ["وال", "فال", "بال", "كال"]
 STOPWORDS = set("""في من على الى إلى عن ان أن إن ما لا لم لن قد ثم او أو و ف ب ك ل هو هي هم هما هن انت أنت انا أنا نحن
