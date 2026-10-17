@@ -106,10 +106,18 @@ if os.path.exists(path):
     with open(path, encoding="utf-8-sig") as f:
         txt = f.read().strip()
         cfg = json.loads(txt) if txt else {}
+ext_dir = os.path.join(os.path.dirname(path), "Claude Extensions")
+has_ext = os.path.isdir(ext_dir) and any("arabiyya" in d for d in os.listdir(ext_dir))
+os.makedirs(os.path.expanduser("~/.sarf"), exist_ok=True)
+with open(os.path.expanduser("~/.sarf/launch.json"), "w", encoding="utf-8") as f:
+    json.dump({"python": py, "server": server}, f, ensure_ascii=False)
 servers = cfg.setdefault("mcpServers", {})
 servers["nusus"] = {"command": "cmd", "args": ["/c", "npx", "-y", "nusus-mcp"]}
 servers.pop("sarf", None)
-servers["arabiyya"] = {"command": py, "args": [server]}
+if has_ext:
+    servers.pop("arabiyya", None)
+else:
+    servers["arabiyya"] = {"command": py, "args": [server]}
 os.makedirs(os.path.dirname(path), exist_ok=True)
 with open(path, "w", encoding="utf-8") as f:
     json.dump(cfg, f, ensure_ascii=False, indent=2)

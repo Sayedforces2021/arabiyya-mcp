@@ -73,9 +73,17 @@ cfg = {}
 if os.path.exists(path):
     with open(path, encoding="utf-8") as f:
         cfg = json.load(f)
+ext_dir = os.path.join(os.path.dirname(path), "Claude Extensions")
+has_ext = os.path.isdir(ext_dir) and any("arabiyya" in d for d in os.listdir(ext_dir))
+os.makedirs(os.path.expanduser("~/.sarf"), exist_ok=True)
+with open(os.path.expanduser("~/.sarf/launch.json"), "w", encoding="utf-8") as f:
+    json.dump({"python": py, "server": server}, f, ensure_ascii=False)
 srv = cfg.setdefault("mcpServers", {})
 srv.pop("sarf", None)
-srv["arabiyya"] = {"command": py, "args": [server]}
+if has_ext:
+    srv.pop("arabiyya", None)  # الإضافة مثبّتة فلا حاجة إلى السطر اليدوي
+else:
+    srv["arabiyya"] = {"command": py, "args": [server]}
 with open(path, "w", encoding="utf-8") as f:
     json.dump(cfg, f, ensure_ascii=False, indent=2)
 print("أُضيفت أداة العربية (arabiyya) إلى", path)

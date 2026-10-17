@@ -1,0 +1,200 @@
+{
+  "manifest_version": "0.2",
+  "name": "arabiyya",
+  "display_name": "العربية",
+  "version": "1.0.0",
+  "description": "علوم العربية موصولةً بالنماذج اللغوية: الصرف والإعلال، والإعراب، والعروض والقافية، والمعاجم التراثية، والشواهد، والدلالة، والمدوّنات.",
+  "long_description": "سبع وثلاثون أداة في علوم العربية، يصوغ Claude الجواب ويصدر الحكم عن مصدر يُراجَع بالجزء والصفحة أو قاعدة تُختبر.\n\nهذه الإضافة تربط Claude بالأداة المثبّتة على الجهاز. فإن لم تكن مثبّتة، فشغّل ملف التثبيت من المستودع مرة واحدة (ينزّل البيانات والنماذج)، ثم أعد تشغيل Claude.",
+  "author": {
+    "name": "Sayed Hassan",
+    "url": "https://x.com/ikagi07"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ikagi07/arabiyya-mcp"
+  },
+  "homepage": "https://ikagi07.github.io/arabiyya-mcp/",
+  "documentation": "https://github.com/ikagi07/arabiyya-mcp#readme",
+  "support": "https://github.com/ikagi07/arabiyya-mcp/issues",
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "server/launcher.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/server/launcher.js"
+      ],
+      "env": {}
+    }
+  },
+  "tools": [
+    {
+      "name": "analyze_word",
+      "description": "كل التحليلات الصرفية المحتملة لكلمة عربية مفردة (الجذر، الوزن، النوع، الحالة، اللواصق)، بلا ترجيح سياقي."
+    },
+    {
+      "name": "analyze_text",
+      "description": "تحليل جملة أو نص قصير كلمةً كلمة مع اختيار التحليل الأرجح بحسب السياق (BERT)."
+    },
+    {
+      "name": "diacritize",
+      "description": "تشكيل نص عربي آليًّا بحسب السياق، بأواخر الكلم."
+    },
+    {
+      "name": "scan_verse",
+      "description": "تقطيع بيت شعر عروضيًّا"
+    },
+    {
+      "name": "lexicon_lookup",
+      "description": "البحث عن جذر أو كلمة في نحو 47 معجمًا تراثيًّا معًا (العين، الصحاح، المحكم، مقاييس اللغة، لسان العرب، تاج العروس"
+    },
+    {
+      "name": "conjugate",
+      "description": "تصريف فعل عربي في الأزمنة كلها مع الضمائر"
+    },
+    {
+      "name": "root_family",
+      "description": "أسرة الجذر"
+    },
+    {
+      "name": "search_poetry",
+      "description": "البحث عن شواهد في مدوّنة «أشعار» (نحو 3.8 ملايين بيت لـ7 آلاف شاعر من الجاهلية إلى اليوم)، بلا إنترنت."
+    },
+    {
+      "name": "quran_word",
+      "description": "التحليل الصرفي لكلمات آية أو كلمة في القرآن من «المدوّنة القرآنية»"
+    },
+    {
+      "name": "quran_root",
+      "description": "مواضع جذر في القرآن من «المدوّنة القرآنية»"
+    },
+    {
+      "name": "maajim",
+      "description": "مادة الجذر من 15 معجمًا تراثيًّا بلا إنترنت، مرتبةً زمنيًّا مع الجزء والصفحة (ترقيم المطبوع كما في الشاملة)"
+    },
+    {
+      "name": "word_similarity",
+      "description": "مقدار التقارب الدلالي بين كلمتين (من -1 إلى 1) بنموذج CAMeLBERT المدرَّب على العربية الكلاسيكية."
+    },
+    {
+      "name": "substitutes_in_context",
+      "description": "ما يصلح أن يحلّ محلّ الكلمة في سياق جملتها بحسب نموذج العربية الكلاسيكية"
+    },
+    {
+      "name": "semantic_neighbors",
+      "description": "أقرب الكلمات دلاليًّا إلى كلمة (خارج السياق) من مفردات نموذج العربية الكلاسيكية"
+    },
+    {
+      "name": "corpus_concordance",
+      "description": "سياقات الكلمة في المدوّنة التراثية (57 كتابًا، نحو 12 مليون كلمة، من سيبويه إلى البغدادي) بطريقة KWIC"
+    },
+    {
+      "name": "corpus_usage",
+      "description": "تطوّر استعمال اللفظ عبر القرون في المدوّنة التراثية"
+    },
+    {
+      "name": "corpus_collocates",
+      "description": "المتلازمات اللفظية"
+    },
+    {
+      "name": "scan_poem",
+      "description": "تقطيع قصيدة كاملة"
+    },
+    {
+      "name": "analyze_qafiya",
+      "description": "علم القافية لقصيدة كاملة"
+    },
+    {
+      "name": "text_profile",
+      "description": "تحليل معجمي لنص أو لشعر شاعر كامل من مدوّنة «أشعار»"
+    },
+    {
+      "name": "compare_texts",
+      "description": "الموازنة الأسلوبية بين نصّين"
+    },
+    {
+      "name": "corpus_find_book",
+      "description": "البحث في فهرس OpenITI (نحو 8800 كتاب عربي تراثي) بعنوان الكتاب أو اسم مؤلفه أو بعضهما، قبل إضافته إلى المدوّنة بأداة corpus_add_book."
+    },
+    {
+      "name": "corpus_add_book",
+      "description": "إضافة كتاب من OpenITI إلى المدوّنة التراثية (فيصبح متاحًا لأدوات corpus_concordance وcorpus_usage وcorpus_collocates وcompare_texts)."
+    },
+    {
+      "name": "corpus_remove_book",
+      "description": "حذف كتاب من المدوّنة التراثية بمعرّفه (URI) كما يظهر في corpus_find_book بلا مُدخل."
+    },
+    {
+      "name": "huruf",
+      "description": "مخارج الحروف وصفاتها على مذهب علماء التجويد (ابن الجزري"
+    },
+    {
+      "name": "phonetics",
+      "description": "التحليل الصوتي للكلمة أو العبارة"
+    },
+    {
+      "name": "mizan",
+      "description": "الميزان الصرفي مع بيان الأصل وخطوات الإعلال والإبدال والإدغام بعبارة الصرفيين"
+    },
+    {
+      "name": "mushtaqqat",
+      "description": "المشتقات القياسية من الفعل مع أوزانها وإعلالها"
+    },
+    {
+      "name": "taqalib",
+      "description": "تقاليب الجذر على طريقة الخليل في العين وابن جني في الاشتقاق الكبير"
+    },
+    {
+      "name": "irab",
+      "description": "إعراب الجملة كلمةً كلمة"
+    },
+    {
+      "name": "takhrij_shahid",
+      "description": "تخريج بيت الشعر"
+    },
+    {
+      "name": "usage_compare",
+      "description": "موازنة استعمال تعبيرين أو أكثر في المدوّنة التراثية"
+    },
+    {
+      "name": "attribute_author",
+      "description": "نسبة النص إلى قائله بالأسلوبية الإحصائية"
+    },
+    {
+      "name": "semantic_change",
+      "description": "التطور الدلالي للفظ عبر العصور في المدوّنة التراثية"
+    },
+    {
+      "name": "lughawiyyat",
+      "description": "البحث في كتب اللغة المتخصصة"
+    },
+    {
+      "name": "detect_badi",
+      "description": "استخراج المحسنات البديعية من بيت أو قصيدة أو نثر"
+    },
+    {
+      "name": "benchmark",
+      "description": "قياس دقة الأدوات على بيانات معيارية محلية، ليعرف الباحث حدود الاعتماد عليها"
+    }
+  ],
+  "keywords": [
+    "arabic",
+    "العربية",
+    "morphology",
+    "prosody",
+    "lexicon",
+    "corpus",
+    "nlp"
+  ],
+  "license": "MIT",
+  "compatibility": {
+    "platforms": [
+      "darwin",
+      "win32"
+    ],
+    "runtimes": {
+      "node": ">=16.0.0"
+    }
+  }
+}
