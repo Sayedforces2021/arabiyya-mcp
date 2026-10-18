@@ -29,7 +29,8 @@ def norm(s):
 
 
 def role_of(desc):
-    first = re.split(r"\s(?:أو|وقيل|وهو|ويجوز)\s|[،.]", desc, maxsplit=1)[0] + " " + desc[:90]   # البدء بالوجه الأول
+    """الدور من الجملة الأولى فقط (إلى أول فاصلة أو نقطة)، ومن وجهها الأول قبل «أو»؛ فلا نلتقط كلمات من تعليلات لاحقة."""
+    first = re.split(r"[،.]", desc, maxsplit=1)[0]
     first = re.split(r"\sأو\s", first)[0]
     for key, lab in ROLES:
         if re.search(r"(?<![%s])%s(?![%s])" % (AR, key, AR), first):
@@ -50,7 +51,7 @@ def parse_irab(text):
     return out
 
 
-VERSE = re.compile(r"^\s*[\d٠-٩]+\s*[-–]\s*(.+?)\s*\.\.\.\s*(.+?)\s*$", re.M)
+VERSE = re.compile(r"^\s*[\u200c\u200f]*[\d٠-٩]+\s*[-–]\s*\(?(.+?)\s*(?:\.\.\.|…)\s*(.+?)\)?\s*$", re.M)
 
 
 def build(text):
@@ -71,7 +72,7 @@ def build(text):
             h = norm(head)
             r = role_of(desc)
             for j in range(pos, len(words)):          # الترتيب محفوظ: لا نرجع إلى الوراء
-                if nw[j] == h or (len(h) > 2 and (h.endswith(nw[j]) or nw[j].endswith(h)) and len(nw[j]) > 1):
+                if nw[j] == h or (len(h) > 2 and nw[j][1:] == h and nw[j][0] in "وفبلك"):   # الواو/الفاء/الباء… سابقة
                     if r and r not in labs[j]:
                         labs[j].append(r)
                     pos = j + 1
@@ -79,6 +80,24 @@ def build(text):
         cover = sum(1 for l in labs if l) / max(1, len(words))
         out.append({"verse": " ".join(words), "words": words, "labels": labs, "coverage": round(cover, 2)})
     return out
+
+
+def read_book(p):
+    """يقرأ .txt أو .htm (تصدير الشاملة)، أو مجلدًا من ملفات .htm، وينظّف رؤوس الصفحات."""
+    import html as _h
+    p = Path(p)
+    files = sorted(p.glob("*.htm*")) if p.is_dir() else [p]
+    parts = []
+    for f in files:
+        t = f.read_text(encoding="utf-8", errors="replace")
+        if f.suffix.lower().startswith(".htm"):
+            t = re.sub(r"<style.*?</style>", "", t, flags=re.S)
+            t = re.sub(r"<(br|/p|/div)[^>]*>", "\n", t)
+            t = _h.unescape(re.sub(r"<[^>]+>", "", t))
+        parts.append(t)
+    t = "\n".join(parts)
+    t = re.sub(r"^.*\(ص:\s*[\d٠-٩]+\s*\)\s*$\n?", "", t, flags=re.M)      # رأس الصفحة: «اسم الكتاب (ص: 25)»
+    return re.sub(r"[ \t]+", " ", t)
 
 
 def main():
@@ -90,7 +109,7 @@ def main():
     n = 0
     with open(a.out, "w", encoding="utf-8") as f:
         for p in a.files:
-            for v in build(Path(p).read_text(encoding="utf-8")):
+            for v in build(read_book(p)):
                 v["source"] = Path(p).name
                 f.write(json.dumps(v, ensure_ascii=False) + "\n")
                 n += 1
