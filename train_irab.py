@@ -366,6 +366,9 @@ def main():
     ap.add_argument("--diac", action="store_true", help="أدخل الكلمات مشكولة بدل المجرّدة")
     ap.add_argument("--smoke", action="store_true", help="اختبار سريع لسلامة الشيفرة (نموذج صغير عشوائي)")
     ap.add_argument("--max-verses", type=int, default=0)
+    ap.add_argument("--dedupe-test", action="store_true",
+                    help="احذف من التطوير والاختبار كل مقطع يتكرر أغلبه في التدريب (للقرآن: آيات وعبارات مكررة بين السور)")
+    ap.add_argument("--eval-only", action="store_true", help="بلا تدريب: قِس model.pt المحفوظ فقط")
     ap.add_argument("--out", default=str(OUT_DIR))
     a = ap.parse_args()
 
@@ -405,6 +408,23 @@ def main():
         step = max(1, len(verses) // a.max_verses)        # عيّنة موزّعة على السور كلها
         verses = verses[::step]
     parts = {k: chunk([v for v in verses if v.get("split", split_of(v["sura"])) == k]) for k in ("train", "dev", "test")}
+    if a.dedupe_test:
+        def grams(v, n=4):
+            w = v["plain"]
+            return {tuple(w[i:i + n]) for i in range(max(1, len(w) - n + 1))}
+        seen = set()
+        for v in parts["train"]:
+            if v["src"] in ("M", "E"):
+                seen |= grams(v)
+        def clean(v):
+            if v["src"] not in ("M", "E"):
+                return True
+            g = grams(v)
+            return len(g & seen) / max(1, len(g)) < 0.5      # أغلب رباعيّاته ليست في التدريب
+        for k in ("dev", "test"):
+            n0 = len(parts[k])
+            parts[k] = [v for v in parts[k] if clean(v)]
+            log(f"إزالة المكرَّر من {k}: {n0} → {len(parts[k])} مقطعًا")
     log("مقاطع: " + "، ".join(f"{k}={len(parts[k])}" for k in parts))
 
     cnt = collections.Counter((v["src"], l) for v in parts["train"] for labs in v["labels"] for l in labs)
@@ -441,7 +461,7 @@ def main():
         else:
             log("تغيّرت الوسوم عن التدريب السابق؛ أبدأ من جديد")
 
-    for ep in range(ep0, a.epochs):
+    for ep in range(ep0 if not a.eval_only else a.epochs, a.epochs):
         model.train()
         order = list(range(len(parts["train"])))
         random.Random(ep).shuffle(order)
@@ -525,10 +545,11 @@ def main():
             lines.append(f"{l} | {e['support']} | {e['P']} | {e['R']} | {e['F1']} | {e['baseline_F1']}")
     lines += ["", "التقسيم بحسب السورة. تنبيه: في القرآن عبارات مكرّرة بين السور فقد تتسرّب بعض الأحكام.",
               "المدوّنات: MASAQ (جامعة الأردن) CC BY 3.0, doi:10.17632/9yvrzxktmr.2 ؛ الشجرة القرآنية الموسّعة (Nashir وآخرون 2025) ؛ UD Arabic PADT وPUD (Universal Dependencies)."]
-    (out / "report.json").write_text(json.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8")
-    (out / "report.txt").write_text("\n".join(lines), encoding="utf-8")
+    sfx = "_dedup" if a.dedupe_test else ""
+    (out / f"report{sfx}.json").write_text(json.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8")
+    (out / f"report{sfx}.txt").write_text("\n".join(lines), encoding="utf-8")
     log("\n".join(lines[:12]))
-    log(f"التقرير: {out / 'report.txt'}")
+    log(f"التقرير: {out / ('report' + sfx + '.txt')}")
 
 
 if __name__ == "__main__":
