@@ -259,7 +259,7 @@ def _poetry_model():
             r = json.load(f)
         mine = r.get("الموازنة: النموذج الجديد على الأبيات نفسها", {}).get("DER مع علامة الإعراب")
         catt = r.get("الموازنة: CATT على الأبيات نفسها", {}).get("DER مع علامة الإعراب")
-        if mine is None or (catt is not None and mine >= catt):
+        if mine is None or catt is None or mine >= catt:  # لا يُعتمد إلا إن ثبت تفوقه على CATT
             return None
         return diac_model.get()
     except Exception:

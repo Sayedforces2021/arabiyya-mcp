@@ -281,11 +281,13 @@ def main():
     try:
         from catt_tashkeel import CATTEncoderDecoder
         ed = CATTEncoderDecoder()
+        from compare_catt import chunks  # CATT لا يقبل السطور الطويلة
+        catt = lambda l: " ".join(ed.do_tashkeel(c, verbose=False) for c in chunks(D.strip_diac(l)))
         st = te[:(10 if quick else 300)]
-        report["الموازنة: CATT على 300 سطر من Tashkeela"] = der_wer([ed.do_tashkeel(D.strip_diac(l), verbose=False) for l in st], st)
+        report["الموازنة: CATT على 300 سطر من Tashkeela"] = der_wer([catt(l) for l in st], st)
         if pte:
             sp = pte[:(10 if quick else 300)]
-            report["الموازنة: CATT على الأبيات نفسها"] = der_wer([ed.do_tashkeel(D.strip_diac(l), verbose=False) for l in sp], sp)
+            report["الموازنة: CATT على الأبيات نفسها"] = der_wer([catt(l) for l in sp], sp)
             report["الموازنة: النموذج الجديد على الأبيات نفسها"] = der_wer(predict(model, vocab, sp, device), sp)
     except Exception as e:
         report["الموازنة بـ CATT"] = f"تعذّرت: {e!r}"
