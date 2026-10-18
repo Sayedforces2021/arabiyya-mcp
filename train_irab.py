@@ -161,6 +161,15 @@ def find_ud(arg):
         if r and Path(r).exists():
             for f in Path(r).rglob("*.conllu"):
                 got.setdefault(f.name, f)
+            for z in Path(r).rglob("*PADT*PUD*.zip"):          # الحزمة المضغوطة: تُفكّ مرة واحدة
+                dst = HOME / ".sarf" / "corpora" / "ud"
+                dst.mkdir(parents=True, exist_ok=True)
+                with zipfile.ZipFile(z) as zf:
+                    for n in zf.namelist():
+                        if n.endswith(".conllu") and not (dst / Path(n).name).exists():
+                            (dst / Path(n).name).write_bytes(zf.read(n))
+                for f in dst.glob("*.conllu"):
+                    got.setdefault(f.name, f)
     return got
 
 
