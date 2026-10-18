@@ -37,15 +37,17 @@ LOG_DIR = HOME / ".sarf" / "train_irab"
 MODEL_NAME = "CAMeL-Lab/bert-base-arabic-camelbert-ca"
 KEY_ROLES = {"M": ["فاعل", "مفعول به", "نائب فاعل", "مبتدأ", "خبر", "مضاف إليه", "نعت", "حال"],
              "E": ["ق:فاعل", "ق:مفعول به", "ق:نائب فاعل", "ق:خبر", "ق:مضاف إليه", "ق:صفة", "ق:حال"],
+             "K": ["ك:فاعل", "ك:مفعول به", "ك:مبتدأ", "ك:خبر", "ك:مضاف إليه", "ك:نعت"],
              "U": ["ن:nsubj", "ن:obj", "ن:csubj", "ن:obl", "ن:nmod", "ن:amod", "ن:advcl", "ن:acl"]}
 PHRASE_PREFIX = "ش:"          # وظيفة الشبه جملة (MASAQ)
 E_PREFIX = "ق:"               # وسوم الشجرة القرآنية الموسّعة
+K_PREFIX = "ك:"               # وسوم «فضّية» من كتب الإعراب (مستخرجة آليًّا، للتدريب الخاص)
 U_PREFIX = "ن:"               # علاقات UD (PADT وPUD): نثر صحفي معاصر
 MIN_LABEL_COUNT = 30          # الوسوم الأقل شيوعًا في التدريب تُهمَل
 MARKS = re.compile("[ً-ٰٟـ]")
-SRC_ID = {"M": 0, "E": 1, "U": 2, "P": 3}      # P = PUD (للقياس فقط)
-SRC_NS = {"M": "M", "E": "E", "U": "U", "P": "U"}   # أيّ نظام وسوم تتبعه كل مدوّنة
-SRC_NAME = {"M": "MASAQ", "E": "الشجرة القرآنية الموسّعة", "U": "PADT", "P": "PUD"}
+SRC_ID = {"M": 0, "E": 1, "U": 2, "P": 3, "K": 4}      # P = PUD (للقياس فقط)
+SRC_NS = {"M": "M", "E": "E", "U": "U", "P": "U", "K": "K"}   # أيّ نظام وسوم تتبعه كل مدوّنة
+SRC_NAME = {"M": "MASAQ", "E": "الشجرة القرآنية الموسّعة", "U": "PADT", "P": "PUD", "K": "كتب الإعراب (فضّي)"}
 
 
 def log(msg):
@@ -57,7 +59,8 @@ def log(msg):
 
 
 def ns_of(label):
-    return "E" if label.startswith(E_PREFIX) else "U" if label.startswith(U_PREFIX) else "M"
+    return ("E" if label.startswith(E_PREFIX) else "U" if label.startswith(U_PREFIX)
+            else "K" if label.startswith(K_PREFIX) else "M")
 
 
 # ───────────────────────── البيانات ─────────────────────────
@@ -196,6 +199,21 @@ def load_conllu(path, src, split):
     return out
 
 
+def load_books(path):
+    """مدوّنة الكتب الفضّية (ناتج build_irab_books.py). الكلمة بلا وسم لا تُحتسب: غيابه لا يعني أنها بلا وظيفة."""
+    import hashlib
+    out = []
+    for line in open(path, encoding="utf-8"):
+        d = json.loads(line)
+        if not any(d["labels"]):
+            continue
+        h = int(hashlib.md5(d["verse"].encode("utf-8")).hexdigest(), 16) % 10
+        out.append({"src": "K", "split": "test" if h == 7 else "dev" if h == 3 else "train", "sura": 0, "verse": len(out),
+                    "plain": [re.sub("[\u064b-\u065f\u0670\u0640]", "", w).strip("()[]:،,.") for w in d["words"]],
+                    "diac": d["words"], "labels": [[K_PREFIX + l for l in ls] for ls in d["labels"]]})
+    return out
+
+
 def split_of(sura):
     """التقسيم بحسب السورة لا بحسب الآية، كي لا يتسرّب شيء من آيات السورة نفسها."""
     return "test" if sura % 10 == 7 else "dev" if sura % 10 == 3 else "train"
@@ -222,6 +240,8 @@ def encode(batch, tok, lab2i, field, maxlen=320):
                 prev = wid
                 continue
             prev = wid
+            if b["src"] == "K" and not b["labels"][wid]:
+                continue                      # كلمة لم يرد إعرابها في الكتاب: تُتجاهَل ولا تُعدّ سالبة
             m[bi, ti] = True
             for l in b["labels"][wid]:
                 if l in lab2i:
@@ -296,7 +316,7 @@ def mean_key_f1(P, Y, S, thr, key_by_ns):
     vals = []
     for ns, sid in SRC_ID.items():
         sel = S == sid
-        if sel.any() and key_by_ns[SRC_NS[ns]] and ns != "P":      # PUD لا يدخل في اختيار أفضل نقطة
+        if sel.any() and key_by_ns[SRC_NS[ns]] and ns not in ("P", "K"):      # PUD لا يدخل في اختيار أفضل نقطة
             vals.append(key_micro_f1(P[sel], Y[sel], thr, key_by_ns[SRC_NS[ns]]))
     return sum(vals) / max(1, len(vals))
 
@@ -318,7 +338,9 @@ def lookup_baseline(train, test, lab2i):
             cnt[(SRC_NS[v["src"]], w)][tuple(l for l in labs if l in lab2i)] += 1
     rows = []
     for v in test:
-        for w in v["plain"]:
+        for w, labs in zip(v["plain"], v["labels"]):
+            if v["src"] == "K" and not labs:
+                continue                       # كما في encode: الكلمة بلا وسم في المدوّنة الفضّية لا تُقاس
             p = torch.zeros(len(lab2i))
             if (SRC_NS[v["src"]], w) in cnt:
                 for l in cnt[(SRC_NS[v["src"]], w)].most_common(1)[0][0]:
@@ -334,6 +356,7 @@ def main():
     ap.add_argument("--eqtb")
     ap.add_argument("--no-eqtb", action="store_true", help="ادرّب على MASAQ وحدها")
     ap.add_argument("--no-ud", action="store_true", help="بلا PADT وPUD")
+    ap.add_argument("--books", help="ملف JSONL من build_irab_books.py (كتب الإعراب الفضّية)")
     ap.add_argument("--ud")
     ap.add_argument("--model", default=MODEL_NAME)
     ap.add_argument("--epochs", type=int, default=10)
@@ -374,6 +397,10 @@ def main():
                 verses += d
             else:
                 log(f"تنبيه: لم أجد {nm}")
+    if a.books:
+        bk = load_books(a.books)
+        log(f"كتب الإعراب (فضّي): {len(bk)} بيتًا")
+        verses += bk
     if a.max_verses:
         step = max(1, len(verses) // a.max_verses)        # عيّنة موزّعة على السور كلها
         verses = verses[::step]
@@ -384,8 +411,8 @@ def main():
     labels = sorted({l for (s, l), c in cnt.items() if c >= MIN_LABEL_COUNT and ns_of(l) == SRC_NS[s]})
     lab2i = {l: i for i, l in enumerate(labels)}
     key_by_ns = {ns: [lab2i[k] for k in KEY_ROLES[ns] if k in lab2i] for ns in KEY_ROLES}
-    nsmask = {ns: torch.tensor([1.0 if ns_of(l) == ns else 0.0 for l in labels]) for ns in ("M", "E", "U")}
-    log(f"عدد الوسوم المعتمدة: {len(labels)} (MASAQ {int(nsmask['M'].sum())}، الشجرة {int(nsmask['E'].sum())}، UD {int(nsmask['U'].sum())})")
+    nsmask = {ns: torch.tensor([1.0 if ns_of(l) == ns else 0.0 for l in labels]) for ns in ("M", "E", "U", "K")}
+    log(f"عدد الوسوم المعتمدة: {len(labels)} (MASAQ {int(nsmask['M'].sum())}، الشجرة {int(nsmask['E'].sum())}، UD {int(nsmask['U'].sum())}، كتب {int(nsmask['K'].sum())})")
     (out / "labels.json").write_text(json.dumps(labels, ensure_ascii=False), encoding="utf-8")
 
     field = "diac" if a.diac else "plain"
@@ -480,7 +507,7 @@ def main():
             d["labels"][labels[i]] = {"support": int((Yn[:, i] > 0.5).sum()), "P": round(float(p[j]), 3),
                                       "R": round(float(r[j]), 3), "F1": round(float(f[j]), 3),
                                       "baseline_F1": round(float(fb[j]), 3)}
-        fl, ml = {"M": ("فاعل", "مفعول به"), "E": (E_PREFIX + "فاعل", E_PREFIX + "مفعول به"), "U": ("ن:nsubj", "ن:obj")}[ns]
+        fl, ml = {"M": ("فاعل", "مفعول به"), "E": (E_PREFIX + "فاعل", E_PREFIX + "مفعول به"), "U": ("ن:nsubj", "ن:obj"), "K": ("ك:فاعل", "ك:مفعول به")}[ns]
         if fl in lab2i and ml in lab2i:
             gf, gm = Yn[:, lab2i[fl]] > .5, Yn[:, lab2i[ml]] > .5
             pf, pm = Pn[:, lab2i[fl]] >= thr, Pn[:, lab2i[ml]] >= thr

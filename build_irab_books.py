@@ -61,14 +61,15 @@ def build(text):
     for i, (s, e, a, b) in enumerate(verses):
         nxt = verses[i + 1][0] if i + 1 < len(verses) else len(text)
         seg = text[e:nxt]
-        k = seg.find("الإعراب:")
-        if k < 0:
+        km = re.search(r"الإعراب\s*[:.]", seg)          # «الإعراب:» أو «الإعراب. الواو: …»
+        if not km:
             continue
+        k = km.start() - 8 + (km.end() - km.start())
         words = (a + " " + b).split()
         labs = [[] for _ in words]
         nw = [norm(w) for w in words]
         pos = 0
-        for head, desc in parse_irab(seg[k + 8:]):
+        for head, desc in parse_irab(seg[km.end():]):
             h = norm(head)
             r = role_of(desc)
             for j in range(pos, len(words)):          # الترتيب محفوظ: لا نرجع إلى الوراء
