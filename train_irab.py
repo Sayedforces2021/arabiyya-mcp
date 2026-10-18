@@ -45,6 +45,9 @@ def log(msg):
 # ───────────────────────── البيانات ─────────────────────────
 def find_masaq(arg):
     cands = [arg] if arg else []
+    proj = os.environ.get("ARABIYYA_PROJECT")       # مجلد «مشروع العربية» على سطح المكتب
+    if proj and Path(proj).exists():
+        cands += list(Path(proj).rglob("MASAQ.csv"))
     cands += [HOME / "claude" / "corpora" / "masaq" / "MASAQ.csv",
               HOME / ".sarf" / "corpora" / "masaq" / "MASAQ.csv",
               Path(__file__).resolve().parent / "MASAQ.csv"]
