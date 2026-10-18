@@ -4,11 +4,15 @@
 
 النموذج: CAMeLBERT-CA (رخصة Apache-2.0) + طبقة وسم متعددة التسميات. التدريب على جهاز المستخدم.
 
-المدوّنة: MASAQ، جامعة الأردن (Mendeley Data، doi:10.17632/9yvrzxktmr.2)، رخصة CC BY 3.0.
-يجب ذكر مصدرها في كل عمل يستعملها.
+المدوّنات (تُنزَّل من مصادرها ولا تُضمّ إلى المستودع):
+  • MASAQ، جامعة الأردن (Mendeley Data، doi:10.17632/9yvrzxktmr.2)، رخصة CC BY 3.0 — يجب ذكر المصدر.
+  • الشجرة القرآنية الموسّعة (Nashir وآخرون، Data in Brief 2025، doi:10.1016/j.dib.2025.111940؛
+    github.com/NoorBayan/Quranic) — للتدريب الخاص؛ انظر DATA_LICENSES.md.
+لكل مدوّنة نظام وسمها؛ فوسوم الشجرة تحمل البادئة «ق:» ولا يُحاسَب النموذج على وسوم مدوّنةٍ في عيّنة مدوّنة أخرى.
 
 التشغيل:  python train_irab.py            (التدريب الكامل)
           python train_irab.py --smoke    (اختبار سريع بلا تنزيل، لسلامة الشيفرة فقط)
+          python train_irab.py --no-eqtb  (MASAQ وحدها)
 النتائج:  ~/.sarf/models/irab_parser/{model.pt, labels.json, report.txt, report.json}
 """
 import argparse
@@ -17,8 +21,10 @@ import csv
 import json
 import os
 import random
+import re
 import sys
 import time
+import zipfile
 from pathlib import Path
 
 import torch
@@ -29,9 +35,13 @@ HOME = Path.home()
 OUT_DIR = HOME / ".sarf" / "models" / "irab_parser"
 LOG_DIR = HOME / ".sarf" / "train_irab"
 MODEL_NAME = "CAMeL-Lab/bert-base-arabic-camelbert-ca"
-KEY_ROLES = ["فاعل", "مفعول به", "نائب فاعل", "مبتدأ", "خبر", "مضاف إليه", "نعت", "حال"]
-PHRASE_PREFIX = "ش:"          # وظيفة الشبه جملة (كالخبر الذي هو جار ومجرور)
+KEY_ROLES = {"M": ["فاعل", "مفعول به", "نائب فاعل", "مبتدأ", "خبر", "مضاف إليه", "نعت", "حال"],
+             "E": ["ق:فاعل", "ق:مفعول به", "ق:نائب فاعل", "ق:خبر", "ق:مضاف إليه", "ق:صفة", "ق:حال"]}
+PHRASE_PREFIX = "ش:"          # وظيفة الشبه جملة (MASAQ)
+E_PREFIX = "ق:"               # وسوم الشجرة القرآنية الموسّعة
 MIN_LABEL_COUNT = 30          # الوسوم الأقل شيوعًا في التدريب تُهمَل
+MARKS = re.compile("[ً-ٰٟـ]")
+SRC_ID = {"M": 0, "E": 1}
 
 
 def log(msg):
@@ -42,21 +52,53 @@ def log(msg):
         f.write(line + "\n")
 
 
+def ns_of(label):
+    return "E" if label.startswith(E_PREFIX) else "M"
+
+
 # ───────────────────────── البيانات ─────────────────────────
+def project_dir():
+    p = os.environ.get("ARABIYYA_PROJECT")        # مجلد «مشروع العربية» على سطح المكتب
+    return Path(p) if p and Path(p).exists() else None
+
+
 def find_masaq(arg):
     cands = [arg] if arg else []
-    proj = os.environ.get("ARABIYYA_PROJECT")       # مجلد «مشروع العربية» على سطح المكتب
-    if proj and Path(proj).exists():
+    proj = project_dir()
+    if proj:
         for nm in ("ماساق.csv", "MASAQ.csv"):
-            cands += list(Path(proj).rglob(nm))
+            cands += list(proj.rglob(nm))
     cands += [HOME / "claude" / "corpora" / "masaq" / "MASAQ.csv",
               HOME / ".sarf" / "corpora" / "masaq" / "MASAQ.csv",
               Path(__file__).resolve().parent / "MASAQ.csv"]
     for c in cands:
         if c and Path(c).exists():
             return Path(c)
-    sys.exit("لم أجد MASAQ.csv. نزّلها من https://data.mendeley.com/datasets/9yvrzxktmr/2 "
-             "وضعها في claude\\corpora\\masaq أو مرّر المسار بـ --masaq")
+    sys.exit("لم أجد ملف MASAQ. نزّله من https://data.mendeley.com/datasets/9yvrzxktmr/2 "
+             "وضعه في مجلد المشروع أو مرّر المسار بـ --masaq")
+
+
+def find_eqtb(arg):
+    """يجد الشجرة القرآنية الموسّعة، ويفكّ المضغوط منها إلى ~/.sarf/corpora إن لزم."""
+    if arg and Path(arg).exists():
+        return Path(arg)
+    proj = project_dir()
+    if proj:
+        for c in proj.rglob("الشجرة القرآنية الموسّعة.csv"):
+            return c
+        for z in proj.rglob("الشجرة القرآنية الموسّعة.zip"):
+            dst = HOME / ".sarf" / "corpora"
+            dst.mkdir(parents=True, exist_ok=True)
+            out = dst / "eqtb.csv"
+            if not out.exists():
+                with zipfile.ZipFile(z) as zf:
+                    name = next(n for n in zf.namelist() if n.lower().endswith(".csv"))
+                    out.write_bytes(zf.read(name))
+            return out
+    for c in (HOME / ".sarf" / "corpora" / "eqtb.csv", HOME / "claude" / "corpora" / "Quranic.csv"):
+        if c.exists():
+            return c
+    return None
 
 
 def load_masaq(path):
@@ -73,7 +115,36 @@ def load_masaq(path):
         labs |= {PHRASE_PREFIX + r["Phrasal_Function"].strip() for r in rs if r["Phrasal_Function"].strip()}
         plain = rs[0]["Without_Diacritics"].strip() or rs[0]["Word"].strip()
         verses.setdefault((s, v), []).append((plain, rs[0]["Word"].strip(), sorted(labs)))
-    return [{"sura": s, "verse": v,
+    return [{"src": "M", "sura": s, "verse": v,
+             "plain": [w[0] for w in ws], "diac": [w[1] for w in ws], "labels": [w[2] for w in ws]}
+            for (s, v), ws in verses.items()]
+
+
+def load_eqtb(path):
+    """الشجرة القرآنية الموسّعة: رمزٌ في كل سطر (UTF-16، مفصول بجداول). نجمع الرموز في كلمات.
+    السطر المضمَر (موضعه «_») يُهمَل. وسوم «NonRel» و«root» لا تُعدّ وظيفة."""
+    csv.field_size_limit(10 ** 9)
+    skip = {"NonRel", "root", "-", "_", ""}
+    words = collections.OrderedDict()
+    with open(path, encoding="utf-16", newline="") as f:
+        for r in csv.DictReader(f, delimiter="\t"):
+            if r["location"].strip() == "_":
+                continue
+            try:
+                key = (int(r["chapter_id"]), int(r["verse_id"]), int(r["word_id"]))
+                tid = int(r["tok_id"])
+            except ValueError:
+                continue
+            r["_t"] = tid
+            words.setdefault(key, []).append(r)
+    verses = collections.OrderedDict()
+    for (s, v, _), rs in words.items():
+        rs.sort(key=lambda r: r["_t"])
+        diac = "".join(r["uthmani_token"] for r in rs)
+        plain = MARKS.sub("", "".join(r["imlaai_token"] for r in rs))
+        labs = sorted({E_PREFIX + r["rel_label_ar"].strip() for r in rs if r["rel_label_ar"].strip() not in skip})
+        verses.setdefault((s, v), []).append((plain, diac, labs))
+    return [{"src": "E", "sura": s, "verse": v,
              "plain": [w[0] for w in ws], "diac": [w[1] for w in ws], "labels": [w[2] for w in ws]}
             for (s, v), ws in verses.items()]
 
@@ -142,23 +213,23 @@ def make_smoke(data):
 @torch.no_grad()
 def predict(model, data, tok, lab2i, field, dev, bs=32):
     model.eval()
-    P, Y = [], []
+    P, Y, S = [], [], []
     for i in range(0, len(data), bs):
-        enc, y, m = encode(data[i:i + bs], tok, lab2i, field)
+        batch = data[i:i + bs]
+        enc, y, m = encode(batch, tok, lab2i, field)
         enc = {k: v.to(dev) for k, v in enc.items()}
         p = torch.sigmoid(model(**enc).float()).cpu()
         P.append(p[m])
         Y.append(y[m])
-    return torch.cat(P), torch.cat(Y)
+        for b, n in zip(batch, m.sum(1).tolist()):
+            S.append(torch.full((n,), SRC_ID[b["src"]]))
+    return torch.cat(P), torch.cat(Y), torch.cat(S)
 
 
 def prf(P, Y, thr, idx):
     pred = P[:, idx] >= thr
     gold = Y[:, idx] > 0.5
-    tp = (pred & gold).sum(0).float()
-    fp = (pred & ~gold).sum(0).float()
-    fn = (~pred & gold).sum(0).float()
-    return tp, fp, fn
+    return ((pred & gold).sum(0).float(), (pred & ~gold).sum(0).float(), (~pred & gold).sum(0).float())
 
 
 def f1_of(tp, fp, fn):
@@ -168,31 +239,42 @@ def f1_of(tp, fp, fn):
 
 
 def key_micro_f1(P, Y, thr, key_idx):
+    if not key_idx:
+        return 0.0
     tp, fp, fn = prf(P, Y, thr, key_idx)
     return float(f1_of(tp.sum(), fp.sum(), fn.sum())[2])
 
 
-def best_threshold(P, Y, key_idx):
+def mean_key_f1(P, Y, S, thr, key_by_ns):
+    vals = []
+    for ns, sid in SRC_ID.items():
+        sel = S == sid
+        if sel.any() and key_by_ns[ns]:
+            vals.append(key_micro_f1(P[sel], Y[sel], thr, key_by_ns[ns]))
+    return sum(vals) / max(1, len(vals))
+
+
+def best_threshold(P, Y, S, key_by_ns):
     best = (0.5, -1.0)
     for t in [0.2, 0.3, 0.4, 0.5, 0.6, 0.7]:
-        f = key_micro_f1(P, Y, t, key_idx)
+        f = mean_key_f1(P, Y, S, t, key_by_ns)
         if f > best[1]:
             best = (t, f)
     return best
 
 
 def lookup_baseline(train, test, lab2i):
-    """خط أساس: لكل كلمة أكثر مجموعة وظائف وقعت لها في التدريب. إن لم يفُق نموذجُنا هذا الخط فلا قيمة له."""
+    """خط أساس: لكل كلمة أكثر مجموعة وظائف وقعت لها في التدريب (في المدوّنة نفسها)."""
     cnt = collections.defaultdict(collections.Counter)
     for v in train:
         for w, labs in zip(v["plain"], v["labels"]):
-            cnt[w][tuple(l for l in labs if l in lab2i)] += 1
+            cnt[(v["src"], w)][tuple(l for l in labs if l in lab2i)] += 1
     rows = []
     for v in test:
         for w in v["plain"]:
             p = torch.zeros(len(lab2i))
-            if w in cnt:
-                for l in cnt[w].most_common(1)[0][0]:
+            if (v["src"], w) in cnt:
+                for l in cnt[(v["src"], w)].most_common(1)[0][0]:
                     p[lab2i[l]] = 1
             rows.append(p)
     return torch.stack(rows)
@@ -202,6 +284,8 @@ def lookup_baseline(train, test, lab2i):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--masaq")
+    ap.add_argument("--eqtb")
+    ap.add_argument("--no-eqtb", action="store_true", help="ادرّب على MASAQ وحدها")
     ap.add_argument("--model", default=MODEL_NAME)
     ap.add_argument("--epochs", type=int, default=10)
     ap.add_argument("--batch", type=int, default=16)
@@ -215,23 +299,34 @@ def main():
 
     random.seed(7)
     torch.manual_seed(7)
-    out = Path(a.out if not a.smoke else OUT_DIR.parent / "irab_parser_smoke")
+    out = Path(a.out) if not a.smoke else OUT_DIR.parent / "irab_parser_smoke"
     out.mkdir(parents=True, exist_ok=True)
     dev = torch.device("cuda" if torch.cuda.is_available() else
                        "mps" if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available() else "cpu")
     log(f"الجهاز: {dev}" + (f" ({torch.cuda.get_device_name(0)})" if dev.type == "cuda" else ""))
 
     verses = load_masaq(find_masaq(a.masaq))
+    log(f"MASAQ: {len(verses)} آية")
+    if not a.no_eqtb:
+        ep = find_eqtb(a.eqtb)
+        if ep:
+            ev = load_eqtb(ep)
+            log(f"الشجرة القرآنية الموسّعة: {len(ev)} آية (من {ep.name})")
+            verses += ev
+        else:
+            log("تنبيه: لم أجد الشجرة القرآنية الموسّعة؛ سيجري التدريب على MASAQ وحدها")
     if a.max_verses:
-        verses = verses[:a.max_verses]
+        step = max(1, len(verses) // a.max_verses)        # عيّنة موزّعة على السور كلها
+        verses = verses[::step]
     parts = {k: chunk([v for v in verses if split_of(v["sura"]) == k]) for k in ("train", "dev", "test")}
-    log("آيات: " + "، ".join(f"{k}={len(parts[k])} مقطعًا" for k in parts))
+    log("مقاطع: " + "، ".join(f"{k}={len(parts[k])}" for k in parts))
 
-    cnt = collections.Counter(l for v in parts["train"] for labs in v["labels"] for l in labs)
-    labels = sorted(l for l, c in cnt.items() if c >= MIN_LABEL_COUNT)
+    cnt = collections.Counter((v["src"], l) for v in parts["train"] for labs in v["labels"] for l in labs)
+    labels = sorted(l for (s, l), c in cnt.items() if c >= MIN_LABEL_COUNT and ns_of(l) == s)
     lab2i = {l: i for i, l in enumerate(labels)}
-    key_idx = [lab2i[k] for k in KEY_ROLES if k in lab2i]
-    log(f"عدد الوسوم المعتمدة: {len(labels)}")
+    key_by_ns = {ns: [lab2i[k] for k in KEY_ROLES[ns] if k in lab2i] for ns in KEY_ROLES}
+    nsmask = {ns: torch.tensor([1.0 if ns_of(l) == ns else 0.0 for l in labels]) for ns in ("M", "E")}
+    log(f"عدد الوسوم المعتمدة: {len(labels)} (MASAQ {int(nsmask['M'].sum())}، الشجرة {int(nsmask['E'].sum())})")
     (out / "labels.json").write_text(json.dumps(labels, ensure_ascii=False), encoding="utf-8")
 
     field = "diac" if a.diac else "plain"
@@ -253,33 +348,38 @@ def main():
     ep0, best_f, bad = 0, -1.0, 0
     if ck.exists():
         st = torch.load(ck, map_location="cpu")
-        model.load_state_dict(st["model"]); opt.load_state_dict(st["opt"]); sched.load_state_dict(st["sched"])
-        ep0, best_f, bad = st["epoch"], st["best"], st["bad"]
-        log(f"استئناف من الدورة {ep0} (أفضل F1 للوظائف الرئيسة {best_f:.4f})")
+        if st.get("labels") == labels:
+            model.load_state_dict(st["model"]); opt.load_state_dict(st["opt"]); sched.load_state_dict(st["sched"])
+            ep0, best_f, bad = st["epoch"], st["best"], st["bad"]
+            log(f"استئناف من الدورة {ep0} (أفضل متوسط F1 {best_f:.4f})")
+        else:
+            log("تغيّرت الوسوم عن التدريب السابق؛ أبدأ من جديد")
 
     for ep in range(ep0, a.epochs):
         model.train()
         order = list(range(len(parts["train"])))
         random.Random(ep).shuffle(order)
-        t0, tot = time.time(), 0.0
+        t0, tot, nb = time.time(), 0.0, 0
         for i in range(0, len(order), a.batch):
             batch = [parts["train"][j] for j in order[i:i + a.batch]]
             enc, y, m = encode(batch, tok, lab2i, field)
+            W = torch.stack([nsmask[b["src"]] for b in batch]).to(dev)   # لا يُحاسَب النموذج إلا على وسوم مدوّنة العيّنة
             enc = {k: v.to(dev) for k, v in enc.items()}
             y, m = y.to(dev), m.to(dev)
             with torch.autocast(dev.type, dtype=torch.float16, enabled=dev.type == "cuda"):
                 logits = model(**enc)
-            loss = F.binary_cross_entropy_with_logits(logits.float()[m], y[m], reduction="sum") / m.sum().clamp(min=1)
+            lm = F.binary_cross_entropy_with_logits(logits.float(), y, reduction="none") * W[:, None, :]
+            loss = lm[m].sum() / m.sum().clamp(min=1)
             opt.zero_grad()
             scaler.scale(loss).backward()
             scaler.unscale_(opt)
             nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             scaler.step(opt); scaler.update(); sched.step()
-            tot += float(loss.detach())
-        P, Y = predict(model, parts["dev"], tok, lab2i, field, dev)
-        thr, f = best_threshold(P, Y, key_idx)
-        log(f"دورة {ep + 1}/{a.epochs}: خسارة {tot / max(1, len(order) / a.batch):.4f}، "
-            f"F1 للوظائف الرئيسة على التطوير {f:.4f} (عتبة {thr})، {time.time() - t0:.0f} ث")
+            tot += float(loss.detach()); nb += 1
+        P, Y, S = predict(model, parts["dev"], tok, lab2i, field, dev)
+        thr, f = best_threshold(P, Y, S, key_by_ns)
+        log(f"دورة {ep + 1}/{a.epochs}: خسارة {tot / max(1, nb):.4f}، "
+            f"متوسط F1 للوظائف الرئيسة على التطوير {f:.4f} (عتبة {thr})، {time.time() - t0:.0f} ث")
         if f > best_f:
             best_f, bad = f, 0
             torch.save({"model": model.state_dict(), "labels": labels, "thr": thr, "field": field,
@@ -287,7 +387,7 @@ def main():
         else:
             bad += 1
         torch.save({"model": model.state_dict(), "opt": opt.state_dict(), "sched": sched.state_dict(),
-                    "epoch": ep + 1, "best": best_f, "bad": bad}, ck)
+                    "epoch": ep + 1, "best": best_f, "bad": bad, "labels": labels}, ck)
         if bad >= a.patience:
             log("توقّف مبكر: لا تحسّن على التطوير")
             break
@@ -295,41 +395,51 @@ def main():
     # ── التقرير على الاختبار ──
     st = torch.load(best_path, map_location="cpu")
     model.load_state_dict(st["model"]); thr = st["thr"]
-    P, Y = predict(model, parts["test"], tok, lab2i, field, dev)
+    P, Y, S = predict(model, parts["test"], tok, lab2i, field, dev)
     B = lookup_baseline(parts["train"], parts["test"], lab2i)
-    all_idx = list(range(len(labels)))
     rep = {"input": field, "threshold": thr, "n_test_words": int(len(Y)),
            "split": "بحسب السورة: الاختبار = السور التي رقمها يُختم بـ7، التطوير = بـ3",
-           "source": "MASAQ (جامعة الأردن) CC BY 3.0, doi:10.17632/9yvrzxktmr.2", "labels": {}}
-    for name, PP in (("model", P), ("lookup_baseline", B)):
-        t = thr if name == "model" else 0.5
-        tp, fp, fn = prf(PP, Y, t, key_idx)
-        rep[name + "_key_micro_f1"] = round(float(f1_of(tp.sum(), fp.sum(), fn.sum())[2]), 4)
-    tp, fp, fn = prf(P, Y, thr, all_idx)
-    p, r, f = f1_of(tp, fp, fn)
-    tpb, fpb, fnb = prf(B, Y, 0.5, all_idx)
-    fb = f1_of(tpb, fpb, fnb)[2]
-    for i, l in enumerate(labels):
-        rep["labels"][l] = {"support": int((Y[:, i] > 0.5).sum()), "P": round(float(p[i]), 3),
-                            "R": round(float(r[i]), 3), "F1": round(float(f[i]), 3), "baseline_F1": round(float(fb[i]), 3)}
-    fi, mi = lab2i.get("فاعل"), lab2i.get("مفعول به")
-    if fi is not None and mi is not None:
-        gf, gm, pf, pm = Y[:, fi] > .5, Y[:, mi] > .5, P[:, fi] >= thr, P[:, mi] >= thr
-        rep["agent_object_confusion"] = {
-            "فاعل→مفعول به": int((gf & ~gm & pm & ~pf).sum()), "مفعول به→فاعل": int((gm & ~gf & pf & ~pm).sum()),
-            "فاعل (الكل)": int(gf.sum()), "مفعول به (الكل)": int(gm.sum())}
-    (out / "report.json").write_text(json.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8")
-    lines = [f"محلّل الوظائف الإعرابية — المدخل: {field} — كلمات الاختبار: {rep['n_test_words']}",
-             f"F1 المجمَّع للوظائف الرئيسة: النموذج {rep['model_key_micro_f1']} | خط الأساس (الحفظ) {rep['lookup_baseline_key_micro_f1']}",
-             f"الخلط بين الفاعل والمفعول: {rep.get('agent_object_confusion')}", "",
-             "الوسم | العدد | الدقة | الاستدعاء | F1 | F1 للحفظ"]
-    for l in sorted(labels, key=lambda x: -rep["labels"][x]["support"])[:40]:
-        d = rep["labels"][l]
-        lines.append(f"{l} | {d['support']} | {d['P']} | {d['R']} | {d['F1']} | {d['baseline_F1']}")
+           "sources": ["MASAQ (جامعة الأردن) CC BY 3.0, doi:10.17632/9yvrzxktmr.2",
+                       "الشجرة القرآنية الموسّعة (Nashir وآخرون 2025, doi:10.1016/j.dib.2025.111940)"],
+           "per_corpus": {}}
+    lines = [f"محلّل الوظائف الإعرابية — المدخل: {field} — كلمات الاختبار: {rep['n_test_words']}"]
+    for ns, sid in SRC_ID.items():
+        sel = S == sid
+        if not sel.any():
+            continue
+        idx = [i for i, l in enumerate(labels) if ns_of(l) == ns]
+        Pn, Yn, Bn = P[sel], Y[sel], B[sel]
+        kk = key_by_ns[ns]
+        d = {"n_words": int(sel.sum()),
+             "model_key_micro_f1": round(key_micro_f1(Pn, Yn, thr, kk), 4),
+             "lookup_baseline_key_micro_f1": round(key_micro_f1(Bn, Yn, 0.5, kk), 4), "labels": {}}
+        tp, fp, fn = prf(Pn, Yn, thr, idx); p, r, f = f1_of(tp, fp, fn)
+        tpb, fpb, fnb = prf(Bn, Yn, 0.5, idx); fb = f1_of(tpb, fpb, fnb)[2]
+        for j, i in enumerate(idx):
+            d["labels"][labels[i]] = {"support": int((Yn[:, i] > 0.5).sum()), "P": round(float(p[j]), 3),
+                                      "R": round(float(r[j]), 3), "F1": round(float(f[j]), 3),
+                                      "baseline_F1": round(float(fb[j]), 3)}
+        fl, ml = ("فاعل", "مفعول به") if ns == "M" else (E_PREFIX + "فاعل", E_PREFIX + "مفعول به")
+        if fl in lab2i and ml in lab2i:
+            gf, gm = Yn[:, lab2i[fl]] > .5, Yn[:, lab2i[ml]] > .5
+            pf, pm = Pn[:, lab2i[fl]] >= thr, Pn[:, lab2i[ml]] >= thr
+            d["agent_object_confusion"] = {"فاعل→مفعول به": int((gf & ~gm & pm & ~pf).sum()),
+                                           "مفعول به→فاعل": int((gm & ~gf & pf & ~pm).sum()),
+                                           "فاعل (الكل)": int(gf.sum()), "مفعول به (الكل)": int(gm.sum())}
+        rep["per_corpus"][ns] = d
+        name = "MASAQ" if ns == "M" else "الشجرة القرآنية الموسّعة"
+        lines += ["", f"== {name} — كلمات: {d['n_words']} ==",
+                  f"F1 المجمَّع للوظائف الرئيسة: النموذج {d['model_key_micro_f1']} | خط الأساس (الحفظ) {d['lookup_baseline_key_micro_f1']}",
+                  f"الخلط بين الفاعل والمفعول: {d.get('agent_object_confusion')}",
+                  "الوسم | العدد | الدقة | الاستدعاء | F1 | F1 للحفظ"]
+        for l in sorted(d["labels"], key=lambda x: -d["labels"][x]["support"])[:30]:
+            e = d["labels"][l]
+            lines.append(f"{l} | {e['support']} | {e['P']} | {e['R']} | {e['F1']} | {e['baseline_F1']}")
     lines += ["", "التقسيم بحسب السورة. تنبيه: في القرآن عبارات مكرّرة بين السور فقد تتسرّب بعض الأحكام.",
-              "المدوّنة: MASAQ (جامعة الأردن) CC BY 3.0, doi:10.17632/9yvrzxktmr.2"]
+              "المدوّنات: MASAQ (جامعة الأردن) CC BY 3.0, doi:10.17632/9yvrzxktmr.2 ؛ الشجرة القرآنية الموسّعة (Nashir وآخرون 2025)."]
+    (out / "report.json").write_text(json.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8")
     (out / "report.txt").write_text("\n".join(lines), encoding="utf-8")
-    log("\n".join(lines[:4]))
+    log("\n".join(lines[:12]))
     log(f"التقرير: {out / 'report.txt'}")
 
 
