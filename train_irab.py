@@ -36,12 +36,16 @@ OUT_DIR = HOME / ".sarf" / "models" / "irab_parser"
 LOG_DIR = HOME / ".sarf" / "train_irab"
 MODEL_NAME = "CAMeL-Lab/bert-base-arabic-camelbert-ca"
 KEY_ROLES = {"M": ["فاعل", "مفعول به", "نائب فاعل", "مبتدأ", "خبر", "مضاف إليه", "نعت", "حال"],
-             "E": ["ق:فاعل", "ق:مفعول به", "ق:نائب فاعل", "ق:خبر", "ق:مضاف إليه", "ق:صفة", "ق:حال"]}
+             "E": ["ق:فاعل", "ق:مفعول به", "ق:نائب فاعل", "ق:خبر", "ق:مضاف إليه", "ق:صفة", "ق:حال"],
+             "U": ["ن:nsubj", "ن:obj", "ن:csubj", "ن:obl", "ن:nmod", "ن:amod", "ن:advcl", "ن:acl"]}
 PHRASE_PREFIX = "ش:"          # وظيفة الشبه جملة (MASAQ)
 E_PREFIX = "ق:"               # وسوم الشجرة القرآنية الموسّعة
+U_PREFIX = "ن:"               # علاقات UD (PADT وPUD): نثر صحفي معاصر
 MIN_LABEL_COUNT = 30          # الوسوم الأقل شيوعًا في التدريب تُهمَل
 MARKS = re.compile("[ً-ٰٟـ]")
-SRC_ID = {"M": 0, "E": 1}
+SRC_ID = {"M": 0, "E": 1, "U": 2, "P": 3}      # P = PUD (للقياس فقط)
+SRC_NS = {"M": "M", "E": "E", "U": "U", "P": "U"}   # أيّ نظام وسوم تتبعه كل مدوّنة
+SRC_NAME = {"M": "MASAQ", "E": "الشجرة القرآنية الموسّعة", "U": "PADT", "P": "PUD"}
 
 
 def log(msg):
@@ -53,7 +57,7 @@ def log(msg):
 
 
 def ns_of(label):
-    return "E" if label.startswith(E_PREFIX) else "M"
+    return "E" if label.startswith(E_PREFIX) else "U" if label.startswith(U_PREFIX) else "M"
 
 
 # ───────────────────────── البيانات ─────────────────────────
@@ -147,6 +151,40 @@ def load_eqtb(path):
     return [{"src": "E", "sura": s, "verse": v,
              "plain": [w[0] for w in ws], "diac": [w[1] for w in ws], "labels": [w[2] for w in ws]}
             for (s, v), ws in verses.items()]
+
+
+def find_ud(arg):
+    """مجلدا UD_Arabic-PADT وUD_Arabic-PUD (ملفات conllu)؛ يبحث في مجلد المشروع ثم في ~/.sarf/corpora."""
+    roots = ([Path(arg)] if arg else []) + ([project_dir()] if project_dir() else []) + [HOME / ".sarf" / "corpora"]
+    got = {}
+    for r in roots:
+        if r and Path(r).exists():
+            for f in Path(r).rglob("*.conllu"):
+                got.setdefault(f.name, f)
+    return got
+
+
+def load_conllu(path, src, split):
+    """كل رمز UD (والسوابق واللواحق منفصلة فيه) كلمةٌ بوسم علاقته؛ التفرّعات الفرعية (nsubj:pass) تُحفظ."""
+    out, cur = [], []
+    def flush():
+        if cur:
+            out.append({"src": src, "split": split, "sura": 0, "verse": len(out),
+                        "plain": [c[0] for c in cur], "diac": [c[1] for c in cur], "labels": [[c[2]] for c in cur]})
+            cur.clear()
+    for l in open(path, encoding="utf-8"):
+        l = l.rstrip("\n")
+        if not l:
+            flush(); continue
+        p = l.split("\t")
+        if len(p) != 10 or not p[0].isdigit() or p[7] in ("punct", "root"):
+            if len(p) == 10 and p[0].isdigit():
+                cur.append((p[1], p[1], U_PREFIX + p[7]))
+            continue
+        vf = re.search(r"Vform=([^|]+)", p[9])
+        cur.append((p[1], vf.group(1) if vf else p[1], U_PREFIX + p[7].split(":")[0]))
+    flush()
+    return out
 
 
 def split_of(sura):
@@ -249,8 +287,8 @@ def mean_key_f1(P, Y, S, thr, key_by_ns):
     vals = []
     for ns, sid in SRC_ID.items():
         sel = S == sid
-        if sel.any() and key_by_ns[ns]:
-            vals.append(key_micro_f1(P[sel], Y[sel], thr, key_by_ns[ns]))
+        if sel.any() and key_by_ns[SRC_NS[ns]] and ns != "P":      # PUD لا يدخل في اختيار أفضل نقطة
+            vals.append(key_micro_f1(P[sel], Y[sel], thr, key_by_ns[SRC_NS[ns]]))
     return sum(vals) / max(1, len(vals))
 
 
@@ -268,13 +306,13 @@ def lookup_baseline(train, test, lab2i):
     cnt = collections.defaultdict(collections.Counter)
     for v in train:
         for w, labs in zip(v["plain"], v["labels"]):
-            cnt[(v["src"], w)][tuple(l for l in labs if l in lab2i)] += 1
+            cnt[(SRC_NS[v["src"]], w)][tuple(l for l in labs if l in lab2i)] += 1
     rows = []
     for v in test:
         for w in v["plain"]:
             p = torch.zeros(len(lab2i))
-            if (v["src"], w) in cnt:
-                for l in cnt[(v["src"], w)].most_common(1)[0][0]:
+            if (SRC_NS[v["src"]], w) in cnt:
+                for l in cnt[(SRC_NS[v["src"]], w)].most_common(1)[0][0]:
                     p[lab2i[l]] = 1
             rows.append(p)
     return torch.stack(rows)
@@ -286,6 +324,8 @@ def main():
     ap.add_argument("--masaq")
     ap.add_argument("--eqtb")
     ap.add_argument("--no-eqtb", action="store_true", help="ادرّب على MASAQ وحدها")
+    ap.add_argument("--no-ud", action="store_true", help="بلا PADT وPUD")
+    ap.add_argument("--ud")
     ap.add_argument("--model", default=MODEL_NAME)
     ap.add_argument("--epochs", type=int, default=10)
     ap.add_argument("--batch", type=int, default=16)
@@ -315,18 +355,28 @@ def main():
             verses += ev
         else:
             log("تنبيه: لم أجد الشجرة القرآنية الموسّعة؛ سيجري التدريب على MASAQ وحدها")
+    if not a.no_ud:
+        ud = find_ud(a.ud)
+        for nm, src, sp in (("ar_padt-ud-train.conllu", "U", "train"), ("ar_padt-ud-dev.conllu", "U", "dev"),
+                            ("ar_padt-ud-test.conllu", "U", "test"), ("ar_pud-ud-test.conllu", "P", "test")):
+            if nm in ud:
+                d = load_conllu(ud[nm], src, sp)
+                log(f"{SRC_NAME[src]} ({sp}): {len(d)} جملة")
+                verses += d
+            else:
+                log(f"تنبيه: لم أجد {nm}")
     if a.max_verses:
         step = max(1, len(verses) // a.max_verses)        # عيّنة موزّعة على السور كلها
         verses = verses[::step]
-    parts = {k: chunk([v for v in verses if split_of(v["sura"]) == k]) for k in ("train", "dev", "test")}
+    parts = {k: chunk([v for v in verses if v.get("split", split_of(v["sura"])) == k]) for k in ("train", "dev", "test")}
     log("مقاطع: " + "، ".join(f"{k}={len(parts[k])}" for k in parts))
 
     cnt = collections.Counter((v["src"], l) for v in parts["train"] for labs in v["labels"] for l in labs)
-    labels = sorted(l for (s, l), c in cnt.items() if c >= MIN_LABEL_COUNT and ns_of(l) == s)
+    labels = sorted({l for (s, l), c in cnt.items() if c >= MIN_LABEL_COUNT and ns_of(l) == SRC_NS[s]})
     lab2i = {l: i for i, l in enumerate(labels)}
     key_by_ns = {ns: [lab2i[k] for k in KEY_ROLES[ns] if k in lab2i] for ns in KEY_ROLES}
-    nsmask = {ns: torch.tensor([1.0 if ns_of(l) == ns else 0.0 for l in labels]) for ns in ("M", "E")}
-    log(f"عدد الوسوم المعتمدة: {len(labels)} (MASAQ {int(nsmask['M'].sum())}، الشجرة {int(nsmask['E'].sum())})")
+    nsmask = {ns: torch.tensor([1.0 if ns_of(l) == ns else 0.0 for l in labels]) for ns in ("M", "E", "U")}
+    log(f"عدد الوسوم المعتمدة: {len(labels)} (MASAQ {int(nsmask['M'].sum())}، الشجرة {int(nsmask['E'].sum())}، UD {int(nsmask['U'].sum())})")
     (out / "labels.json").write_text(json.dumps(labels, ensure_ascii=False), encoding="utf-8")
 
     field = "diac" if a.diac else "plain"
@@ -363,7 +413,7 @@ def main():
         for i in range(0, len(order), a.batch):
             batch = [parts["train"][j] for j in order[i:i + a.batch]]
             enc, y, m = encode(batch, tok, lab2i, field)
-            W = torch.stack([nsmask[b["src"]] for b in batch]).to(dev)   # لا يُحاسَب النموذج إلا على وسوم مدوّنة العيّنة
+            W = torch.stack([nsmask[SRC_NS[b["src"]]] for b in batch]).to(dev)   # لا يُحاسَب النموذج إلا على وسوم مدوّنة العيّنة
             enc = {k: v.to(dev) for k, v in enc.items()}
             y, m = y.to(dev), m.to(dev)
             with torch.autocast(dev.type, dtype=torch.float16, enabled=dev.type == "cuda"):
@@ -400,13 +450,15 @@ def main():
     rep = {"input": field, "threshold": thr, "n_test_words": int(len(Y)),
            "split": "بحسب السورة: الاختبار = السور التي رقمها يُختم بـ7، التطوير = بـ3",
            "sources": ["MASAQ (جامعة الأردن) CC BY 3.0, doi:10.17632/9yvrzxktmr.2",
-                       "الشجرة القرآنية الموسّعة (Nashir وآخرون 2025, doi:10.1016/j.dib.2025.111940)"],
+                       "الشجرة القرآنية الموسّعة (Nashir وآخرون 2025, doi:10.1016/j.dib.2025.111940)",
+                       "UD Arabic PADT (Hajič وآخرون؛ CC BY-NC-SA 3.0) وUD Arabic PUD (CC BY-SA 3.0)"],
            "per_corpus": {}}
     lines = [f"محلّل الوظائف الإعرابية — المدخل: {field} — كلمات الاختبار: {rep['n_test_words']}"]
-    for ns, sid in SRC_ID.items():
+    for src, sid in SRC_ID.items():
         sel = S == sid
         if not sel.any():
             continue
+        ns = SRC_NS[src]
         idx = [i for i, l in enumerate(labels) if ns_of(l) == ns]
         Pn, Yn, Bn = P[sel], Y[sel], B[sel]
         kk = key_by_ns[ns]
@@ -419,15 +471,15 @@ def main():
             d["labels"][labels[i]] = {"support": int((Yn[:, i] > 0.5).sum()), "P": round(float(p[j]), 3),
                                       "R": round(float(r[j]), 3), "F1": round(float(f[j]), 3),
                                       "baseline_F1": round(float(fb[j]), 3)}
-        fl, ml = ("فاعل", "مفعول به") if ns == "M" else (E_PREFIX + "فاعل", E_PREFIX + "مفعول به")
+        fl, ml = {"M": ("فاعل", "مفعول به"), "E": (E_PREFIX + "فاعل", E_PREFIX + "مفعول به"), "U": ("ن:nsubj", "ن:obj")}[ns]
         if fl in lab2i and ml in lab2i:
             gf, gm = Yn[:, lab2i[fl]] > .5, Yn[:, lab2i[ml]] > .5
             pf, pm = Pn[:, lab2i[fl]] >= thr, Pn[:, lab2i[ml]] >= thr
             d["agent_object_confusion"] = {"فاعل→مفعول به": int((gf & ~gm & pm & ~pf).sum()),
                                            "مفعول به→فاعل": int((gm & ~gf & pf & ~pm).sum()),
                                            "فاعل (الكل)": int(gf.sum()), "مفعول به (الكل)": int(gm.sum())}
-        rep["per_corpus"][ns] = d
-        name = "MASAQ" if ns == "M" else "الشجرة القرآنية الموسّعة"
+        rep["per_corpus"][src] = d
+        name = SRC_NAME[src]
         lines += ["", f"== {name} — كلمات: {d['n_words']} ==",
                   f"F1 المجمَّع للوظائف الرئيسة: النموذج {d['model_key_micro_f1']} | خط الأساس (الحفظ) {d['lookup_baseline_key_micro_f1']}",
                   f"الخلط بين الفاعل والمفعول: {d.get('agent_object_confusion')}",
@@ -436,7 +488,7 @@ def main():
             e = d["labels"][l]
             lines.append(f"{l} | {e['support']} | {e['P']} | {e['R']} | {e['F1']} | {e['baseline_F1']}")
     lines += ["", "التقسيم بحسب السورة. تنبيه: في القرآن عبارات مكرّرة بين السور فقد تتسرّب بعض الأحكام.",
-              "المدوّنات: MASAQ (جامعة الأردن) CC BY 3.0, doi:10.17632/9yvrzxktmr.2 ؛ الشجرة القرآنية الموسّعة (Nashir وآخرون 2025)."]
+              "المدوّنات: MASAQ (جامعة الأردن) CC BY 3.0, doi:10.17632/9yvrzxktmr.2 ؛ الشجرة القرآنية الموسّعة (Nashir وآخرون 2025) ؛ UD Arabic PADT وPUD (Universal Dependencies)."]
     (out / "report.json").write_text(json.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8")
     (out / "report.txt").write_text("\n".join(lines), encoding="utf-8")
     log("\n".join(lines[:12]))
