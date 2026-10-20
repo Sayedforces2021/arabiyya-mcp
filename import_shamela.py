@@ -126,7 +126,14 @@ def book_paras(sh, bid):
     return paras, unnumbered
 
 
-def import_book(sh, con, bid, genre, died=None):
+def _sources(con):
+    con.execute("CREATE TABLE IF NOT EXISTS sources(uri TEXT PRIMARY KEY, source TEXT, shamela_id INTEGER)")
+    return {u: (s, i) for u, s, i in con.execute("SELECT uri, source, shamela_id FROM sources")}
+
+
+def import_book(sh, con, bid, genre, died=None, uri=None, replace_id=None):
+    """يضيف كتاب الشاملة bid. إن مُرّر replace_id حُذف ذلك الكتاب في المعاملة نفسها (استبدال بلا تكرار)،
+    واحتفظ الكتاب الجديد بمعرّف القديم uri لتبقى الأدوات التي تشير إليه (مثل lughawiyyat) عاملة."""
     card = sh.book_card(bid)
     if card is None:
         return {"تنبيه": f"الكتاب {bid} غير موجود في فهرس الشاملة على هذا الجهاز."}
@@ -134,18 +141,22 @@ def import_book(sh, con, bid, genre, died=None):
     died = died or d
     if not died:
         return {"تنبيه": f"لم أستخرج سنة وفاة مؤلف «{title}» من بطاقته؛ أعد التشغيل مع --died.", "البطاقة": card[:300]}
-    uri = f"{died:04d}Shamela.{bid}"
-    if con.execute("SELECT 1 FROM books WHERE uri=?", (uri,)).fetchone():
+    uri = uri or f"{died:04d}Shamela.{bid}"
+    src = _sources(con)
+    if src.get(uri, (None,))[0] == "shamela" or (replace_id is None and con.execute("SELECT 1 FROM books WHERE uri=?", (uri,)).fetchone()):
         return {"تنبيه": f"«{title}» في المدوّنة من قبل ({uri})."}
     paras, unnumbered = book_paras(sh, bid)
     if not paras:
         return {"تنبيه": f"لم أجد نصًّا لصفحات الكتاب {bid}."}
     try:
+        if replace_id is not None:
+            remove_book(con, replace_id, commit=False)
         b = (con.execute("SELECT MAX(id) FROM books").fetchone()[0] or 0) + 1
         p = con.execute("SELECT MAX(id) FROM paras").fetchone()[0] or 0
         _t, ntok, counts, _ = bci.insert_book(con, b, p, genre, uri, {"BookTITLE": title, "AuthorNAME": author}, paras)
         con.executemany("INSERT INTO freq(token, n) VALUES (?, ?) ON CONFLICT(token) DO UPDATE SET n = n + excluded.n",
                         counts.items())
+        con.execute("INSERT OR REPLACE INTO sources VALUES (?, 'shamela', ?)", (uri, bid))
         con.commit()
     except Exception:
         con.rollback()
@@ -191,22 +202,32 @@ def _title_overlap(a, b):
     return len(wa & wb) / max(1, min(len(wa), len(wb)))
 
 
-def remove_book(con, bid):
+def remove_book(con, bid, commit=True):
     """حذف كتاب من المدوّنة في معاملة واحدة: الفقرات، وفهرسها النصي، وتكراراته (دون مساس بكلمات الكتب الأخرى)."""
     counts = Counter()
+    if not commit:
+        _remove(con, bid, counts)
+        return
     try:
-        for pid, text in con.execute("SELECT id, text FROM paras WHERE book = ?", (bid,)).fetchall():
-            n = bci.norm(text)
-            con.execute("INSERT INTO paras_fts(paras_fts, rowid, body) VALUES('delete', ?, ?)", (pid, n))
-            counts.update(bci.TOKEN.findall(n))
-        con.executemany("UPDATE freq SET n = n - ? WHERE token = ?", ((c, t) for t, c in counts.items()))
-        con.execute("DELETE FROM freq WHERE n <= 0")
-        con.execute("DELETE FROM paras WHERE book = ?", (bid,))
-        con.execute("DELETE FROM books WHERE id = ?", (bid,))
+        _remove(con, bid, counts)
         con.commit()
     except Exception:
         con.rollback()
         raise
+
+
+def _remove(con, bid, counts):
+    for pid, text in con.execute("SELECT id, text FROM paras WHERE book = ?", (bid,)).fetchall():
+        n = bci.norm(text)
+        con.execute("INSERT INTO paras_fts(paras_fts, rowid, body) VALUES('delete', ?, ?)", (pid, n))
+        counts.update(bci.TOKEN.findall(n))
+    con.executemany("UPDATE freq SET n = n - ? WHERE token = ?", ((c, t) for t, c in counts.items()))
+    con.execute("DELETE FROM freq WHERE n <= 0")
+    con.execute("DELETE FROM paras WHERE book = ?", (bid,))
+    uri = con.execute("SELECT uri FROM books WHERE id = ?", (bid,)).fetchone()
+    con.execute("DELETE FROM books WHERE id = ?", (bid,))
+    if uri and con.execute("SELECT name FROM sqlite_master WHERE name='sources'").fetchone():
+        con.execute("DELETE FROM sources WHERE uri = ?", uri)
 
 
 def replace_openiti(sh, con, db_path, dry_run=False):
@@ -214,8 +235,9 @@ def replace_openiti(sh, con, db_path, dry_run=False):
     لا يستبدل إلا إذا وُجد الكتاب في الشاملة على الجهاز وتقارب عنواناه؛ وإلا تركه وذكر السبب."""
     ids = openiti_shamela_ids(db_path)
     report = []
+    src = _sources(con)
     for bid, uri, title, genre in con.execute("SELECT id, uri, title, genre FROM books ORDER BY id").fetchall():
-        if "Shamela." in uri:
+        if src.get(uri, (None,))[0] == "shamela" or "Shamela." in uri:
             continue
         sid = ids.get(uri)
         if not sid:
@@ -229,10 +251,9 @@ def replace_openiti(sh, con, db_path, dry_run=False):
         if dry_run:
             report.append({"الكتاب": title, "الحال": f"سيُستبدل بالشاملة {sid}"}); continue
         died = int(uri[:4]) if uri[:4].isdigit() else None
-        r = import_book(sh, con, sid, genre, died=_d or died)
+        r = import_book(sh, con, sid, genre, died=died or _d, uri=uri, replace_id=bid)
         if "أُضيف" not in r:
             report.append({"الكتاب": title, "الحال": "تُرك: " + str(r.get("تنبيه"))}); continue
-        remove_book(con, bid)
         report.append({"الكتاب": title, "الحال": f"استُبدل بالشاملة {sid}", "الصفحات": r["الصفحات"], "بلا رقم": r["صفحات بلا رقم"]})
     return report
 

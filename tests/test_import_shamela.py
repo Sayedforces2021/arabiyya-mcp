@@ -55,5 +55,56 @@ class TestRemove(unittest.TestCase):
         self.assertEqual(con.execute("SELECT count(*) FROM books").fetchone(), (1,))
 
 
+class FakeShamela:
+    """بديل عن مكتبة الشاملة للاختبار: كتاب واحد رقمه 7362 بصفحتين."""
+    def book_card(self, bid):
+        return "الكتاب: الإنصاف في مسائل الخلاف\rالمؤلف: أبو البركات الأنباري (٥١٣ - ٥٧٧ هـ)" if bid == 7362 else None
+
+    def page_texts(self, bid):
+        return {1: "<span>مُقَدِّمَة</span>", 10: "وَاللَّهُ أَسْمَاكَ سُمًى مُبَارَكًا ... آثَرَكَ اللَّهُ بِهِ إِيثَارَكَا"}
+
+    def page_numbers(self, bid):
+        return {1: ("1", 5), 10: ("1", 14)}
+
+
+class TestReplace(unittest.TestCase):
+    def setUp(self):
+        import sqlite3
+        self.con = con = sqlite3.connect(":memory:")
+        con.executescript("""CREATE TABLE books(id INTEGER PRIMARY KEY, uri TEXT, title TEXT, author TEXT, died INTEGER, genre TEXT, tokens INTEGER);
+            CREATE TABLE paras(id INTEGER PRIMARY KEY, book INTEGER, vol INTEGER, page INTEGER, text TEXT);
+            CREATE VIRTUAL TABLE paras_fts USING fts5(body, content='', tokenize='unicode61 remove_diacritics 0');
+            CREATE TABLE freq(token TEXT PRIMARY KEY, n INTEGER) WITHOUT ROWID;""")
+        _t, _n, counts, _ = I.bci.insert_book(con, 1, 0, "نحو", "0577AbuBarakatAnbari.InsafFiMasail",
+                                              {"BookTITLE": "الإنصاف في مسائل الخلاف بين النحويين"},
+                                              [[1, 15, "والله أسماك سمى مباركا آثرك الله به إيثاركا"]])
+        con.executemany("INSERT INTO freq VALUES (?, ?)", counts.items())
+        con.commit()
+        self._ids = I.openiti_shamela_ids
+        I.openiti_shamela_ids = lambda db: {"0577AbuBarakatAnbari.InsafFiMasail": 7362}
+
+    def tearDown(self):
+        I.openiti_shamela_ids = self._ids
+
+    def test_replace_keeps_uri_and_fixes_page(self):
+        rep = I.replace_openiti(FakeShamela(), self.con, ":memory:")
+        self.assertIn("استُبدل", rep[0]["الحال"])
+        rows = self.con.execute("SELECT b.uri, p.vol, p.page FROM paras p JOIN books b ON b.id=p.book ORDER BY p.id").fetchall()
+        self.assertEqual(rows, [("0577AbuBarakatAnbari.InsafFiMasail", 1, 5), ("0577AbuBarakatAnbari.InsafFiMasail", 1, 14)])
+        self.assertEqual(self.con.execute("SELECT count(*) FROM books").fetchone(), (1,))
+        hit = self.con.execute("SELECT count(*) FROM paras_fts WHERE paras_fts MATCH '\"ايثاركا\"'").fetchone()[0]
+        self.assertEqual(hit, 1)                                  # القديم حُذف من الفهرس، والجديد فُهرس
+        self.assertEqual(self.con.execute("SELECT n FROM freq WHERE token='ايثاركا'").fetchone(), (1,))
+
+    def test_replace_is_idempotent(self):
+        I.replace_openiti(FakeShamela(), self.con, ":memory:")
+        I.replace_openiti(FakeShamela(), self.con, ":memory:")
+        self.assertEqual(self.con.execute("SELECT count(*) FROM paras").fetchone(), (2,))
+
+    def test_import_twice_is_refused(self):
+        self.assertIn("أُضيف", I.import_book(FakeShamela(), self.con, 7362, "نحو"))
+        self.assertIn("تنبيه", I.import_book(FakeShamela(), self.con, 7362, "نحو"))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)
