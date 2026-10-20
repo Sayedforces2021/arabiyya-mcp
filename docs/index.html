@@ -8,534 +8,900 @@
 <title>العربية</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="العربية: خادمٌ حاسوبي لعلوم العربية يصل النماذج اللغوية بالمعاجم والمدوّنات والمحلّلات، فيستند الجواب إلى مصدرٍ يُراجَع أو قاعدةٍ تُختبَر.">
+<script>document.documentElement.classList.add('js')</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Aref+Ruqaa:wght@700&family=Reem+Kufi:wght@500;700&family=IBM+Plex+Sans+Arabic:wght@400;500&family=Cormorant+Garamond:wght@600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Aref+Ruqaa:wght@700&display=swap">
 <style>
-/* Layout: a manuscript page under a lamp. Dark-first; one bold element (the hero's ghost ʿayn and the worked tool call); everything else quiet, separated by hairlines. */
+/* The page is a manuscript: the model's answer is the text, the tool's output its margin. The product
+   performs on the page (data-ui fragments with real tool output), set among real folios. */
 :root{
-  --ground:#121A24; --raised:#1A2430; --text:#E9D8B0; --muted:#9AA3AE; --gold:#C9A35C; --line:#2A3644; --ghost:#17212C; --code:#0E151E;
-  --ruqaa:"Aref Ruqaa", Amiri, serif;
-  --kufi:"Reem Kufi", "Noto Kufi Arabic", sans-serif;
-  --naskh:Amiri, "Noto Naskh Arabic", serif;
-  --ui:"IBM Plex Sans Arabic", system-ui, sans-serif;
-  --latin:"Cormorant Garamond", Georgia, serif;
-  --mono:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --bg:#121A24; --surface:#1A2430; --deep:#0E151E; --ink:#EDE0C2; --muted:#B4AD9C; --accent:#C9A35C; --accent-ink:#121A24;
+  --paper:#E9D8B0; --paper-ink:#121A24;
+  --ui-line:#2A3644;
+  --display:"Aref Ruqaa", Amiri, serif;
+  --text:Amiri, "Noto Naskh Arabic", serif;
+  --code:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; /* taste-skill-ignore: literal tool calls in <code> */
+  --s-small:15px; --s-body:19px; --s-lead:clamp(21px, 1.2vw + 14px, 26px);
+  --s-sub:clamp(26px, 1.4vw + 16px, 36px); --s-head:clamp(36px, 3.6vw + 12px, 64px); --s-display:clamp(76px, 9vw + 20px, 156px);
+  --margin:clamp(16px, 3vw, 48px); --gutter:clamp(16px, 2vw, 32px); --section:clamp(88px, 9vw, 168px);
+  --radius:0px; --ui-radius:10px;
+  --ease-out:cubic-bezier(.22,1,.36,1); --ease-soft:cubic-bezier(.33,1,.68,1); --ease-io:cubic-bezier(.76,0,.24,1);
   color-scheme:dark;
 }
 @media (prefers-color-scheme: light){
   :root:not([data-theme="dark"]){
-    --ground:#F6F0E2; --raised:#EDE4D0; --text:#121A24; --muted:#5B6573; --gold:#7A5C22; --line:#D9CCAF; --ghost:#EEE6D3; --code:#FBF7EC;
-    color-scheme:light;
+    --bg:#F6F0E2; --surface:#EDE4D0; --deep:#FBF7EC; --ink:#121A24; --muted:#4E5662; --accent:#7A5C22; --accent-ink:#F6F0E2;
+    --paper:#121A24; --paper-ink:#EDE0C2; --ui-line:#D9CCAF; color-scheme:light;
   }
 }
 :root[data-theme="light"]{
-  --ground:#F6F0E2; --raised:#EDE4D0; --text:#121A24; --muted:#5B6573; --gold:#7A5C22; --line:#D9CCAF; --ghost:#EEE6D3; --code:#FBF7EC;
-  color-scheme:light;
+  --bg:#F6F0E2; --surface:#EDE4D0; --deep:#FBF7EC; --ink:#121A24; --muted:#4E5662; --accent:#7A5C22; --accent-ink:#F6F0E2;
+  --paper:#121A24; --paper-ink:#EDE0C2; --ui-line:#D9CCAF; color-scheme:light;
 }
-*{box-sizing:border-box}
+:root[data-theme="dark"]{ color-scheme:dark; }
+
+*,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{background:var(--ground);color:var(--text);font-family:var(--naskh);font-size:19px;line-height:1.95;direction:rtl}
-a{color:var(--gold)}
-a:focus-visible,.btn:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:6px}
-.wrap{max-width:1080px;margin:0 auto;padding-block:0;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
-.measure{max-width:68ch}
-
-/* top bar */
-.bar{border-bottom:1px solid var(--line)}
-.bar .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:14px}
-.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
-.brand svg{width:34px;height:34px;flex:none}
-.brand span{font-family:var(--ruqaa);font-size:24px;line-height:1}
-.nav{display:flex;gap:18px;font-family:var(--ui);font-size:14px;flex-wrap:wrap}
-.nav a{color:var(--muted);text-decoration:none}
-.nav a:hover{color:var(--text)}
-
-/* hero */
-.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
-.ghost{position:absolute;left:-90px;top:-40px;width:520px;height:520px;pointer-events:none}
-.ghost path{fill:var(--ghost)}
-.hero .wrap{position:relative;display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center;padding-block:64px 72px}
-.hero-text{min-width:0}
-.hero h1{font-family:var(--ruqaa);font-weight:700;font-size:clamp(68px,11vw,120px);line-height:1.05;margin:0}
-.latin{font-family:var(--latin);font-weight:600;font-size:17px;letter-spacing:.24em;color:var(--gold);direction:ltr;text-align:right;margin:4px 0 0}
-.thesis{font-family:var(--naskh);font-size:clamp(22px,2.6vw,27px);line-height:1.8;margin:26px 0 0;text-wrap:balance}
-.thesis b{color:var(--gold);font-weight:700}
-.cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px}
-.btn{display:inline-flex;align-items:center;gap:10px;padding:10px 20px;border-radius:12px;font-family:var(--kufi);font-weight:500;font-size:17px;text-decoration:none;border:1px solid var(--gold);color:var(--gold)}
-.btn svg{width:18px;height:18px;fill:currentColor;flex:none}
-.btn.solid{background:var(--gold);color:var(--ground)}
-.btn:hover{filter:brightness(1.08)}
-
-/* worked call */
-.call{background:var(--code);border:1px solid var(--line);border-radius:14px;padding:22px;min-width:0;font-size:17px}
-.call .row{display:grid;grid-template-columns:76px 1fr;gap:14px;padding-block:12px;border-bottom:1px dashed var(--line)}
-.call .row:last-child{border-bottom:0}
-.call .lab{font-family:var(--ui);font-size:12px;letter-spacing:.04em;color:var(--muted);padding-top:6px}
-.call .q{font-family:var(--naskh);font-size:21px}
-.call code{font-family:var(--mono);font-size:13px;direction:ltr;display:inline-block;color:var(--gold)}
-.call dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:2px 14px;font-size:17px}
-.call dt{color:var(--muted);font-family:var(--ui);font-size:13px;padding-top:5px}
-.call dd{margin:0}
-.call .ans{font-size:18px;line-height:1.85}
-.call .cap{font-family:var(--ui);font-size:12px;color:var(--muted);margin:10px 0 0}
-
-/* sections */
-section{border-bottom:1px solid var(--line)}
-section > .wrap{padding-block:64px}
-.eyebrow{font-family:var(--ui);font-size:13px;letter-spacing:.06em;color:var(--gold);margin:0 0 6px}
-h2{font-family:var(--kufi);font-weight:700;font-size:clamp(28px,3.4vw,36px);line-height:1.35;margin:0 0 18px;text-wrap:balance}
-h3{font-family:var(--kufi);font-weight:500;font-size:22px;line-height:1.45;margin:0 0 8px}
-p{margin:0 0 16px}
-.lead{font-size:21px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--text);font-size:var(--s-body);line-height:1.75;-webkit-font-smoothing:antialiased}
+h1,h2,h3,p,figure,ul,ol,dl,dd{margin:0}
+ul[class],ol[class]{list-style:none;padding:0}
+img{display:block;max-width:100%;height:auto}
+a{color:inherit}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+::selection{background:var(--accent);color:var(--accent-ink)}
+h1,h2{font-family:var(--display);font-weight:700;text-wrap:balance;letter-spacing:0}
+h2{font-size:var(--s-head);line-height:1.3}
+h3{font-family:var(--text);font-weight:700;font-size:var(--s-lead);line-height:1.5}
+p{max-width:62ch;text-wrap:pretty}
+code{font-family:var(--code);font-size:var(--s-small);direction:ltr;unicode-bidi:isolate}
+code .ar{font-family:var(--text);unicode-bidi:isolate}
+.lead{font-size:var(--s-lead);line-height:1.6}
+.small{font-size:var(--s-small);line-height:1.6}
 .muted{color:var(--muted)}
+.wrap{padding-inline:var(--margin)}
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--gutter)}
+.sec{padding-block:calc(var(--section) / 2)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 
-.two{display:grid;grid-template-columns:1fr 1fr;gap:40px}
-.two > *{min-width:0}
-
-.errs{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid var(--line);margin-top:28px}
-.errs div{padding:20px 0 4px;padding-inline-start:18px;border-inline-start:1px solid var(--line);min-width:0}
-.errs div:first-child{border-inline-start:0;padding-inline-start:0}
-.errs b{display:block;font-family:var(--kufi);font-weight:500;font-size:19px;margin-bottom:4px}
-.errs p{font-size:17px;color:var(--muted);margin:0}
-
-/* flow diagram */
-.flow{overflow-x:auto;margin-top:26px}
-.flow svg{display:block;width:100%;min-width:640px;height:auto}
-.flow .box{fill:var(--raised);stroke:var(--line);stroke-width:1.5}
-.flow .boxg{fill:var(--code);stroke:var(--gold);stroke-width:1.5}
-.flow .t{fill:var(--text);font-family:var(--kufi);font-size:19px}
-.flow .s{fill:var(--muted);font-family:var(--ui);font-size:13px}
-.flow .ar{stroke:var(--gold);stroke-width:1.6;fill:none}
-.flow .ah{fill:var(--gold)}
-
-/* tiers */
-.tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:28px}
-.tier{background:var(--raised);border-radius:14px;padding:24px;min-width:0}
-.tier .n{font-family:var(--kufi);font-size:15px;color:var(--gold)}
-.tier p{font-size:17px}
-.tier .err{font-size:15px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px;margin:0}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 14px}
-.chips code{font-family:var(--mono);font-size:12px;direction:ltr;padding:2px 8px;border:1px solid var(--line);border-radius:6px;color:var(--text)}
-
-/* branches */
-.branches{display:grid;grid-template-columns:repeat(2,1fr);gap:0 40px;margin-top:20px}
-.br{padding:18px 0;border-bottom:1px solid var(--line);min-width:0}
-.br h3{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
-.br h3 small{font-family:var(--ui);font-size:13px;color:var(--muted);font-weight:400}
-.br p{font-size:17px;margin:0}
-.br .chips{margin:10px 0 0}
-
-/* numbers */
-.nums{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-top:26px}
-.num{border-top:2px solid var(--gold);padding-top:12px;min-width:0}
-.num b{display:block;font-family:var(--kufi);font-size:30px;line-height:1.3;font-variant-numeric:tabular-nums}
-.num span{font-size:16px;color:var(--muted)}
-
-/* table */
-.tbl{overflow-x:auto;margin-top:22px}
-table{border-collapse:collapse;width:100%;min-width:620px;font-size:17px}
-th,td{text-align:right;padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:top}
-th{font-family:var(--ui);font-size:13px;font-weight:500;color:var(--muted)}
-td.v{font-family:var(--kufi);color:var(--gold);white-space:nowrap;font-variant-numeric:tabular-nums}
-
-/* not list */
-.not{display:grid;grid-template-columns:1fr 1fr;gap:14px 40px;margin-top:22px}
-.not div{min-width:0;padding-inline-start:16px;border-inline-start:2px solid var(--line)}
-.not b{font-family:var(--kufi);font-weight:500;display:block;font-size:18px}
-.not p{font-size:17px;color:var(--muted);margin:2px 0 0}
-
-/* roadmap */
-.road{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;margin-top:24px}
-.road > div{min-width:0}
-.road h3{font-size:19px;padding-bottom:8px;border-bottom:1px solid var(--line)}
-.road ul{list-style:none;margin:0;padding:0}
-.road li{font-size:17px;padding:8px 0;padding-inline-start:22px;position:relative}
-.road li::before{content:"";position:absolute;inset-inline-start:0;top:19px;width:9px;height:9px;transform:rotate(45deg);border:1.5px solid var(--gold)}
-.road .done li::before{background:var(--gold)}
-
-/* install */
-.dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin:26px 0}
-.dlc{display:grid;gap:4px;padding:20px 22px;border:1px solid var(--line);border-radius:14px;background:var(--raised);text-decoration:none;color:var(--text);transition:border-color .15s,transform .15s}
-.dlc:hover{border-color:var(--gold);transform:translateY(-2px)}
-.dlc .os{font-family:var(--kufi);font-size:22px;color:var(--gold)}
-.dlc .fn{font-family:var(--mono);font-size:13px;direction:ltr;text-align:start;color:var(--muted)}
-.dlc .sz{font-size:14px;color:var(--muted)}
-.dlc .go{margin-top:8px;font-family:var(--kufi);font-size:17px}
-.warn{margin:20px 0;border:1px solid var(--line);border-radius:12px;padding:12px 18px;background:var(--ghost)}
-.warn summary{cursor:pointer;font-family:var(--kufi)}
-.warn p{margin:.7em 0 0;font-size:16px}
-.steps{counter-reset:s;list-style:none;margin:0;padding:0}
-.steps li{counter-increment:s;position:relative;padding-inline-start:44px;margin-bottom:14px}
-.steps li::before{content:counter(s, arabic-indic);position:absolute;inset-inline-start:0;top:2px;width:30px;height:30px;border:1px solid var(--gold);border-radius:8px;display:grid;place-items:center;font-family:var(--kufi);font-size:15px;color:var(--gold)}
-.steps code,p code{font-family:var(--mono);font-size:14px;direction:ltr;display:inline-block;background:var(--raised);padding:0 6px;border-radius:5px}
-
-/* author */
-.author{display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:start}
-.author > svg{width:96px;height:96px}
-.author .links{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px}
-
-.thanks{display:grid;grid-template-columns:repeat(3,1fr);gap:0 32px;margin-top:22px}
-.thanks a{display:block;padding:14px 0;border-bottom:1px solid var(--line);text-decoration:none;min-width:0}
-.thanks b{display:block;font-family:var(--kufi);font-weight:500;font-size:17px;color:var(--text)}
-.thanks span{display:block;font-size:15px;color:var(--muted);line-height:1.7}
-.thanks a:hover b{color:var(--gold)}
-@media (max-width:900px){.thanks{grid-template-columns:1fr 1fr}}
-@media (max-width:480px){.thanks{grid-template-columns:1fr}}
-footer .wrap{padding-block:30px 44px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-family:var(--ui);font-size:14px;color:var(--muted)}
-footer a{color:var(--muted)}
-
-@media (max-width:900px){
-  .hero .wrap{grid-template-columns:1fr;gap:36px;padding-block:44px 52px}
-  .two,.not{grid-template-columns:1fr;gap:20px}
-  .tiers,.road{grid-template-columns:1fr}
-  .errs{grid-template-columns:1fr 1fr}
-  .errs div:nth-child(3){border-inline-start:0;padding-inline-start:0}
-  .nums{grid-template-columns:repeat(2,1fr)}
-  .branches{grid-template-columns:1fr}
-  .nav{display:none}
-  .ghost{width:360px;height:360px;left:-120px}
+/* one button: square, flat */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:52px;padding:0 26px;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:var(--s-body);text-decoration:none;border-radius:var(--radius);transition:transform 140ms var(--ease-out),background-color 180ms ease}
+.btn:active{transform:scale(.97)}
+.btn svg{width:18px;height:18px;fill:currentColor;flex:none}
+.tlink{text-decoration:underline;text-underline-offset:.3em;text-decoration-thickness:1px;text-decoration-color:color-mix(in srgb, currentColor 40%, transparent);transition:text-decoration-color 180ms ease,color 180ms ease}
+@media (hover:hover) and (pointer:fine){
+  .btn:hover{background:color-mix(in srgb, var(--accent) 86%, var(--ink))}
+  .tlink:hover{text-decoration-color:currentColor}
 }
-@media (max-width:480px){
-  .errs{grid-template-columns:1fr}
-  .errs div{border-inline-start:0;padding-inline-start:0;border-bottom:1px solid var(--line);padding-bottom:16px}
-  .call .row{grid-template-columns:1fr;gap:4px}
-  .author{grid-template-columns:1fr}
+
+/* ---------- header ---------- */
+.top{display:flex;align-items:center;justify-content:space-between;gap:24px;padding-block:20px}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none}
+.brand svg{width:40px;height:40px;flex:none}
+.brand span{font-family:var(--display);font-size:var(--s-lead);line-height:1}
+.nav{display:flex;align-items:center;gap:28px;font-size:var(--s-small)}
+.nav a{text-decoration:none}
+.nav .tlink{text-decoration:underline;text-decoration-color:transparent}
+.nav .tlink:hover{text-decoration-color:currentColor}
+.nav .btn{min-height:44px;padding:0 20px;font-size:var(--s-small)}
+
+/* ---------- hero ---------- */
+.hero{padding-block:clamp(32px, 5vw, 72px) calc(var(--section) / 2);align-items:center;row-gap:48px}
+.hero-text{grid-column:1 / span 5}
+.hero h1{font-size:var(--s-display);line-height:1.05}
+.hero .lead{margin-top:28px;max-width:30ch}
+.hero .acts{display:flex;align-items:center;flex-wrap:wrap;gap:16px 28px;margin-top:40px}
+.hero .facts{margin-top:40px;font-size:var(--s-small);color:var(--muted);max-width:40ch}
+.hero-ui{grid-column:7 / span 6}
+
+/* ---------- the product's own fragments (data-ui) ---------- */
+[data-ui]{background:var(--deep);border:1px solid var(--ui-line);border-radius:var(--ui-radius);font-size:var(--s-small);line-height:1.6;color:var(--ink)}
+.console{overflow:hidden}
+.console .tabs{display:flex;gap:4px;padding:10px;background:var(--surface);border-bottom:1px solid var(--ui-line)} /* taste-skill-ignore: inside data-ui */
+.console .tab{padding:6px 16px;border-radius:7px;color:var(--muted);transition:background-color 180ms ease,color 180ms ease}
+.console .tab:hover{color:var(--ink)}
+.console .tab[aria-selected="true"]{background:var(--accent);color:var(--accent-ink);font-weight:700}
+.console .panes{display:grid}
+.console .pane{grid-area:1 / 1;padding:8px 22px 18px}
+.console .pane[hidden]{display:none}
+@media (prefers-reduced-motion: no-preference){.js .console .pane.fresh{animation:band-in 420ms var(--ease-out) both}}
+.row{display:grid;grid-template-columns:88px 1fr;gap:16px;padding-block:14px;border-bottom:1px solid var(--ui-line)} /* taste-skill-ignore: inside data-ui */
+.row:last-child{border-bottom:0}
+.row > .k{color:var(--muted);padding-top:4px}
+.row .q{font-size:var(--s-lead);line-height:1.5}
+.row .ans{font-size:var(--s-body);line-height:1.75}
+.call{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px}
+.call code{color:var(--accent)}
+.tier{display:inline-flex;align-items:center;gap:6px;padding:1px 10px;border-radius:999px;background:var(--surface);color:var(--ink)}
+.tier::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent)}
+.out{display:grid;grid-template-columns:auto 1fr;gap:4px 16px}
+.out dt{color:var(--muted)}
+.out dd{margin:0}
+.cite{color:var(--accent)}
+
+/* ---------- problem ---------- */
+.problem{row-gap:56px;align-items:start}
+.problem .col{grid-column:1 / span 5}
+.problem .col p{margin-top:24px}
+.problem .col p.lead{margin-top:32px}
+.errs{margin-top:36px;display:grid;gap:20px}
+.errs b{display:block;font-size:var(--s-lead);line-height:1.4}
+.problem figure{grid-column:7 / span 6;position:sticky;top:32px}
+.problem .frame{overflow:hidden;aspect-ratio:4 / 3.3}
+.problem .frame img{width:100%;height:100%;object-fit:cover;object-position:30% 40%;transform:scale(var(--zoom,1.06));transform-origin:center;will-change:transform}
+figcaption{margin-top:14px;font-size:var(--s-small);color:var(--muted);max-width:56ch}
+
+/* ---------- how it works: pinned fragment ---------- */
+.how .head{grid-column:1 / span 5;padding-bottom:8px}
+.how .steps{grid-column:1 / span 5}
+.how .step{min-height:52vh;display:flex;flex-direction:column;justify-content:center;gap:16px}
+.how .step h3{font-family:var(--display);font-size:var(--s-sub);line-height:1.45;color:var(--muted);transition:color 300ms ease}
+.how .step.is-on h3{color:var(--ink)}
+.how .step p{max-width:44ch}
+.how .stage{grid-column:7 / span 6;grid-row:1 / span 2;position:sticky;top:14vh;align-self:start;height:72vh;display:grid;place-items:center;background:var(--surface)}
+.chat{width:min(520px, 88%);padding:22px;display:grid;gap:14px}
+.bubble{justify-self:start;max-width:86%;padding:12px 18px;border-radius:14px;background:var(--surface);font-size:var(--s-body)}
+.toolblock{background:var(--surface);border-radius:8px;overflow:hidden}
+.toolblock .out{background:var(--deep);margin:0 4px 4px;border-radius:6px}
+.toolblock .th{display:flex;justify-content:space-between;gap:12px;padding:8px 14px;background:var(--surface);color:var(--muted)}
+.toolblock .th code{color:var(--accent)}
+.toolblock .out{padding:12px 14px}
+.reply{font-size:var(--s-body);line-height:1.75}
+.reply .cite{display:block;margin-top:6px;font-size:var(--s-small)}
+.js .chat .toolblock,.js .chat .reply{transition:opacity 420ms var(--ease-out),transform 520ms var(--ease-out)}
+.js .chat[data-state="1"] .toolblock,.js .chat[data-state="1"] .reply,.js .chat[data-state="2"] .reply{opacity:0;transform:translateY(12px)}
+.how .after{grid-column:1 / span 5;margin-top:24px}
+
+/* ---------- tiers: comparison set as text ---------- */
+.tiers .intro{grid-column:1 / span 7;margin-bottom:56px}
+.tiers .intro p{margin-top:20px}
+.cmp{grid-column:1 / -1;display:grid;grid-template-columns:minmax(150px, 3fr) repeat(3, minmax(0, 3fr));position:relative}
+.cmp{isolation:isolate}
+.cmp .cell,.cmp .ch,.cmp .rh,.cmp .corner{padding:18px 20px;min-height:68px;position:relative;z-index:2}
+.cmp .ch{font-weight:700;font-size:var(--s-lead);padding-top:28px;cursor:pointer;text-align:start;transition:color 200ms ease}
+.cmp .rh{font-weight:700;font-size:var(--s-lead);line-height:1.45}
+.cmp .band{grid-column:1 / -1;z-index:0}
+.cmp .alt{background:var(--surface)}
+.cmp .cell,.cmp .ch{transition:background-color 360ms ease,color 360ms ease}
+.cmp .on{background:var(--accent);color:var(--accent-ink)}
+.cmp .ch.on{padding-top:52px;margin-top:-24px}
+.cmp .tools code{display:inline-block;margin:0 0 4px 8px}
+.cmp .on code{color:var(--accent-ink)}
+
+/* ---------- tools: branch tabs and banded list ---------- */
+.tools-sec .h{grid-column:1 / span 8;margin-bottom:56px}
+.tools-sec .h .soft{color:var(--muted)}
+.branches{grid-column:1 / span 3;display:grid;gap:6px;align-content:start}
+.branch{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:60px;padding:8px 18px;background:var(--surface);text-align:start;transition:background-color 200ms ease,color 200ms ease}
+.branch span{font-size:var(--s-small);color:var(--muted)}
+.branch[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.branch[aria-selected="true"] span{color:var(--bg)}
+@media (hover:hover) and (pointer:fine){.branch:not([aria-selected="true"]):hover{background:color-mix(in srgb, var(--surface) 70%, var(--ink))}}
+.toolpanes{grid-column:4 / -1;display:grid}
+.toolpane{grid-area:1 / 1;display:grid;gap:4px;align-content:start}
+.toolpane[hidden]{display:none}
+.toolpane .about{padding:0 24px 20px;max-width:64ch}
+.tool{display:grid;grid-template-columns:minmax(200px, 3fr) 7fr;gap:8px 24px;align-items:center;min-height:76px;padding:14px 24px;background:var(--surface)}
+.tool:nth-child(odd){background:color-mix(in srgb, var(--surface) 55%, var(--bg))}
+.tool code{color:var(--accent);font-size:var(--s-small)}
+.js .toolpane:not([hidden]) .tool{animation:band-in 520ms var(--ease-out) both;animation-delay:calc(var(--i,0) * 60ms)}
+@keyframes band-in{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+/* ---------- sources: photograph with figure tiles ---------- */
+.sources .h{grid-column:1 / span 7;margin-bottom:40px}
+.sources .h p{margin-top:20px}
+.mosaic{display:grid;grid-template-columns:2fr 1fr;grid-template-rows:1fr 1fr;min-height:50vw}
+.mosaic .pics{grid-row:1 / span 2;position:relative;overflow:hidden;background:var(--surface)}
+.mosaic .pics img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1600ms ease}
+.mosaic .pics img.on{opacity:1}
+.mosaic .pics img:first-child{opacity:1}
+.js .mosaic .pics img:first-child:not(.on){opacity:0}
+.mosaic .cap{position:absolute;inset-inline:0;bottom:0;padding:48px 28px 22px;background:linear-gradient(to top, rgba(10,14,20,.78), rgba(10,14,20,0)); /* taste-skill-ignore: neutral scrim under a caption on a photograph */color:#F3E9D2;font-size:var(--s-small)}
+.tile{padding:28px;display:flex;flex-direction:column;gap:12px}
+.tile b{font-family:var(--display);font-size:var(--s-head);line-height:1.1;font-variant-numeric:tabular-nums}
+.tile p{max-width:22ch}
+.tile.t1{background:var(--paper);color:var(--paper-ink)}
+.tile.t2{background:var(--accent);color:var(--accent-ink)}
+.sources .more{margin-top:48px;column-gap:var(--gutter)}
+.sources .more p:first-child{grid-column:1 / span 7}
+.sources .more p:last-child{grid-column:9 / span 4;margin-top:6px}
+
+/* ---------- accuracy: column aligned on the figure ---------- */
+.acc{align-items:start}
+.acc .h{grid-column:1 / span 4;position:sticky;top:48px}
+.acc .h p{margin-top:20px}
+.ledger{grid-column:6 / -1;width:100%;border-collapse:collapse}
+.ledger th{font-weight:400;color:var(--muted);text-align:start;padding:0 20px 12px;font-size:var(--s-small)}
+.ledger td{padding:22px 20px;vertical-align:baseline}
+.ledger tbody tr:nth-child(odd){background:var(--surface)}
+.ledger .v{font-family:var(--display);font-size:var(--s-sub);line-height:1.2;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--accent);direction:ltr;text-align:end}
+.ledger .t b{display:block;font-size:var(--s-lead)}
+.ledger .t span{display:block;color:var(--muted);font-size:var(--s-small);margin-top:4px}
+.acc .notes{grid-column:6 / -1;margin-top:32px}
+
+/* ---------- faq: filled tiles ---------- */
+.faq{align-items:start}
+.faq .h{grid-column:1 / span 4;position:sticky;top:48px}
+.faq .h figure{margin-top:36px}
+.faq .h img{width:100%;max-height:52vh;object-fit:cover;object-position:top}
+.qs{grid-column:6 / -1;display:grid;gap:8px}
+.qs details{background:var(--surface);transition:background-color 260ms ease,color 260ms ease}
+.qs summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:24px;min-height:72px;padding:16px 24px;font-size:var(--s-lead);cursor:pointer}
+.qs summary::-webkit-details-marker{display:none}
+.qs .pm{position:relative;width:16px;height:16px;flex:none}
+.qs .pm::before,.qs .pm::after{content:"";position:absolute;inset-inline:0;top:50%;height:3px;margin-top:-1.5px;background:currentColor;transition:transform 260ms var(--ease-out)}
+.qs .pm::after{transform:rotate(90deg)}
+.qs details[open]{background:var(--accent);color:var(--accent-ink)}
+.qs details[open] .pm::after{transform:rotate(0)}
+.qs .a{padding:0 24px 24px;max-width:56ch}
+.qs .a p + p{margin-top:12px}
+.qs details[open] a{color:inherit}
+
+/* ---------- roadmap, under the ledger ---------- */
+.road{grid-column:6 / -1;margin-top:clamp(56px, 6vw, 96px);display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:32px var(--gutter)}
+.road .rh2{grid-column:1 / -1}
+.road .rh2 p{margin-top:12px}
+.road h3{font-family:var(--display);font-size:var(--s-sub);margin-bottom:8px}
+.road li{padding-block:6px;line-height:1.55}
+.road .later li{color:var(--muted)}
+
+/* ---------- install: first step already open ---------- */
+.install{background:var(--accent);color:var(--accent-ink);min-height:80svh;align-items:center;padding-block:calc(var(--section) / 2)}
+.install .say{grid-column:1 / span 5;align-self:end}
+.install h2{font-size:var(--s-head);line-height:1.3}
+.install .say p{margin-top:24px}
+.install .say a{color:inherit}
+.install .fine{margin-top:20px;font-size:var(--s-small)}
+.wizard{grid-column:7 / span 5;justify-self:center;width:100%;max-width:460px;background:#F4F4F2;color:#15191F;border-color:transparent;box-shadow:0 30px 60px -20px rgba(10,14,20,.55); /* taste-skill-ignore: the open dialog casts its shadow */overflow:hidden}
+.wizard .bar{display:flex;align-items:center;gap:10px;padding:10px 16px;background:#fff;color:#444}
+.wizard .bar i{width:22px;height:22px;border-radius:5px;background:#121A24;color:#C9A35C;display:grid;place-items:center;font-style:normal;font-weight:700}
+.wizard .body{padding:22px 24px;display:grid;gap:16px}
+.wizard h3{font-size:var(--s-lead)}
+.seg{display:grid;grid-template-columns:1fr 1fr;padding:3px;border-radius:8px;background:#E3E3DF}
+.seg button{min-height:40px;border-radius:6px;transition:background-color 180ms ease,color 180ms ease}
+.seg button[aria-pressed="true"]{background:#121A24;color:#E9D8B0;font-weight:700}
+.file{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:8px;background:#fff}
+.file code{color:#15191F}
+.file span{color:#555}
+.wizard ol{counter-reset:s;display:grid;gap:8px}
+.wizard ol li{counter-increment:s;display:grid;grid-template-columns:28px 1fr;gap:8px;line-height:1.6}
+.wizard ol li::before{content:counter(s, arabic-indic);width:24px;height:24px;border-radius:50%;background:#121A24;color:#E9D8B0;display:grid;place-items:center;font-size:14px;margin-top:2px}
+.wizard .go{display:flex;align-items:center;justify-content:center;min-height:52px;border-radius:8px;background:#121A24;color:#E9D8B0;font-weight:700;text-decoration:none;transition:transform 140ms var(--ease-out),background-color 180ms ease}
+.wizard .go:hover{background:#24303E}
+.wizard .go:active{transform:scale(.98)}
+.wizard details{color:#333}
+.wizard summary{cursor:pointer;text-decoration:underline;text-underline-offset:.25em}
+.wizard details p{margin-top:10px}
+.wizard details a{color:#15191F}
+
+/* ---------- thanks: plain names in columns ---------- */
+.thanks .h{grid-column:1 / span 3}
+.thanks .h p{margin-top:20px}
+.names{grid-column:5 / -1;columns:3;column-gap:32px}
+.names a{display:block;break-inside:avoid;padding-bottom:22px;text-decoration:none}
+.names b{display:block;font-size:var(--s-lead);line-height:1.45;transition:color 180ms ease}
+.names span{display:block;color:var(--muted);font-size:var(--s-small);line-height:1.6}
+.names a:hover b{color:var(--accent)}
+
+/* ---------- author: letter ---------- */
+.letter{max-width:600px;margin-inline:auto;padding-block:calc(var(--section) / 2)}
+.letter svg{width:56px;height:56px}
+.letter h2{margin-top:24px}
+.letter p{margin-top:20px}
+.letter .sign{margin-top:32px;font-size:var(--s-small);color:var(--muted)}
+.letter .acts{display:flex;flex-wrap:wrap;gap:16px 28px;align-items:center;margin-top:32px}
+
+/* ---------- footer of tiles ---------- */
+.foot{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:8px;padding:8px}
+.foot > *{padding:28px calc(var(--margin) - 8px);background:var(--surface);text-decoration:none;min-width:0}
+.foot .f1{grid-column:span 6;display:flex;flex-direction:column;justify-content:space-between;gap:24px}
+.foot .f1 p{font-size:var(--s-lead)}
+.foot .f2{grid-column:span 3}
+.foot .f2 li{padding-block:2px}
+.foot .f2 a{text-decoration:none}
+.foot .f2 a:hover{text-decoration:underline}
+.foot .f3{grid-column:span 3;display:flex;flex-direction:column;justify-content:flex-end;gap:6px}
+.foot .credits{font-size:var(--s-small);line-height:1.7;max-width:none}
+.foot .credits a{text-underline-offset:.2em}
+.foot .wm{grid-column:span 8;background:var(--ink);color:var(--bg);display:grid;place-items:center;min-height:300px}
+.foot .wm span{font-family:var(--display);font-size:var(--s-display);line-height:1}
+.foot .go{grid-column:span 4;background:var(--accent);color:var(--accent-ink);display:flex;flex-direction:column;justify-content:space-between;min-height:300px;transition:background-color 200ms ease}
+.foot .go p{font-size:var(--s-lead);font-weight:700}
+.foot .go svg{width:56px;height:56px;align-self:flex-end;transition:transform 300ms var(--ease-out)}
+.foot .go:hover svg{transform:translateX(-8px)}
+
+/* ---------- motion layer ---------- */
+@media (prefers-reduced-motion: no-preference){
+  .js [data-rise]{opacity:0;transform:translateY(22px);animation:rise 900ms var(--ease-out) forwards;animation-delay:calc(var(--i,0) * 90ms + 100ms)}
+  .js [data-reveal]{opacity:0;transform:translateY(26px);transition:opacity 700ms var(--ease-out),transform 900ms var(--ease-out);transition-delay:calc(var(--i,0) * 80ms)}
+  .js [data-reveal].is-in{opacity:1;transform:none}
+  .js .shutter[data-reveal]{opacity:1;transform:none;clip-path:inset(0 0 100% 0);transition:clip-path 1200ms var(--ease-io)}
+  .js .shutter[data-reveal].is-in{clip-path:inset(0)}
+}
+@keyframes rise{to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){
+  .js .chat .toolblock,.js .chat .reply{opacity:1 !important;transform:none !important}
+  .mosaic .pics img{transition:none}
+}
+
+/* ---------- tablet and phone ---------- */
+@media (max-width:1100px){
+  .hero-text{grid-column:1 / -1}
+  .hero-ui{grid-column:1 / -1}
+  .hero .lead{max-width:36ch}
+  .problem .col,.problem figure{grid-column:1 / -1}
+  .problem figure{position:static}
+  .tools-sec .h{grid-column:1 / -1}
+  .branches{grid-column:1 / -1;grid-template-columns:repeat(5, minmax(0,1fr));margin-bottom:24px}
+  .toolpanes{grid-column:1 / -1}
+  .acc .h,.faq .h{grid-column:1 / -1;position:static;margin-bottom:40px}
+  .ledger,.acc .notes,.qs,.road{grid-column:1 / -1}
+  .faq .h figure{display:none}
+  .install .say,.wizard{grid-column:1 / -1}
+  .install{row-gap:48px}
+  .install .say{align-self:start}
+  .thanks .h{grid-column:1 / -1;margin-bottom:40px}
+  .names{grid-column:1 / -1;columns:2}
+  .sources .more p:first-child,.sources .more p:last-child{grid-column:1 / -1}
+}
+@media (max-width:900px){
+  .nav .tlink{display:none}
+  .how .head,.how .steps,.how .after{grid-column:1 / -1}
+  .how .stage{grid-column:1 / -1;grid-row:3;position:static;height:auto;padding:16px 0;margin-top:32px}
+  .how .steps{grid-row:2}
+  .how .step{min-height:0;padding-top:28px}
+  .how .step h3{color:var(--ink)}
+  .js .chat .toolblock,.js .chat .reply{opacity:1 !important;transform:none !important}
+  .chat{width:100%;padding:16px}
+  .tiers .intro{grid-column:1 / -1}
+  .cmp{grid-template-columns:1fr}
+  .cmp .band{display:none}
+  .cmp .cell,.cmp .rh{grid-column:1 !important;grid-row:auto !important;min-height:0;padding:6px 20px}
+  .cmp .ch,.cmp .corner{display:none}
+  .cmp .rh{padding-top:28px}
+  .cmp [data-col]::before{content:attr(data-col) ": ";font-weight:700}
+  .cmp [data-col].on{background:var(--accent);color:var(--accent-ink);padding-block:12px}
+  .mosaic{grid-template-columns:1fr 1fr;grid-template-rows:auto auto;min-height:0}
+  .mosaic .pics{grid-column:1 / -1;grid-row:1;aspect-ratio:4 / 3.4}
+  .road{grid-template-columns:1fr}
+  .foot .f1,.foot .wm,.foot .go{grid-column:1 / -1}
+  .foot .f2,.foot .f3{grid-column:span 6}
+  .foot .wm,.foot .go{min-height:180px}
+  .sources .h{grid-column:1 / -1}
+}
+@media (max-width:560px){
   body{font-size:18px}
+  .nav{gap:12px}
+  .branches{grid-template-columns:1fr 1fr}
+  .tool{grid-template-columns:1fr;gap:4px}
+  .row{grid-template-columns:1fr;gap:2px}
+  .console .tabs{flex-wrap:wrap}
+  .console .tab{flex:1 1 auto}
+  .names{columns:1}
+  .ledger td{padding:16px 12px}
+  .ledger th{padding:0 12px 12px}
+  .tile{padding:18px}
+  .foot .f2,.foot .f3{grid-column:1 / -1}
+  .foot > *{padding:20px}
 }
 </style>
-<style>body{margin:0}img{max-width:100%}</style>
 </head>
 <body>
 
-
-<header class="bar">
-  <div class="wrap">
-    <a class="brand" href="#top" aria-label="العربية"><svg viewBox="0 0 512 512" aria-hidden="true"><rect x="0" y="0" width="512" height="512" rx="88.0" fill="#121A24"/><rect x="34.0" y="34.0" width="444.0" height="444.0" rx="60.0" fill="none" stroke="#C9A35C" stroke-width="6.0"/><path d="M142 -200Q99 -186 66.5 -150.0Q34 -114 34 -59Q34 -22 44.0 4.5Q54 31 70 53Q40 81 29.5 116.0Q19 151 25.5 187.0Q32 223 52.5 253.0Q73 283 105.0 301.5Q137 320 178 320Q212 320 236.5 303.5Q261 287 275.5 264.5Q290 242 292 224Q267 243 244.0 250.5Q221 258 202 254Q185 252 171.5 236.5Q158 221 158 204Q158 187 169.0 172.5Q180 158 201.5 149.0Q223 140 256 140H359L299 0H236Q224 0 207.0 -7.5Q190 -15 177.5 -30.5Q165 -46 165 -72Q165 -104 182.0 -123.5Q199 -143 225.5 -151.5Q252 -160 282.5 -161.0Q313 -162 341.5 -158.0Q370 -154 389 -147Q372 -168 342.0 -182.0Q312 -196 276.5 -203.0Q241 -210 206.0 -209.5Q171 -209 142 -200Z" fill="#E9D8B0" transform="translate(139.29 293.29) scale(0.56654 -0.56654)"/></svg><span>العربية</span></a>
-    <nav class="nav" aria-label="أقسام الصفحة">
-      <a href="#idea">الفكرة</a><a href="#tiers">مراتب الأحكام</a><a href="#tools">الأدوات</a><a href="#accuracy">الدقة</a><a href="#road">التطوير</a><a href="#install">التثبيت</a><a href="#thanks">شكر وتقدير</a>
-    </nav>
-  </div>
+<header class="wrap top">
+  <a class="brand" href="#top" aria-label="العربية، أول الصفحة"><svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="88" fill="#121A24"/><rect x="34" y="34" width="444" height="444" rx="60" fill="none" stroke="#C9A35C" stroke-width="6"/><path d="M142 -200Q99 -186 66.5 -150.0Q34 -114 34 -59Q34 -22 44.0 4.5Q54 31 70 53Q40 81 29.5 116.0Q19 151 25.5 187.0Q32 223 52.5 253.0Q73 283 105.0 301.5Q137 320 178 320Q212 320 236.5 303.5Q261 287 275.5 264.5Q290 242 292 224Q267 243 244.0 250.5Q221 258 202 254Q185 252 171.5 236.5Q158 221 158 204Q158 187 169.0 172.5Q180 158 201.5 149.0Q223 140 256 140H359L299 0H236Q224 0 207.0 -7.5Q190 -15 177.5 -30.5Q165 -46 165 -72Q165 -104 182.0 -123.5Q199 -143 225.5 -151.5Q252 -160 282.5 -161.0Q313 -162 341.5 -158.0Q370 -154 389 -147Q372 -168 342.0 -182.0Q312 -196 276.5 -203.0Q241 -210 206.0 -209.5Q171 -209 142 -200Z" fill="#E9D8B0" transform="translate(139.29 293.29) scale(0.56654 -0.56654)"/></svg><span>العربية</span></a>
+  <nav class="nav" aria-label="أقسام الصفحة">
+    <a class="tlink" href="#tools">الأدوات</a>
+    <a class="tlink" href="#accuracy">الدقة</a>
+    <a class="tlink" href="#faq">أسئلة</a>
+    <a class="tlink" href="https://github.com/ikagi07/arabiyya-mcp" target="_blank" rel="noopener">GitHub</a>
+    <a class="btn" href="#install">التثبيت</a>
+  </nav>
 </header>
 
 <main id="top">
-<div class="hero">
-  <svg class="ghost" viewBox="0 0 512 512" aria-hidden="true"><path d="M142 -200Q99 -186 66.5 -150.0Q34 -114 34 -59Q34 -22 44.0 4.5Q54 31 70 53Q40 81 29.5 116.0Q19 151 25.5 187.0Q32 223 52.5 253.0Q73 283 105.0 301.5Q137 320 178 320Q212 320 236.5 303.5Q261 287 275.5 264.5Q290 242 292 224Q267 243 244.0 250.5Q221 258 202 254Q185 252 171.5 236.5Q158 221 158 204Q158 187 169.0 172.5Q180 158 201.5 149.0Q223 140 256 140H359L299 0H236Q224 0 207.0 -7.5Q190 -15 177.5 -30.5Q165 -46 165 -72Q165 -104 182.0 -123.5Q199 -143 225.5 -151.5Q252 -160 282.5 -161.0Q313 -162 341.5 -158.0Q370 -154 389 -147Q372 -168 342.0 -182.0Q312 -196 276.5 -203.0Q241 -210 206.0 -209.5Q171 -209 142 -200Z" transform="translate(84.82 301.89) scale(0.83092 -0.83092)"/></svg>
-  <div class="wrap">
-    <div class="hero-text">
-      <h1>العربية</h1>
-      <p class="latin">ARABIYYA · MCP</p>
-      <p class="thesis">خادمٌ حاسوبي لعلوم العربية، يصل النماذج اللغوية بالمعاجم والمدوّنات والمحلّلات. <b>يصوغ النموذجُ الجواب، ويصدر الحكمُ عن مصدرٍ يُراجَع أو قاعدةٍ تُختبَر.</b></p>
-      <div class="cta">
-        <a class="btn solid" href="https://github.com/ikagi07/arabiyya-mcp" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>المستودع على GitHub</a>
-        <a class="btn" href="https://x.com/ikagi07" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>@ikagi07</a>
+
+<!-- hero: the product performs -->
+<section class="wrap grid hero" aria-labelledby="t-hero">
+  <div class="hero-text">
+    <h1 id="t-hero" data-rise style="--i:0">العربية</h1>
+    <p class="lead" data-rise style="--i:1">أدوات لعلوم العربية يستدعيها النموذج اللغوي: المعاجم والمدوّنات والمحلّلات. يصوغ النموذجُ الجواب، ويصدر الحكمُ عن مصدرٍ يُراجَع أو قاعدةٍ تُختبَر.</p>
+    <div class="acts" data-rise style="--i:2">
+      <a class="btn" href="#install">نزّل معالج التثبيت</a>
+      <a class="tlink" href="https://github.com/ikagi07/arabiyya-mcp" target="_blank" rel="noopener">الشيفرة على GitHub</a>
+    </div>
+    <p class="facts" data-rise style="--i:3">سبعٌ وثلاثون أداة، تعمل على جهازك بلا اتصال بعد التثبيت، مع Claude ومع أي عميل يدعم بروتوكول سياق النموذج (MCP). مفتوحة المصدر برخصة MIT.</p>
+  </div>
+
+  <div class="hero-ui" data-rise style="--i:2">
+    <div class="console" data-ui role="group" aria-label="أمثلة من مُخرَج الأدوات">
+      <div class="tabs" role="tablist" aria-label="اختر سؤالًا">
+        <button class="tab" role="tab" id="tab-sarf" aria-controls="pane-sarf" aria-selected="true">صرف</button>
+        <button class="tab" role="tab" id="tab-arud" aria-controls="pane-arud" aria-selected="false" tabindex="-1">عروض</button>
+        <button class="tab" role="tab" id="tab-mujam" aria-controls="pane-mujam" aria-selected="false" tabindex="-1">معجم</button>
+        <button class="tab" role="tab" id="tab-shahid" aria-controls="pane-shahid" aria-selected="false" tabindex="-1">شاهد</button>
+      </div>
+      <div class="panes">
+        <div class="pane" role="tabpanel" id="pane-sarf" aria-labelledby="tab-sarf">
+          <div class="row"><div class="k">السؤال</div><div class="q">ما أصل «مَبِيع»؟ وما خطوات إعلاله؟</div></div>
+          <div class="row"><div class="k">الأداة</div><div class="call"><code>mizan(word="<span class="ar">مَبِيع</span>")</code><span class="tier">مرتبة القاعدة</span></div></div>
+          <div class="row"><div class="k">المُخرَج</div><dl class="out">
+            <dt>الجذر</dt><dd>ب ي ع (أجوف يائي)</dd>
+            <dt>الصيغة</dt><dd>اسم مفعول من الثلاثي، على «مَفْعُول»</dd>
+            <dt>الأصل</dt><dd>مَبْيُوع</dd>
+            <dt>بالنقل</dt><dd>نُقلت حركة الياء إلى الباء الساكنة قبلها، فصار «مَبُيْوع»</dd>
+            <dt>بالحذف</dt><dd>التقى ساكنان، فحُذفت واو مفعول (على مذهب سيبويه، والمحذوف عند الأخفش العين)، وكُسرت الباء لتصحّ الياء</dd>
+          </dl></div>
+          <div class="row"><div class="k">الجواب</div><div class="ans">أصلها «مَبْيُوع» على «مَفْعُول»، أُعلّت بالنقل ثم بالحذف، ووزنها على لفظها «مَفِيل».</div></div>
+        </div>
+        <div class="pane" role="tabpanel" id="pane-arud" aria-labelledby="tab-arud" hidden>
+          <div class="row"><div class="k">السؤال</div><div class="q">قطّع: «قِفا نَبْكِ مِنْ ذِكْرى حَبِيبٍ وَمَنْزِلِ»</div></div>
+          <div class="row"><div class="k">الأداة</div><div class="call"><code>scan_verse(verse="<span class="ar">قفا نبك…</span>")</code></div></div>
+          <div class="row"><div class="k">المُخرَج</div><dl class="out">
+            <dt>البحر</dt><dd>الطويل، تام</dd>
+            <dt>الصدر</dt><dd>فعولن مفاعيلن فعولن مفاعلن (الأخيرة مقبوضة)</dd>
+            <dt>العجز</dt><dd>فعولن مفاعيلن فعولُ مفاعلن (بالقبض)</dd>
+            <dt>الرموز</dt><dd><code>11010110101011010110110</code></dd>
+            <dt>القافية</dt><dd>«فَحَوْمَلِ»، رويّها اللام المكسورة، متداركة</dd>
+          </dl></div>
+          <div class="row"><div class="k">الجواب</div><div class="ans">البيت من الطويل التام، دخل القبضُ ضربَه وعروضَه، ورويّه لامٌ مكسورة.</div></div>
+        </div>
+        <div class="pane" role="tabpanel" id="pane-mujam" aria-labelledby="tab-mujam" hidden>
+          <div class="row"><div class="k">السؤال</div><div class="q">ما مادة «ح ق ق» في لسان العرب؟</div></div>
+          <div class="row"><div class="k">الأداة</div><div class="call"><code>maajim(root="<span class="ar">حقق</span>")</code><span class="tier">مرتبة النقل</span></div></div>
+          <div class="row"><div class="k">المُخرَج</div><dl class="out">
+            <dt>المعجم</dt><dd>لسان العرب لابن منظور (ت 711هـ)</dd>
+            <dt>الموضع</dt><dd class="cite">ج10 ص49، بترقيم المطبوع</dd>
+            <dt>النص</dt><dd>«الحق: نقيض الباطل، وجمعه حقوق وحقاق، وليس له بناء أدنى عدد…»</dd>
+          </dl></div>
+          <div class="row"><div class="k">الجواب</div><div class="ans">قال ابن منظور: «الحق نقيض الباطل، وجمعه حقوق وحقاق». <span class="cite">(لسان العرب، ج10 ص49)</span></div></div>
+        </div>
+        <div class="pane" role="tabpanel" id="pane-shahid" aria-labelledby="tab-shahid" hidden>
+          <div class="row"><div class="k">السؤال</div><div class="q">أين استُشهد بـ«قِفا نَبْكِ» في كتب النحو؟</div></div>
+          <div class="row"><div class="k">الأداة</div><div class="call"><code>takhrij_shahid(verse="<span class="ar">قفا نبك…</span>")</code><span class="tier">مرتبة الترجيح</span></div></div>
+          <div class="row"><div class="k">المُخرَج</div><dl class="out">
+            <dt>المواضع</dt><dd>نحو 21، أدب 23، بلاغة 14</dd>
+            <dt>الكتاب</dt><dd class="cite">لسيبويه، ج4 ص205</dd>
+            <dt>سر الصناعة</dt><dd class="cite">لابن جني، ج2 ص501</dd>
+            <dt>شرح الكافية</dt><dd class="cite">للرضي، ج4 ص386</dd>
+          </dl></div>
+          <div class="row"><div class="k">الجواب</div><div class="ans">استُشهد به في واحدٍ وعشرين موضعًا من كتب النحو في المدوّنة، منها «الكتاب» لسيبويه في الوقف بحرف الإطلاق.</div></div>
+        </div>
       </div>
     </div>
-    <figure class="call" aria-label="مثال على استدعاء أداة">
-      <div class="row"><div class="lab">السؤال</div><div class="q">ما وزن «اسْتَقامَ»؟ وما جرى فيه من إعلال؟</div></div>
-      <div class="row"><div class="lab">الاستدعاء</div><div><code>mizan(word="استقام")</code></div></div>
-      <div class="row"><div class="lab">مُخرَج الأداة</div><div>
-        <dl>
+  </div>
+</section>
+
+<!-- problem -->
+<section class="wrap grid sec problem" aria-labelledby="t-problem">
+  <div class="col">
+    <h2 id="t-problem" data-reveal>نموذجٌ فصيح، يجيب من حفظه</h2>
+    <p class="lead" data-reveal style="--i:1">النماذج اللغوية تُحسن العربية عبارةً وفهمًا، لكنها في مسائل علومها تجيب من محفوظها الإحصائي، كعالمٍ واسع الحفظ بلا مكتبة يرجع إليها.</p>
+    <p data-reveal style="--i:2">فلا يتميّز في جوابها المنقولُ من المستنتَج، ولا الصحيحُ من الموهوم، ويقع الخطأ بنبرة الواثق، في أخصّ مواضع الصنعة:</p>
+    <dl class="errs">
+      <div data-reveal style="--i:3"><dt><b>في الميزان</b></dt><dd>وزن المعتلّ على لفظه لا على أصله، وإسقاط خطوات الإعلال أو تخليطها.</dd></div>
+      <div data-reveal style="--i:4"><dt><b>في العروض</b></dt><dd>تعيين البحر بالتخمين حين يختلّ الضبط، وتقطيعٌ لا تتفق رموزه مع حروفه.</dd></div>
+      <div data-reveal style="--i:5"><dt><b>في الشاهد</b></dt><dd>نسبة البيت إلى غير قائله، أو روايته بلفظٍ لم يُروَ به.</dd></div>
+      <div data-reveal style="--i:6"><dt><b>في المعجم</b></dt><dd>نصٌّ يُنسب إلى «اللسان» أو «المقاييس» وليس فيهما بلفظه.</dd></div>
+    </dl>
+  </div>
+  <figure>
+    <div class="frame" data-reveal><img id="zoomer" src="assets/alfiyya.jpg" width="1600" height="1131" alt="صفحتان من مخطوط شرحٍ على ألفية ابن مالك، يتوسّط المتنُ الصفحة وتحيط به الحواشي من كل جهة" loading="lazy"></div>
+    <figcaption data-reveal style="--i:1">شرحٌ على ألفية ابن مالك: المتن في الوسط، وحوله حواشٍ تُسنده وتراجعه. على هذا كُتب العلم، وعليه تعمل الأداة.</figcaption>
+  </figure>
+</section>
+
+<!-- how it works: pinned fragment, changing state -->
+<section class="wrap grid sec how" aria-labelledby="t-how">
+  <div class="head"><h2 id="t-how" data-reveal>الفصل بين الصياغة والحكم</h2></div>
+  <div class="stage" aria-hidden="false">
+    <div class="chat" data-ui data-state="3" id="chat" role="img" aria-label="الباحث يسأل عن وزن استقام، فيستدعي النموذج أداة الميزان، ثم يصوغ الجواب من مُخرَجها">
+      <div class="bubble">ما وزن «اسْتَقامَ»؟ وما جرى فيه من إعلال؟</div>
+      <div class="toolblock">
+        <div class="th"><span>استدعاء أداة</span><code>mizan(word="<span class="ar">اسْتَقامَ</span>")</code></div>
+        <dl class="out">
           <dt>الجذر</dt><dd>ق و م (أجوف واوي)</dd>
-          <dt>الوزن</dt><dd>اسْتَفْعَلَ</dd>
-          <dt>الأصل</dt><dd>اسْتَقْوَمَ</dd>
-          <dt>الخطوة ١</dt><dd>نُقلت فتحة الواو إلى القاف الساكنة قبلها</dd>
-          <dt>الخطوة ٢</dt><dd>قُلبت الواو ألفًا لتحركها في الأصل وانفتاح ما قبلها الآن</dd>
+          <dt>الوزن</dt><dd>اِسْتَفْعَلَ</dd>
+          <dt>الأصل</dt><dd>اِسْتَقْوَمَ</dd>
+          <dt>الإعلال</dt><dd>نُقلت حركة الواو إلى القاف الساكنة قبلها، ثم قُلبت ألفًا لتحركها في الأصل وانفتاح ما قبلها الآن</dd>
           <dt>التحقق</dt><dd>أعادت القواعدُ الأصلَ إلى الكلمة نفسها</dd>
         </dl>
-      </div></div>
-      <div class="row"><div class="lab">الجواب</div><div class="ans">وزنها «اسْتَفْعَلَ»، وأصلها «اسْتَقْوَمَ»، أُعلّت بالنقل ثم بالقلب.</div></div>
-      <figcaption class="cap">مثال مبسَّط لما يجري: الحكم من محرّك الإعلال، والصياغة من النموذج.</figcaption>
+      </div>
+      <div class="reply">وزنها «اسْتَفْعَلَ»، وأصلها «اسْتَقْوَمَ»، أُعلّت بالنقل ثم بالقلب.<span class="cite">الحكم من أداة الميزان، في مرتبة القاعدة</span></div>
+    </div>
+  </div>
+  <div class="steps">
+    <div class="step" data-step="1">
+      <h3>يسأل الباحث بالعربية، كما يسأل أستاذه.</h3>
+      <p>لا صيغة خاصة ولا أوامر: سؤالٌ في الصرف أو العروض أو المعجم، بلفظه.</p>
+    </div>
+    <div class="step" data-step="2">
+      <h3>فيختار النموذج الأداة، وتُخرج حكمها منظّمًا.</h3>
+      <p>بينهما بروتوكول سياق النموذج (MCP). وتعمل الأداة على جهاز الباحث بلا اتصال، فلا تخرج النصوص منه ولا كلفة استضافة.</p>
+    </div>
+    <div class="step" data-step="3">
+      <h3>ثم يصوغ النموذج الجواب، والحكم في حاشيته.</h3>
+      <p>مُخرَج الأداة ظاهر في تطبيق العميل لمن أراد مراجعته، كما تُراجَع حاشية الكتاب. وهي لا تُدرّب النموذج ولا تُغيّره، وإنما يرجع إليها كما يرجع الباحث إلى كتاب.</p>
+    </div>
+  </div>
+</section>
+
+<!-- tiers: comparison set as text -->
+<section class="wrap grid sec tiers" id="tiers" aria-labelledby="t-tiers">
+  <div class="intro">
+    <h2 id="t-tiers" data-reveal>مراتب الأحكام</h2>
+    <p class="lead" data-reveal style="--i:1">ما تُخرجه الأدوات ليس من جنس واحد، فيُرتَّب بحسب مصدر الحكم، وبه تُقدَّر درجة الوثوق به وجهة الخطأ فيه.</p>
+  </div>
+  <div class="cmp" id="cmp" data-reveal style="--i:2" role="table" aria-label="مقارنة مراتب الأحكام الثلاث">
+    <div class="band" style="grid-row:1" aria-hidden="true"></div>
+    <div role="row" style="display:contents">
+      <div class="corner" role="columnheader" style="grid-row:1;grid-column:1"><span class="sr-only">الوجه</span></div>
+      <button class="ch" role="columnheader" style="grid-row:1;grid-column:2" data-c="2" aria-pressed="true">النقل</button>
+      <button class="ch" role="columnheader" style="grid-row:1;grid-column:3" data-c="3" aria-pressed="false">القاعدة</button>
+      <button class="ch" role="columnheader" style="grid-row:1;grid-column:4" data-c="4" aria-pressed="false">الترجيح</button>
+    </div>
+  </div>
+</section>
+
+<!-- tools: branch tabs, banded list -->
+<section class="wrap grid sec tools-sec" id="tools" aria-labelledby="t-tools">
+  <h2 class="h" id="t-tools" data-reveal><span class="soft">سبعٌ وثلاثون أداة</span><br>في عشرة فروع</h2>
+  <div class="branches" role="tablist" aria-label="فروع الأدوات" aria-orientation="vertical" id="branches" data-reveal style="--i:1"></div>
+  <div class="toolpanes" id="toolpanes" data-reveal style="--i:2"></div>
+</section>
+
+<!-- sources: photograph with figure tiles -->
+<section class="sec sources" aria-labelledby="t-sources">
+  <div class="wrap grid">
+    <div class="h">
+      <h2 id="t-sources" data-reveal>ما ترجع إليه الأدوات</h2>
+      <p data-reveal style="--i:1">مواردُ مفتوحة معروفة لدى الباحثين، تُنزَّل من مصادرها عند التثبيت، ولكلٍّ منها رخصته وشروط ناشره.</p>
+    </div>
+  </div>
+  <div class="mosaic" data-reveal style="--i:2">
+    <div class="pics" id="pics">
+      <img src="assets/qamus.jpg" width="1600" height="1224" alt="فاتحة مخطوط القاموس المحيط للفيروزآبادي، وإلى جانبها فهرس أبوابه بأرقام صفحاتها" data-cap="القاموس المحيط للفيروزآبادي: الفاتحة المذهّبة، وفهرس أبوابه بأرقام صفحاتها. مجموعة خليلي.">
+      <img src="assets/kufic.jpg" width="1600" height="1113" alt="ورقة من مصحف بالخط الكوفي على رقّ، بنقط الإعراب الحمراء" loading="lazy" data-cap="ورقة من مصحف بالخط الكوفي على رقّ، من القرن الثاني أو الثالث للهجرة، والنقط الحمر علامات إعرابه.">
+      <img src="assets/poem.jpg" width="1010" height="1400" alt="لوحة فيها قصيدة عربية من ثمانية أبيات في الوسط تحيط بها أبيات فارسية" loading="lazy" data-cap="ثمانية أبيات عربية في وسط لوحة، تحيط بها أبيات فارسية. القرن العاشر للهجرة.">
+      <img src="assets/maqamat.jpg" width="989" height="1600" alt="الصفحة الأولى من كتاب المقامات للحريري" loading="lazy" data-cap="الصفحة الأولى من «كتاب المقامات» للحريري. المكتبة الوطنية الفرنسية، عربي 3924.">
+      <p class="cap" id="pcap" aria-live="polite">القاموس المحيط للفيروزآبادي: الفاتحة المذهّبة، وفهرس أبوابه بأرقام صفحاتها. مجموعة خليلي.</p>
+    </div>
+    <div class="tile t1"><b>15</b><p>معجمًا تراثيًّا من «العين» إلى «التاج»، بالجزء والصفحة</p></div>
+    <div class="tile t2"><b>3.86 مليون</b><p>بيتٍ في مدوّنة «أشعار» للبحث والتخريج</p></div>
+  </div>
+  <div class="wrap grid more">
+    <p class="lead" data-reveal>وفي المدوّنة التراثية 57 مصنَّفًا في نحو 12 مليون كلمة، ويمكن أن يُضاف إليها أيٌّ من 8,792 نصًّا في فهرس OpenITI، ومعها 77,429 كلمة قرآنية محلَّلة صرفيًّا.</p>
+    <p class="small muted" data-reveal style="--i:1">ومن المحلّلات والنماذج: CAMeL Tools وقاعدتها الصرفية CALIMA-Star، ونماذج CAMeLBERT، ومشكِّل CATT، ومحلّل Stanza بنموذج AraELECTRA، وPyArud للعروض، وقطرب للتصريف.</p>
+  </div>
+</section>
+
+<!-- accuracy -->
+<section class="wrap grid sec acc" id="accuracy" aria-labelledby="t-acc">
+  <div class="h">
+    <h2 id="t-acc" data-reveal>الدقة بأرقام معلنة</h2>
+    <p data-reveal style="--i:1">تقيس أداة <code>benchmark</code> الدقة على بيانات معيارية، ويُعاد إنتاج كل رقم ببذرة العيّنة. والأرقام لا تصدق إلا على جنس عيّنتها.</p>
+  </div>
+  <table class="ledger" data-reveal style="--i:1">
+    <caption class="sr-only">نتائج القياس: النتيجة، ثم المهمة والبيانات</caption>
+    <tbody>
+      <tr><td class="v">43 / 43</td><td class="t"><b>الميزان والإعلال</b><span>43 حالة معيارية من كتب الصرف</span></td></tr>
+      <tr><td class="v">96.7%</td><td class="t"><b>نسبة النص إلى قائله</b><span>30 شاعرًا من «أشعار»، ونصٌّ معزول من نحو 1500 كلمة</span></td></tr>
+      <tr><td class="v">78.8%</td><td class="t"><b>استخراج الجذر</b><span>2,000 كلمة عشوائية من القرآن، بأرجح تحليل بلا سياق</span></td></tr>
+      <tr><td class="v">1.1%</td><td class="t"><b>خطأ تشكيل النثر</b><span>40 سطرًا من قسم الاختبار في Tashkeela، نسبة الحروف المخطوءة</span></td></tr>
+      <tr><td class="v">15.2%</td><td class="t"><b>خطأ تشكيل الشعر</b><span>40 بيتًا مشكولًا من «أشعار»، نسبة الحروف المخطوءة</span></td></tr>
+    </tbody>
+  </table>
+  <p class="notes" data-reveal>الفرق بين تشكيل النثر والشعر هو علّة الضبط الموجَّه بالعروض. ونسبة النصوص قيست على شعراء أكثرهم معاصرون، فلا تُعمَّم على الشعر القديم. والإعراب والبديع والدلالة لم تُقَس بعد، لفقد مجموعات اختبار مصحّحة بمصطلح النحو العربي.</p>
+  <div class="road" id="road">
+    <div class="rh2" data-reveal>
+      <h3>وما لم يُقَس بعد</h3>
+      <p>غاية المشروع أن يبلغ في كل فرع درجةً يُعتمد عليها في البحث، بقياسٍ معلَن لا بدعوى.</p>
+    </div>
+    <div class="c" data-reveal style="--i:1"><h3>أُنجز</h3><ul class="l">
+      <li>معالج تثبيت رسومي لويندوز وماك</li>
+      <li>سبع وثلاثون أداة بمناهجها وحدودها</li>
+      <li>محرّك للإعلال يتحقق من نتيجته بنفسه</li>
+      <li>التقطيع بالضبط الموجَّه، وعلم القافية بعيوبه</li>
+      <li>التخريج الآلي للشاهد، ونسبة النصوص</li>
+      <li>أداة قياس على بيانات معيارية معلنة</li>
+    </ul></div>
+    <div class="c" data-reveal style="--i:2"><h3>قيد العمل</h3><ul class="l">
+      <li>مشكِّل خاص بالشعر، يُعتمد إن فاق المشكِّل الحالي</li>
+      <li>استضافة على الشبكة تُغني عن التثبيت</li>
+    </ul></div>
+    <div class="c later" data-reveal style="--i:3"><h3>مخطط</h3><ul class="l">
+      <li>مجموعة اختبار للإعراب مصحّحة يدويًّا</li>
+      <li>توسيع حالات الصرف المعيارية إلى أبوابه كلها</li>
+      <li>تقويم بشري يشارك فيه متخصصون</li>
+      <li>ورقة علمية تصف المنهج ونتائج القياس</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- faq -->
+<section class="wrap grid sec faq" id="faq" aria-labelledby="t-faq">
+  <div class="h">
+    <h2 id="t-faq" data-reveal>ما ليست الأداة، وما يُسأل عنه</h2>
+    <figure data-reveal style="--i:1">
+      <img src="assets/hashiya.jpg" width="948" height="1600" alt="صفحة من مخطوط ملتقى الأبحر، متنها في الوسط وفي هوامشها تعليقات بالحبر الأسود والأحمر" loading="lazy">
+      <figcaption>«ملتقى الأبحر» لإبراهيم الحلبي، نسخة 1679م، وفي هوامشها تعليقات القرّاء.</figcaption>
     </figure>
   </div>
-</div>
-
-<section id="problem">
-  <div class="wrap">
-    <p class="eyebrow">المشكلة</p>
-    <h2>نموذجٌ فصيح، لكنه يجيب من حفظه</h2>
-    <div class="measure">
-      <p class="lead">النماذج اللغوية الكبيرة تُحسن العربية عبارةً وفهمًا، لكنها في مسائل علومها تجيب من محفوظها الإحصائي، كعالمٍ واسع الحفظ بلا مكتبة يرجع إليها. فلا يتميّز في جوابها المنقولُ من المستنتَج، ولا الصحيحُ من الموهوم، ويقع الخطأ بنبرة الواثق.</p>
-      <p>ويظهر ذلك في أخصّ مواضع الصنعة، حيث لا يُغني حسنُ العبارة عن ضبط القاعدة وتوثيق النقل:</p>
-    </div>
-    <div class="errs">
-      <div><b>الميزان</b><p>وزن المعتلّ على لفظه لا على أصله، وإسقاط خطوات الإعلال أو تخليطها.</p></div>
-      <div><b>العروض</b><p>تعيين البحر بالتخمين حين يختلّ الضبط، وتقطيعٌ لا تتفق رموزه مع حروفه.</p></div>
-      <div><b>الشاهد</b><p>نسبة البيت إلى غير قائله، أو روايته بلفظٍ لم يُروَ به.</p></div>
-      <div><b>المعجم</b><p>نصٌّ يُنسب إلى «اللسان» أو «المقاييس» وليس فيهما بلفظه.</p></div>
-    </div>
+  <div class="qs">
+    <details name="faq" open data-reveal><summary>هل هي نموذج لغوي؟<i class="pm" aria-hidden="true"></i></summary><div class="a"><p>لا. ولا تُدرّب نموذجًا ولا تُغيّره؛ هي أدوات يستدعيها النموذج، ويرجع إليها كما يرجع الباحث إلى كتاب.</p></div></details>
+    <details name="faq" data-reveal style="--i:1"><summary>هل أحكامها معصومة؟<i class="pm" aria-hidden="true"></i></summary><div class="a"><p>لا. أحكامها على مراتب متفاوتة: النقل والقاعدة والترجيح، وما كان ترجيحًا يُعرض بوجوهه ولا يُجزم به.</p></div></details>
+    <details name="faq" data-reveal style="--i:2"><summary>هل تغني عن المصادر؟<i class="pm" aria-hidden="true"></i></summary><div class="a"><p>لا. تختصر الطريق إلى الموضع بالجزء والصفحة، والتحقيق بعدها للباحث.</p></div></details>
+    <details name="faq" data-reveal style="--i:3"><summary>هل تضمن أن ينقل النموذج مُخرَجها بأمانة؟<i class="pm" aria-hidden="true"></i></summary><div class="a"><p>لا. العبرة بمُخرَج الأداة نفسه، وهو ظاهر في تطبيق العميل لمن أراد مراجعته.</p></div></details>
+    <details name="faq" data-reveal style="--i:4"><summary>هل تعمل بلا اتصال بالشبكة؟<i class="pm" aria-hidden="true"></i></summary><div class="a"><p>نعم، بعد التثبيت. تُنزَّل البيانات مرة واحدة، ثم تعمل الأدوات على جهازك، إلا <code>lexicon_lookup</code> فإنها تبحث في موقع على الشبكة.</p></div></details>
+    <details name="faq" data-reveal style="--i:5"><summary>هل تعمل مع غير Claude؟<i class="pm" aria-hidden="true"></i></summary><div class="a"><p>نعم، مع أي عميل يدعم بروتوكول سياق النموذج. والمعالج يربطها بتطبيق Claude Desktop تلقائيًّا.</p></div></details>
+    <details name="faq" data-reveal style="--i:6"><summary>ظهرت رسالة تحذير عند فتح المعالج؟<i class="pm" aria-hidden="true"></i></summary><div class="a"><p>الملفان غير موقَّعين رقميًّا (التوقيع يكلّف مئات الدولارات سنويًّا)، فيُنبّهك النظام. والمعالج مفتوح المصدر في <a class="tlink" href="https://github.com/ikagi07/arabiyya-mcp/tree/main/installer" target="_blank" rel="noopener">المستودع</a> لتفحصه.</p><p>في ويندوز اضغط «مزيد من المعلومات» ثم «تشغيل على أي حال». وفي ماك انقر بالزر الأيمن على التطبيق واختر «فتح»، فإن لم يظهر الخيار ففي «إعدادات النظام ← الخصوصية والأمان» اضغط «فتح على أي حال».</p></div></details>
+    <details name="faq" data-reveal style="--i:7"><summary>كيف أحذفها؟<i class="pm" aria-hidden="true"></i></summary><div class="a"><p>من «التطبيقات المثبّتة» في ويندوز، أو احذف التطبيق من مجلد التطبيقات في ماك.</p></div></details>
   </div>
 </section>
 
-<section id="idea">
-  <div class="wrap">
-    <p class="eyebrow">الفكرة</p>
-    <h2>الفصل بين الصياغة والحكم</h2>
-    <div class="two">
-      <div>
-        <p class="lead">يتولّى النموذج اللغوي فهمَ السؤال وصياغةَ الجواب، ويصدر الحكم نفسه عن أداةٍ معلومة المنهج.</p>
-        <p>والوسيط بينهما بروتوكول سياق النموذج (Model Context Protocol): صيغةٌ متفق عليها للرسائل بين النموذج والأدوات. فإذا سأل الباحث، اختار النموذج الأداة المناسبة وأرسل إليها المُدخَل، فأجابته بنتيجةٍ منظّمة، ثم صاغ منها الجواب.</p>
+<!-- install: first step already open -->
+<section class="wrap grid install" id="install" aria-labelledby="t-install">
+  <div class="say">
+    <h2 id="t-install" data-reveal>نزّل، وافتح، وانتظر</h2>
+    <p class="lead" data-reveal style="--i:1">معالج رسومي بالعربية يتولّى كل شيء، بلا سطر أوامر. يقيس تقدّمه أمامك، ويربط الأداة بـ Claude في آخره.</p>
+    <p class="fine" data-reveal style="--i:2">يلزم تطبيق <a class="tlink" href="https://claude.ai/download" target="_blank" rel="noopener">Claude Desktop</a>، واتصالٌ بالشبكة أثناء التثبيت وحده. وتستطيع أن <a class="tlink" href="wizard-preview.html">تجرّب المعالج هنا</a> قبل تنزيله.</p>
+  </div>
+  <div class="wizard" data-ui data-reveal style="--i:1">
+    <div class="bar"><i aria-hidden="true">ع</i><span>العربية: معالج التثبيت</span></div>
+    <div class="body">
+      <h3>اختر نظام جهازك</h3>
+      <div class="seg" role="group" aria-label="نظام التشغيل">
+        <button type="button" aria-pressed="true" data-os="win">ويندوز 10 / 11</button>
+        <button type="button" aria-pressed="false" data-os="mac">macOS</button>
       </div>
-      <div>
-        <p>ويعمل الخادم على جهاز الباحث: تُنزَّل البيانات مرة واحدة، ثم تعمل الأدوات بلا اتصال بالشبكة، فلا تخرج النصوص من الجهاز ولا كلفة استضافة.</p>
-        <p class="muted">وتعمل الأداة مع Claude ومع أي عميل يدعم البروتوكول. وهي لا تُدرّب النموذج ولا تُغيّره، وإنما يرجع إليها كما يرجع الباحث إلى كتاب.</p>
-      </div>
-    </div>
-    <div class="flow" role="img" aria-label="الباحث يسأل، والنموذج يستدعي الأداة، والأداة ترجع إلى المصدر أو القاعدة، ثم يصوغ النموذج الجواب">
-      <svg viewBox="0 0 980 190">
-        <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="ah" d="M0 0L10 5L0 10z"/></marker></defs>
-        <rect class="box" x="790" y="40" width="170" height="96" rx="12"/>
-        <text class="t" x="875" y="84" text-anchor="middle">الباحث</text>
-        <text class="s" x="875" y="110" text-anchor="middle">يسأل بالعربية</text>
-        <rect class="box" x="545" y="40" width="190" height="96" rx="12"/>
-        <text class="t" x="640" y="84" text-anchor="middle">النموذج اللغوي</text>
-        <text class="s" x="640" y="110" text-anchor="middle">يفهم ويختار ويصوغ</text>
-        <rect class="boxg" x="290" y="40" width="200" height="96" rx="12"/>
-        <text class="t" x="390" y="84" text-anchor="middle">خادم العربية</text>
-        <text class="s" x="390" y="110" text-anchor="middle">37 أداة</text>
-        <rect class="box" x="20" y="14" width="215" height="66" rx="12"/>
-        <text class="t" x="127" y="44" text-anchor="middle">المصادر</text>
-        <text class="s" x="127" y="66" text-anchor="middle">معاجم · قرآن · شعر · مدوّنة</text>
-        <rect class="box" x="20" y="98" width="215" height="66" rx="12"/>
-        <text class="t" x="127" y="128" text-anchor="middle">القواعد والنماذج</text>
-        <text class="s" x="127" y="150" text-anchor="middle">إعلال · عروض · إعراب</text>
-        <path class="ar" d="M788 76H737" marker-end="url(#ah)"/>
-        <path class="ar" d="M737 100H788" marker-end="url(#ah)"/>
-        <path class="ar" d="M543 76H492" marker-end="url(#ah)"/>
-        <path class="ar" d="M492 100H543" marker-end="url(#ah)"/>
-        <path class="ar" d="M288 70H237" marker-end="url(#ah)"/>
-        <path class="ar" d="M288 106H237" marker-end="url(#ah)"/>
-        <text class="s" x="762" y="66" text-anchor="middle">سؤال</text>
-        <text class="s" x="762" y="124" text-anchor="middle">جواب</text>
-        <text class="s" x="517" y="66" text-anchor="middle">MCP</text>
-      </svg>
+      <div class="file"><code id="fname">arabiyya-setup-windows.exe</code><span id="fsize">٦١٢ ك.ب</span></div>
+      <ol>
+        <li id="step1">شغّل الملف، واضغط «ابدأ التثبيت».</li>
+        <li>اختر «كامل» (نحو 4 غيغابايت) أو «سريع» (نحو 2.5)، ثم انتظر من نصف ساعة إلى ساعة.</li>
+        <li>أعد تشغيل Claude، فتظهر أدوات «العربية» فيه.</li>
+      </ol>
+      <a class="go" id="dl" href="downloads/arabiyya-setup-windows.exe" download>تنزيل المعالج لويندوز</a>
     </div>
   </div>
 </section>
 
-<section id="tiers">
-  <div class="wrap">
-    <p class="eyebrow">المنهج</p>
-    <h2>مراتب الأحكام</h2>
-    <p class="measure lead">ما تُخرجه الأدوات ليس من جنس واحد. فيُرتَّب بحسب مصدر الحكم، وبه تُقدَّر درجة الوثوق به وجهة الخطأ فيه.</p>
-    <div class="tiers">
-      <div class="tier">
-        <div class="n">المرتبة الأولى</div>
-        <h3>النقل</h3>
-        <p>نصٌّ في مصدر معيّن يُنقل بلفظه، معزوًّا إلى موضعه بالجزء والصفحة.</p>
-        <div class="chips"><code>maajim</code><code>lughawiyyat</code><code>quran_word</code><code>quran_root</code><code>search_poetry</code><code>corpus_concordance</code></div>
-        <p class="err">جهة الخطأ: النسخة الرقمية، كالتصحيف ونقص النص، أو تقطيع المعجم إلى مواد.</p>
-      </div>
-      <div class="tier">
-        <div class="n">المرتبة الثانية</div>
-        <h3>القاعدة</h3>
-        <p>قواعد صريحة على مذهب أهل الصنعة، تُعطي النتيجة نفسها كلما أُعيدت، وتُختبر بحالات معيارية.</p>
-        <div class="chips"><code>mizan</code><code>mushtaqqat</code><code>taqalib</code><code>analyze_qafiya</code><code>huruf</code><code>phonetics</code><code>detect_badi</code></div>
-        <p class="err">جهة الخطأ: قاعدة ناقصة أو حالة لم تُستوعب، فتُصلَح القاعدة نفسها.</p>
-      </div>
-      <div class="tier">
-        <div class="n">المرتبة الثالثة</div>
-        <h3>الترجيح</h3>
-        <p>نموذج إحصائي مدرَّب يرجّح بين وجوه بحسب ما رأى، فتُعرض نتيجته بوجوهها ولا يُجزم بها.</p>
-        <div class="chips"><code>diacritize</code><code>irab</code><code>scan_poem</code><code>semantic_change</code><code>attribute_author</code><code>takhrij_shahid</code></div>
-        <p class="err">جهة الخطأ: الخروج عن جنس بيانات التدريب، كالشعر والتراكيب النادرة.</p>
-      </div>
-    </div>
+<!-- thanks -->
+<section class="wrap grid sec thanks" id="thanks" aria-labelledby="t-thanks">
+  <div class="h">
+    <h2 id="t-thanks" data-reveal>قائمٌ على أعمال غيره</h2>
+    <p data-reveal style="--i:1">الفضل في كل نتيجة صحيحة لما بناه هؤلاء وأتاحوه للباحثين، وما وقع من خطأ فعلى هذا المشروع لا عليهم.</p>
+  </div>
+  <div class="names" data-reveal style="--i:1">
+    <a href="https://github.com/CAMeL-Lab/camel_tools" target="_blank" rel="noopener"><b>مختبر CAMeL، جامعة نيويورك أبوظبي</b><span>CAMeL Tools، وقاعدة CALIMA-Star، ونماذج CAMeLBERT</span></a>
+    <a href="https://github.com/abjadai/catt" target="_blank" rel="noopener"><b>Abjad AI (فارس الأسمري وزملاؤه)</b><span>مشكِّل CATT</span></a>
+    <a href="https://huggingface.co/datasets/arbml/ashaar" target="_blank" rel="noopener"><b>فريق ARBML (زيد اليافعي وماجد الشيباني وزملاؤهما)</b><span>مدوّنة «أشعار»</span></a>
+    <a href="https://pypi.org/project/pyarud/" target="_blank" rel="noopener"><b>شعيب النمري</b><span>مكتبة PyArud للتقطيع العروضي</span></a>
+    <a href="https://github.com/linuxscout" target="_blank" rel="noopener"><b>طه زروقي</b><span>قطرب لتصريف الأفعال، ومدوّنة Tashkeela</span></a>
+    <a href="https://github.com/AliOsm/arabic-text-diacritization" target="_blank" rel="noopener"><b>علي فاضل وزملاؤه</b><span>التقسيم المعياري لـ Tashkeela</span></a>
+    <a href="https://openiti.org" target="_blank" rel="noopener"><b>مبادرة OpenITI ومشروع KITAB</b><span>المعاجم التراثية، ومدوّنة الكتب، وفهرس النصوص</span></a>
+    <a href="https://corpus.quran.com" target="_blank" rel="noopener"><b>كايس دوكس، جامعة ليدز</b><span>المدوّنة القرآنية، في نسخة mustafa0x المصحّحة</span></a>
+    <a href="https://stanfordnlp.github.io/stanza/" target="_blank" rel="noopener"><b>مجموعة ستانفورد لمعالجة اللغات</b><span>محلّل Stanza النحوي</span></a>
+    <a href="https://github.com/aub-mind/arabert" target="_blank" rel="noopener"><b>مختبر MIND، الجامعة الأمريكية في بيروت</b><span>نموذج AraELECTRA</span></a>
+    <a href="https://arabiclexicon.hawramani.com" target="_blank" rel="noopener"><b>إكرام هورامي</b><span>موقع The Arabic Lexicon</span></a>
+    <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener"><b>Anthropic</b><span>بروتوكول سياق النموذج، وتطبيق Claude</span></a>
+    <a href="https://shamela.ws" target="_blank" rel="noopener"><b>المكتبة الشاملة</b><span>أصل كثير من نصوص OpenITI</span></a>
   </div>
 </section>
 
-<section id="tools">
-  <div class="wrap">
-    <p class="eyebrow">الأدوات</p>
-    <h2>سبعٌ وثلاثون أداة في عشرة فروع</h2>
-    <div class="branches">
-      <div class="br"><h3>الصرف والميزان <small>6 أدوات</small></h3><p>التحليل الصرفي بلا سياق وبالسياق، وأسرة الجذر، والتصريف. والميزان بأصل الكلمة وخطوات الإعلال والإبدال والإدغام بعبارة الصرفيين، لا يُقبل إلا إذا أعاد الأصلَ إلى الكلمة نفسها.</p><div class="chips"><code>analyze_word</code><code>analyze_text</code><code>root_family</code><code>conjugate</code><code>mizan</code><code>mushtaqqat</code></div></div>
-      <div class="br"><h3>النحو والإعراب <small>أداة واحدة</small></h3><p>إعراب الجملة كلمةً كلمة بمحلّل التبعية، تُنقل علاقاته إلى أبواب النحو العربي، مع العلامات الأصلية والفرعية وضبط الأواخر.</p><div class="chips"><code>irab</code></div></div>
-      <div class="br"><h3>الضبط والعروض <small>3 أدوات</small></h3><p>التشكيل الآلي، وتقطيع البيت والقصيدة بالزحافات والعلل. وإذا لم يستقم البيت بُحث عن أقل تغيير في الضبط يقيم وزنه، ويُعرض على أنه ضبطٌ يقتضيه الوزن لا رواية محقّقة.</p><div class="chips"><code>diacritize</code><code>scan_verse</code><code>scan_poem</code></div></div>
-      <div class="br"><h3>القافية والبديع <small>أداتان</small></h3><p>عناصر القافية من الروي إلى التوجيه، وعيوبها من الإقواء إلى الإيطاء. ورصد مرشّحات الجناس والطباق والمقابلة والتصريع والسجع والاقتباس.</p><div class="chips"><code>analyze_qafiya</code><code>detect_badi</code></div></div>
-      <div class="br"><h3>الأصوات <small>أداتان</small></h3><p>المخارج والصفات على مذهب ابن الجزري، والموازنة بين حرفين. والكتابة الصوتية الدولية والمقاطع والنبر.</p><div class="chips"><code>huruf</code><code>phonetics</code></div></div>
-      <div class="br"><h3>المعجم وكتب اللغة <small>4 أدوات</small></h3><p>مادة الجذر من خمسة عشر معجمًا من العين إلى التاج، بالجزء والصفحة. والفروق والأضداد والإبدال والمعرّب. والتقاليب بالمستعمل والمهمل.</p><div class="chips"><code>maajim</code><code>lughawiyyat</code><code>taqalib</code><code>lexicon_lookup</code></div></div>
-      <div class="br"><h3>القرآن والشعر <small>4 أدوات</small></h3><p>صرف كلمات الآية وإعرابها ومواضع الجذر. والبحث في نحو أربعة ملايين بيت. وتخريج الشاهد: نسبته ورواياته، ومن استشهد به من أصحاب الكتب.</p><div class="chips"><code>quran_word</code><code>quran_root</code><code>search_poetry</code><code>takhrij_shahid</code></div></div>
-      <div class="br"><h3>الدلالة <small>4 أدوات</small></h3><p>التقارب الدلالي بين لفظين منفردين أو في سياقهما، وما يصلح مكان الكلمة، وأقرب الألفاظ إليها. والتطور الدلالي للفظ عبر القرون الهجرية.</p><div class="chips"><code>word_similarity</code><code>substitutes_in_context</code><code>semantic_neighbors</code><code>semantic_change</code></div></div>
-      <div class="br"><h3>لسانيات المدوّنة <small>7 أدوات</small></h3><p>سياقات اللفظ في سبعة وخمسين كتابًا تراثيًّا، وتوزّعه على القرون، ومتلازماته بنسبة الأرجحية، وموازنة التعابير في الاستعمال. وإضافة أي كتاب من فهرس OpenITI.</p><div class="chips"><code>corpus_concordance</code><code>corpus_usage</code><code>corpus_collocates</code><code>usage_compare</code><code>corpus_find_book</code><code>corpus_add_book</code><code>corpus_remove_book</code></div></div>
-      <div class="br"><h3>الأسلوب والقياس <small>4 أدوات</small></h3><p>الوصف المعجمي لنصٍّ أو ديوان، والموازنة بين نصّين بالإبانة الإحصائية، ونسبة النص إلى قائله بمقاييس Delta. وقياس دقة الأدوات على بيانات معيارية.</p><div class="chips"><code>text_profile</code><code>compare_texts</code><code>attribute_author</code><code>benchmark</code></div></div>
-    </div>
-  </div>
-</section>
-
-<section id="sources">
-  <div class="wrap">
-    <p class="eyebrow">الموارد</p>
-    <h2>ما ترجع إليه الأدوات</h2>
-    <p class="measure">موارد مفتوحة معروفة لدى الباحثين، تُنزَّل من مصادرها عند التثبيت، ولكلٍّ منها رخصته وشروط ناشره.</p>
-    <div class="nums">
-      <div class="num"><b>15</b><span>معجمًا تراثيًّا من OpenITI</span></div>
-      <div class="num"><b>3.86 مليون</b><span>بيت في مدوّنة «أشعار»</span></div>
-      <div class="num"><b>57</b><span>مصنَّفًا في المدوّنة، نحو 12 مليون كلمة</span></div>
-      <div class="num"><b>8,792</b><span>نصًّا في فهرس OpenITI يمكن إضافتها</span></div>
-      <div class="num"><b>77,429</b><span>كلمة قرآنية محلَّلة صرفيًّا</span></div>
-    </div>
-    <p class="muted" style="margin-top:22px;font-size:16px">ومن المحلّلات والنماذج: CAMeL Tools وقاعدتها الصرفية CALIMA-Star، ونماذج CAMeLBERT، ومشكِّل CATT، ومحلّل Stanza بنموذج AraELECTRA، وPyArud للعروض، وقطرب للتصريف.</p>
-  </div>
-</section>
-
-<section id="accuracy">
-  <div class="wrap">
-    <p class="eyebrow">القياس</p>
-    <h2>الدقة بأرقام معلنة</h2>
-    <p class="measure">تقيس أداة <code>benchmark</code> الدقة على بيانات معيارية، ويُعاد إنتاج كل رقم ببذرة العينة. والأرقام لا تصدق إلا على جنس عيّنتها.</p>
-    <div class="tbl">
-      <table>
-        <thead><tr><th>المهمة</th><th>البيانات</th><th>النتيجة</th></tr></thead>
-        <tbody>
-          <tr><td>الميزان والإعلال</td><td>43 حالة معيارية من كتب الصرف</td><td class="v">43 / 43</td></tr>
-          <tr><td>نسبة النص إلى قائله</td><td>30 شاعرًا من «أشعار»، ونصٌّ معزول من نحو 1500 كلمة</td><td class="v">96.7%</td></tr>
-          <tr><td>استخراج الجذر</td><td>2,000 كلمة عشوائية من القرآن، بأرجح تحليل بلا سياق</td><td class="v">78.8%</td></tr>
-          <tr><td>تشكيل النثر</td><td>40 سطرًا من قسم الاختبار في Tashkeela، نسبة الحروف المخطوءة</td><td class="v">1.1% خطأ</td></tr>
-          <tr><td>تشكيل الشعر</td><td>40 بيتًا مشكولًا من «أشعار»، نسبة الحروف المخطوءة</td><td class="v">15.2% خطأ</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <p class="muted" style="margin-top:18px;font-size:16px">الفرق بين تشكيل النثر والشعر هو علّة الضبط الموجَّه بالعروض. ونسبة النصوص قيست على شعراء أكثرهم معاصرون، فلا تُعمَّم على الشعر القديم. والإعراب والبديع والدلالة لم تُقَس بعد لفقد مجموعات اختبار مصحّحة بمصطلح النحو العربي.</p>
-  </div>
-</section>
-
-<section id="not">
-  <div class="wrap">
-    <p class="eyebrow">دفع الإيهام</p>
-    <h2>ما ليست الأداة</h2>
-    <div class="not">
-      <div><b>ليست نموذجًا لغويًّا</b><p>ولا تُدرّب نموذجًا ولا تُغيّره؛ هي أدوات يستدعيها النموذج.</p></div>
-      <div><b>ليست معصومة</b><p>أحكامها على مراتب متفاوتة، وما كان ترجيحًا يُعرض بوجوهه.</p></div>
-      <div><b>ليست بديلًا عن المصادر</b><p>تختصر الطريق إلى الموضع، والتحقيق بعدها للباحث.</p></div>
-      <div><b>ليست ضامنةً لنقل النموذج</b><p>العبرة بمُخرَج الأداة، وهو ظاهر في تطبيق العميل لمن أراد مراجعته.</p></div>
-    </div>
-  </div>
-</section>
-
-<section id="road">
-  <div class="wrap">
-    <p class="eyebrow">خطة التطوير</p>
-    <h2>مشروعٌ قائم ومستمر</h2>
-    <p class="measure">غايته أن يبلغ في كل فرع درجةً يُعتمد عليها في البحث، بقياسٍ معلَن لا بدعوى.</p>
-    <div class="road">
-      <div class="done"><h3>أُنجز</h3><ul>
-        <li>معالج تثبيت رسومي لويندوز وماك</li>
-        <li>سبع وثلاثون أداة بمناهجها وحدودها</li>
-        <li>محرّك للإعلال يتحقق من نتيجته بنفسه</li>
-        <li>التقطيع بالضبط الموجَّه، وعلم القافية بعيوبه</li>
-        <li>التخريج الآلي للشاهد، ونسبة النصوص</li>
-        <li>أداة قياس على بيانات معيارية معلنة</li>
-      </ul></div>
-      <div><h3>قيد العمل</h3><ul>
-        <li>مشكِّل خاص بالشعر، يُعتمد إن فاق المشكِّل الحالي</li>
-        <li>استضافة على الشبكة تُغني عن التثبيت</li>
-        
-      </ul></div>
-      <div><h3>مخطط</h3><ul>
-        <li>مجموعة اختبار للإعراب مصحّحة يدويًّا</li>
-        <li>توسيع حالات الصرف المعيارية إلى أبوابه كلها</li>
-        <li>تقويم بشري يشارك فيه متخصصون</li>
-        <li>ورقة علمية تصف المنهج ونتائج القياس</li>
-      </ul></div>
-    </div>
-  </div>
-</section>
-
-<section id="install">
-  <div class="wrap">
-    <p class="eyebrow">التثبيت</p>
-    <h2>نزّل، وافتح، وانتظر</h2>
-    <p class="measure">معالج رسومي بالعربية يتولّى كل شيء، ولا تحتاج إلى سطر أوامر. يقيس تقدّمه أمامك، ويربط الأداة بـ Claude في آخره.</p>
-    <div class="dl">
-      <a class="dlc" href="downloads/arabiyya-setup-windows.exe" download>
-        <span class="os">ويندوز 10 / 11</span>
-        <span class="fn">arabiyya-setup-windows.exe</span>
-        <span class="sz">٦١٢ ك.ب</span>
-        <span class="go">تنزيل ↓</span>
-      </a>
-      <a class="dlc" href="downloads/arabiyya-setup-mac.zip" download>
-        <span class="os">macOS</span>
-        <span class="fn">arabiyya-setup-mac.zip</span>
-        <span class="sz">١٫١ م.ب</span>
-        <span class="go">تنزيل ↓</span>
-      </a>
-    </div>
-    <ol class="steps">
-      <li>شغّل الملف (على ماك فكّ الضغط أولًا) واضغط «ابدأ التثبيت».</li>
-      <li>اختر «كامل» (نحو 4 غيغابايت) أو «سريع» (نحو 2.5)، ثم انتظر من نصف ساعة إلى ساعة؛ ولا شيء مطلوب منك.</li>
-      <li>أعد تشغيل Claude، فتظهر أدوات «العربية» فيه.</li>
-    </ol>
-    <details class="warn">
-      <summary>ظهرت رسالة تحذير عند الفتح؟</summary>
-      <p>الملفان غير موقَّعين رقميًّا (التوقيع يكلّف مئات الدولارات سنويًّا)، فيُنبّهك النظام. الملف مفتوح المصدر في <a href="https://github.com/ikagi07/arabiyya-mcp/tree/main/installer" target="_blank" rel="noopener">المستودع</a> لتفحصه.</p>
-      <p><b>ويندوز:</b> اضغط «مزيد من المعلومات» ثم «تشغيل على أي حال».<br><b>ماك:</b> انقر بزر الفأرة الأيمن على التطبيق واختر «فتح»؛ وإن لم يظهر الخيار ففي «إعدادات النظام ← الخصوصية والأمان» اضغط «فتح على أي حال».</p>
-    </details>
-    <p class="muted" style="font-size:16px">يلزم تطبيق <a href="https://claude.ai/download" target="_blank" rel="noopener">Claude Desktop</a> واتصال بالشبكة أثناء التثبيت وحده. للحذف: «التطبيقات المثبّتة» في ويندوز، أو احذف التطبيق من ماك.</p>
-  </div>
-</section>
-
-<section id="try">
-  <div class="wrap">
-    <p class="eyebrow">جرّب أن تسأل</p>
-    <h2>بالعربية، كما تسأل أستاذك</h2>
-    <div class="call" style="padding:8px 22px">
-      <div class="row"><div class="lab">صرف</div><div>ما أصل «مَبِيع» وما خطوات إعلاله؟</div></div>
-      <div class="row"><div class="lab">عروض</div><div>قطّع هذه القصيدة وبيّن الأبيات المختلّة.</div></div>
-      <div class="row"><div class="lab">معجم</div><div>ما مادة «ح ق ق» في المقاييس واللسان؟</div></div>
-      <div class="row"><div class="lab">شاهد</div><div>خرّج «قفا نبكِ من ذكرى حبيبٍ ومنزلِ».</div></div>
-      <div class="row"><div class="lab">دلالة</div><div>كيف تطوّر استعمال «الاستعارة» عبر القرون؟</div></div>
-    </div>
-  </div>
-</section>
-
-<section id="thanks">
-  <div class="wrap">
-    <p class="eyebrow">شكر وتقدير</p>
-    <h2>قائمٌ على أعمال غيره</h2>
-    <p class="measure">قام هذا المشروع على أعمالٍ مفتوحة أتاحها أصحابها للباحثين، ولولاها ما كان. فالشكر لهم، والفضل في كل نتيجة صحيحة لما بنوه، وما وقع من خطأ فعلى هذا المشروع لا عليهم.</p>
-    <div class="thanks">
-      <a href="https://github.com/CAMeL-Lab/camel_tools" target="_blank" rel="noopener"><b>مختبر CAMeL، جامعة نيويورك أبوظبي</b><span>CAMeL Tools، وقاعدة CALIMA-Star الصرفية، ونماذج CAMeLBERT</span></a>
-      <a href="https://github.com/abjadai/catt" target="_blank" rel="noopener"><b>Abjad AI (فارس الأسمري وزملاؤه)</b><span>مشكِّل CATT</span></a>
-      <a href="https://huggingface.co/datasets/arbml/ashaar" target="_blank" rel="noopener"><b>فريق ARBML (زيد اليافعي وماجد الشيباني وزملاؤهما)</b><span>مدوّنة «أشعار»</span></a>
-      <a href="https://pypi.org/project/pyarud/" target="_blank" rel="noopener"><b>شعيب النمري (Chouaieb Nemri)</b><span>مكتبة PyArud للتقطيع العروضي</span></a>
-      <a href="https://github.com/linuxscout" target="_blank" rel="noopener"><b>طه زروقي</b><span>قطرب لتصريف الأفعال، ومدوّنة Tashkeela</span></a>
-      <a href="https://github.com/AliOsm/arabic-text-diacritization" target="_blank" rel="noopener"><b>علي فاضل وزملاؤه</b><span>التقسيم المعياري لـ Tashkeela للتدريب والاختبار</span></a>
-      <a href="https://openiti.org" target="_blank" rel="noopener"><b>مبادرة OpenITI ومشروع KITAB</b><span>المعاجم التراثية، ومدوّنة الكتب، وفهرس النصوص</span></a>
-      <a href="https://corpus.quran.com" target="_blank" rel="noopener"><b>كايس دوكس، جامعة ليدز</b><span>المدوّنة القرآنية (Quranic Arabic Corpus)، في نسخة mustafa0x المصحّحة</span></a>
-      <a href="https://stanfordnlp.github.io/stanza/" target="_blank" rel="noopener"><b>مجموعة ستانفورد لمعالجة اللغات الطبيعية</b><span>محلّل Stanza النحوي</span></a>
-      <a href="https://github.com/aub-mind/arabert" target="_blank" rel="noopener"><b>مختبر MIND، الجامعة الأمريكية في بيروت</b><span>نموذج AraELECTRA</span></a>
-      <a href="https://arabiclexicon.hawramani.com" target="_blank" rel="noopener"><b>إكرام هورامي</b><span>موقع The Arabic Lexicon</span></a>
-      <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener"><b>Anthropic</b><span>بروتوكول سياق النموذج (MCP) وتطبيق Claude</span></a>
-      <a href="https://shamela.ws" target="_blank" rel="noopener"><b>المكتبة الشاملة</b><span>أصل كثير من نصوص OpenITI</span></a>
-    </div>
-  </div>
-</section>
-
-<section id="author">
-  <div class="wrap author">
-    <svg viewBox="0 0 512 512" aria-hidden="true"><rect x="0" y="0" width="512" height="512" rx="88.0" fill="#121A24"/><rect x="34.0" y="34.0" width="444.0" height="444.0" rx="60.0" fill="none" stroke="#C9A35C" stroke-width="6.0"/><path d="M142 -200Q99 -186 66.5 -150.0Q34 -114 34 -59Q34 -22 44.0 4.5Q54 31 70 53Q40 81 29.5 116.0Q19 151 25.5 187.0Q32 223 52.5 253.0Q73 283 105.0 301.5Q137 320 178 320Q212 320 236.5 303.5Q261 287 275.5 264.5Q290 242 292 224Q267 243 244.0 250.5Q221 258 202 254Q185 252 171.5 236.5Q158 221 158 204Q158 187 169.0 172.5Q180 158 201.5 149.0Q223 140 256 140H359L299 0H236Q224 0 207.0 -7.5Q190 -15 177.5 -30.5Q165 -46 165 -72Q165 -104 182.0 -123.5Q199 -143 225.5 -151.5Q252 -160 282.5 -161.0Q313 -162 341.5 -158.0Q370 -154 389 -147Q372 -168 342.0 -182.0Q312 -196 276.5 -203.0Q241 -210 206.0 -209.5Q171 -209 142 -200Z" fill="#E9D8B0" transform="translate(139.29 293.29) scale(0.56654 -0.56654)"/></svg>
-    <div class="measure">
-      <p class="eyebrow">صاحب المشروع</p>
-      <h2>سيد حسن</h2>
-      <p>صمّم المشروع وحدّد فروعه ومناهجه ومصادره، وكُتبت شيفرته بمعونة نموذج Claude بتوجيهه ومراجعته. ويُذكر ذلك لأن أداةً غايتها التمييز بين مصادر الأحكام أولى بأن تُبيّن مصدر صنعتها.</p>
-      <p>ويُرحَّب بملاحظات أهل الاختصاص: النص المُدخَل، والأداة، وما أخرجته، والصواب ومصدره.</p>
-      <div class="links">
-        <a class="btn solid" href="https://github.com/ikagi07/arabiyya-mcp" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
-        <a class="btn" href="https://github.com/ikagi07/arabiyya-mcp/issues" target="_blank" rel="noopener">أرسل ملاحظة</a>
-        <a class="btn" href="https://x.com/ikagi07" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>@ikagi07</a>
-      </div>
+<!-- author: letter -->
+<section class="wrap" id="author" aria-labelledby="t-author">
+  <div class="letter">
+    <svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="88" fill="#121A24"/><rect x="34" y="34" width="444" height="444" rx="60" fill="none" stroke="#C9A35C" stroke-width="6"/><path d="M142 -200Q99 -186 66.5 -150.0Q34 -114 34 -59Q34 -22 44.0 4.5Q54 31 70 53Q40 81 29.5 116.0Q19 151 25.5 187.0Q32 223 52.5 253.0Q73 283 105.0 301.5Q137 320 178 320Q212 320 236.5 303.5Q261 287 275.5 264.5Q290 242 292 224Q267 243 244.0 250.5Q221 258 202 254Q185 252 171.5 236.5Q158 221 158 204Q158 187 169.0 172.5Q180 158 201.5 149.0Q223 140 256 140H359L299 0H236Q224 0 207.0 -7.5Q190 -15 177.5 -30.5Q165 -46 165 -72Q165 -104 182.0 -123.5Q199 -143 225.5 -151.5Q252 -160 282.5 -161.0Q313 -162 341.5 -158.0Q370 -154 389 -147Q372 -168 342.0 -182.0Q312 -196 276.5 -203.0Q241 -210 206.0 -209.5Q171 -209 142 -200Z" fill="#E9D8B0" transform="translate(139.29 293.29) scale(0.56654 -0.56654)"/></svg>
+    <h2 id="t-author" data-reveal>سيد حسن</h2>
+    <p class="lead" data-reveal style="--i:1">صمّم المشروع وحدّد فروعه ومناهجه ومصادره، وكُتبت شيفرته بمعونة نموذج Claude بتوجيهه ومراجعته.</p>
+    <p data-reveal style="--i:2">ويُذكر ذلك لأن أداةً غايتها التمييز بين مصادر الأحكام أولى بأن تُبيّن مصدر صنعتها.</p>
+    <p data-reveal style="--i:3">ويُرحَّب بملاحظات أهل الاختصاص: النص المُدخَل، والأداة، وما أخرجته، والصواب ومصدره.</p>
+    <div class="acts" data-reveal style="--i:4">
+      <a class="btn" href="https://github.com/ikagi07/arabiyya-mcp/issues" target="_blank" rel="noopener">أرسل ملاحظة</a>
+      <a class="tlink" href="https://x.com/ikagi07" target="_blank" rel="noopener">‎@ikagi07 على X</a>
     </div>
   </div>
 </section>
 </main>
 
-<footer>
-  <div class="wrap">
-    <span>العربية · شيفرة مفتوحة برخصة MIT</span>
-    <span><a href="https://github.com/ikagi07/arabiyya-mcp" target="_blank" rel="noopener">github.com/ikagi07/arabiyya-mcp</a></span>
+<footer class="foot">
+  <div class="f1">
+    <p>العربية: شيفرة مفتوحة برخصة MIT.</p>
+    <p class="credits">صور المخطوطات من ويكيميديا كومنز: <a href="https://commons.wikimedia.org/wiki/File:Khalili_Collection_Hajj_and_Arts_of_Pilgrimage_mss_0236_fol_0b-1a.jpg">القاموس المحيط</a>، مجموعة خليلي، <a href="https://creativecommons.org/licenses/by-sa/3.0/igo/deed.en">CC BY-SA 3.0</a>؛ و<a href="https://commons.wikimedia.org/wiki/File:%D8%B4%D8%B1%D8%AD_%D8%A3%D9%84%D9%81%D9%8A%D8%A9_%D8%A7%D8%A8%D9%86_%D9%85%D8%A7%D9%84%D9%83.jpg">شرح ألفية ابن مالك</a>، و<a href="https://commons.wikimedia.org/wiki/File:Multaqa_al_abhur.jpg">ملتقى الأبحر</a>، و<a href="https://commons.wikimedia.org/wiki/File:Folio_from_a_Koran_(8th-9th_century).jpg">ورقة من مصحف كوفي</a>، و<a href="https://commons.wikimedia.org/wiki/File:Anonymous_Arabic_and_Persian_Poetic_Verses_WDL6796.png">أبيات عربية وفارسية</a>، و<a href="https://commons.wikimedia.org/wiki/File:Maqamat_al-Hariri,_BNF_Arabe_3924,_first_page._Dated_1188,_by_al-Q%C4%81sim_ibn_%CA%BFAl%C4%AB_al-_%E1%B8%A4ar%C4%ABr%C4%AB_al-Ba%E1%B9%A3r%C4%AB_(1054-1122).jpg">مقامات الحريري</a>، وكلها <a href="https://creativecommons.org/publicdomain/mark/1.0/">ملك عام</a>.</p>
   </div>
+  <nav class="f2" aria-label="روابط">
+    <ul class="l">
+      <li><a href="#tools">الأدوات</a></li>
+      <li><a href="#tiers">مراتب الأحكام</a></li>
+      <li><a href="#accuracy">الدقة</a></li>
+      <li><a href="#install">التثبيت</a></li>
+      <li><a href="#thanks">شكر وتقدير</a></li>
+    </ul>
+  </nav>
+  <div class="f3">
+    <a class="tlink" href="https://github.com/ikagi07/arabiyya-mcp" target="_blank" rel="noopener">github.com/ikagi07/arabiyya-mcp</a>
+    <a class="tlink" href="https://x.com/ikagi07" target="_blank" rel="noopener">‎@ikagi07</a>
+  </div>
+  <div class="wm" aria-hidden="true"><span>العربية</span></div>
+  <a class="go" href="https://github.com/ikagi07/arabiyya-mcp/issues" target="_blank" rel="noopener">
+    <p>أخبرنا بما أخطأت فيه الأداة</p>
+    <svg viewBox="0 0 56 56" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="4"><path d="M50 28H8M24 12 8 28l16 16"/></svg>
+  </a>
 </footer>
 
+<script>
+// ---------- data: tiers and tools (the page's own content) ----------
+const TIERS = {
+  rows: [
+    ['مصدر الحكم', 'نصٌّ في مصدر معيّن', 'قواعد صريحة على مذهب أهل الصنعة', 'نموذج إحصائي مدرَّب يرجّح بين وجوه'],
+    ['كيف يُعرض', 'بلفظه، معزوًّا إلى موضعه بالجزء والصفحة', 'النتيجة بخطواتها، كما يعرضها أهل الفن', 'بوجوهه، ولا يُجزم به'],
+    ['إذا أُعيد', 'النص نفسه ما دامت النسخة واحدة', 'النتيجة نفسها، وتُختبر بحالات معيارية', 'يتغيّر بتغيّر السياق، ويضعف خارج جنس التدريب'],
+    ['جهة الخطأ', 'النسخة الرقمية: تصحيفٌ أو نقص، أو تقطيع المعجم إلى مواد', 'قاعدة ناقصة أو حالة لم تُستوعب، فتُصلَح القاعدة نفسها', 'الخروج عن جنس بيانات التدريب، كالشعر والتراكيب النادرة'],
+    ['من أدواته', 'maajim lughawiyyat quran_word quran_root search_poetry corpus_concordance', 'mizan mushtaqqat taqalib analyze_qafiya huruf phonetics detect_badi', 'diacritize irab scan_poem semantic_change attribute_author takhrij_shahid']
+  ]
+};
+const BRANCHES = [
+  ['الصرف والميزان', 'التحليل الصرفي بلا سياق وبالسياق، والميزان بأصل الكلمة وخطوات إعلالها، لا يُقبل إلا إذا أعاد الأصلَ إلى الكلمة نفسها.', [
+    ['analyze_word', 'تحليل الكلمة المنفردة بكل ما تحتمله من وجوه'], ['analyze_text', 'تحليل النص صرفيًّا في سياقه'], ['root_family', 'أسرة الجذر: ما ورد من مشتقاته'], ['conjugate', 'تصريف الفعل في الأزمنة والضمائر'], ['mizan', 'الميزان بالأصل وخطوات الإعلال والإبدال والإدغام بعبارة الصرفيين'], ['mushtaqqat', 'المشتقات القياسية من الفعل']]],
+  ['النحو والإعراب', 'محلّل التبعية تُنقل علاقاته إلى أبواب النحو العربي.', [
+    ['irab', 'إعراب الجملة كلمةً كلمة: الباب والحكم والعلامة الأصلية أو الفرعية، وضبط الأواخر']]],
+  ['الضبط والعروض', 'إذا لم يستقم البيت بُحث عن أقل تغيير في الضبط يقيم وزنه، ويُعرض على أنه ضبطٌ يقتضيه الوزن لا رواية محقّقة.', [
+    ['diacritize', 'التشكيل الآلي للنص'], ['scan_verse', 'تقطيع البيت: البحر والتفعيلات والزحافات والعلل والقافية'], ['scan_poem', 'تقطيع القصيدة وبيان المختلّ، مع الضبط الموجَّه بالوزن']]],
+  ['القافية والبديع', 'علم القافية بعناصره وعيوبه، ورصد مرشّحات البديع.', [
+    ['analyze_qafiya', 'عناصر القافية من الرويّ إلى التوجيه، وعيوبها من الإقواء إلى الإيطاء'], ['detect_badi', 'الجناس والطباق والمقابلة والتصريع وردّ العجز والسجع والاقتباس']]],
+  ['الأصوات', 'على مذهب ابن الجزري في المخارج والصفات.', [
+    ['huruf', 'مخارج الحروف وصفاتها، والموازنة بين حرفين'], ['phonetics', 'الكتابة الصوتية الدولية والمقاطع والنبر']]],
+  ['المعجم وكتب اللغة', 'مادة الجذر من خمسة عشر معجمًا من «العين» إلى «التاج»، بالجزء والصفحة.', [
+    ['maajim', 'مادة الجذر من خمسة عشر معجمًا تراثيًّا، مرتّبة زمنيًّا بمواضعها'], ['lughawiyyat', 'الفروق والأضداد والإبدال والمعرّب والمثلثات وفقه اللغة'], ['taqalib', 'تقاليب الجذر بالمستعمل منها والمهمل'], ['lexicon_lookup', 'البحث في موقع The Arabic Lexicon عبر الشبكة']]],
+  ['القرآن والشعر', 'صرف الآية وإعرابها، والبحث في نحو أربعة ملايين بيت، وتخريج الشاهد.', [
+    ['quran_word', 'صرف كلمات الآية وإعرابها'], ['quran_root', 'مواضع الجذر في القرآن'], ['search_poetry', 'البحث في مدوّنة «أشعار»'], ['takhrij_shahid', 'تخريج الشاهد: نسبته ورواياته، ومن استشهد به بالكتاب والجزء والصفحة']]],
+  ['الدلالة', 'التقارب الدلالي، وما يصلح مكان الكلمة، وتطوّر اللفظ عبر القرون.', [
+    ['semantic_neighbors', 'أقرب الألفاظ إلى الكلمة دلالةً'], ['word_similarity', 'التقارب الدلالي بين لفظين منفردين أو في سياقهما'], ['substitutes_in_context', 'ما يصلح مكان الكلمة في سياقها'], ['semantic_change', 'التطور الدلالي للفظ عبر القرون الهجرية']]],
+  ['لسانيات المدوّنة', 'سياقات اللفظ في سبعة وخمسين كتابًا تراثيًّا، وإضافة أي كتاب من فهرس OpenITI.', [
+    ['corpus_concordance', 'سياقات اللفظ في الكتب التراثية'], ['corpus_usage', 'توزّع اللفظ على القرون والفنون'], ['corpus_collocates', 'متلازمات اللفظ بنسبة الأرجحية'], ['usage_compare', 'موازنة تعبيرين في الاستعمال'], ['corpus_find_book', 'البحث في فهرس OpenITI'], ['corpus_add_book', 'إضافة كتاب من الفهرس إلى المدوّنة'], ['corpus_remove_book', 'إخراج كتاب من المدوّنة']]],
+  ['الأسلوب والقياس', 'الوصف الإحصائي للنصوص ونسبتها، وقياس دقة الأدوات نفسها.', [
+    ['text_profile', 'الوصف المعجمي لنصٍّ أو ديوان'], ['compare_texts', 'الموازنة بين نصّين بالإبانة الإحصائية'], ['attribute_author', 'نسبة النص إلى قائله بمقاييس Delta'], ['benchmark', 'قياس دقة الأدوات على بيانات معيارية']]]
+];
+const ar = (n) => n.toLocaleString('ar-EG');
+const countLabel = (n) => n === 1 ? 'أداة' : n === 2 ? 'أداتان' : `${ar(n)} أدوات`;
+
+// ---------- tiers table ----------
+(() => {
+  const cmp = document.getElementById('cmp');
+  TIERS.rows.forEach((r, i) => {
+    const row = i + 2;
+    if (i % 2 === 0) { const b = document.createElement('div'); b.className = 'band alt'; b.style.gridRow = row; b.setAttribute('aria-hidden', 'true'); cmp.appendChild(b); }
+    const wrap = document.createElement('div'); wrap.setAttribute('role', 'row'); wrap.style.display = 'contents';
+    const h = document.createElement('div'); h.className = 'rh'; h.setAttribute('role', 'rowheader'); h.style.gridRow = row; h.style.gridColumn = 1; h.textContent = r[0]; wrap.appendChild(h);
+    ['النقل', 'القاعدة', 'الترجيح'].forEach((name, j) => {
+      const c = document.createElement('div'); c.className = 'cell'; c.setAttribute('role', 'cell'); c.dataset.col = name; c.dataset.c = j + 2;
+      c.style.gridRow = row; c.style.gridColumn = j + 2;
+      if (i === TIERS.rows.length - 1) { c.classList.add('tools'); c.innerHTML = r[j + 1].split(' ').map((t) => `<code>${t}</code>`).join(' '); }
+      else c.textContent = r[j + 1];
+      wrap.appendChild(c);
+    });
+    cmp.appendChild(wrap);
+  });
+  const set = (col) => {
+    cmp.querySelectorAll('[data-c]').forEach((el) => el.classList.toggle('on', el.dataset.c === String(col)));
+    cmp.querySelectorAll('.ch').forEach((b) => b.setAttribute('aria-pressed', b.dataset.c === String(col)));
+  };
+  cmp.querySelectorAll('.ch').forEach((b) => b.addEventListener('click', () => set(b.dataset.c)));
+  set(2);
+})();
+
+// ---------- tools: branch tabs ----------
+(() => {
+  const tabs = document.getElementById('branches'), panes = document.getElementById('toolpanes');
+  BRANCHES.forEach(([name, about, tools], i) => {
+    const t = document.createElement('button');
+    t.className = 'branch'; t.setAttribute('role', 'tab'); t.id = `br-${i}`; t.setAttribute('aria-controls', `bp-${i}`);
+    t.setAttribute('aria-selected', i === 0); t.tabIndex = i === 0 ? 0 : -1;
+    t.innerHTML = `${name}<span>${countLabel(tools.length)}</span>`;
+    tabs.appendChild(t);
+    const p = document.createElement('div');
+    p.className = 'toolpane'; p.id = `bp-${i}`; p.setAttribute('role', 'tabpanel'); p.setAttribute('aria-labelledby', t.id); p.hidden = i !== 0;
+    p.innerHTML = `<p class="about lead">${about}</p>` + tools.map(([n, d], k) => `<div class="tool" style="--i:${k}"><code>${n}</code><span>${d}</span></div>`).join('');
+    panes.appendChild(p);
+  });
+  const all = [...tabs.children];
+  const pick = (t, focus) => {
+    all.forEach((x) => { const on = x === t; x.setAttribute('aria-selected', on); x.tabIndex = on ? 0 : -1; document.getElementById(x.getAttribute('aria-controls')).hidden = !on; });
+    if (focus) t.focus();
+  };
+  tabs.addEventListener('click', (e) => { const t = e.target.closest('.branch'); if (t) pick(t); });
+  tabs.addEventListener('keydown', (e) => {
+    const i = all.indexOf(document.activeElement); if (i < 0) return;
+    const next = { ArrowDown: 1, ArrowLeft: 1, ArrowUp: -1, ArrowRight: -1 }[e.key];
+    if (next) { e.preventDefault(); pick(all[(i + next + all.length) % all.length], true); }
+  });
+})();
+
+// ---------- hero console tabs ----------
+(() => {
+  const tabs = [...document.querySelectorAll('.console .tab')];
+  const pick = (t, focus) => {
+    tabs.forEach((x) => { const on = x === t; x.setAttribute('aria-selected', on); x.tabIndex = on ? 0 : -1; const p = document.getElementById(x.getAttribute('aria-controls')); p.hidden = !on; p.classList.toggle('fresh', on); });
+    if (focus) t.focus();
+  };
+  tabs.forEach((t) => t.addEventListener('click', () => pick(t)));
+  tabs[0].parentElement.addEventListener('keydown', (e) => {
+    const i = tabs.indexOf(document.activeElement); if (i < 0) return;
+    const next = { ArrowLeft: 1, ArrowRight: -1 }[e.key];
+    if (next) { e.preventDefault(); pick(tabs[(i + next + tabs.length) % tabs.length], true); }
+  });
+})();
+
+// ---------- pinned stage: the step nearest the middle sets the state ----------
+(() => {
+  const chat = document.getElementById('chat'), steps = [...document.querySelectorAll('.how .step')];
+  if (!('IntersectionObserver' in window) || matchMedia('(max-width:900px)').matches) return;
+  chat.dataset.state = '1';
+  const io = new IntersectionObserver((es) => es.forEach((e) => {
+    if (!e.isIntersecting) return;
+    steps.forEach((s) => s.classList.toggle('is-on', s === e.target));
+    chat.dataset.state = e.target.dataset.step;
+  }), { rootMargin: '-45% 0px -45% 0px' });
+  steps.forEach((s) => io.observe(s));
+})();
+
+// ---------- install: choose the system ----------
+(() => {
+  const files = {
+    win: ['downloads/arabiyya-setup-windows.exe', 'arabiyya-setup-windows.exe', '٦١٢ ك.ب', 'شغّل الملف، واضغط «ابدأ التثبيت».', 'تنزيل المعالج لويندوز'],
+    mac: ['downloads/arabiyya-setup-mac.zip', 'arabiyya-setup-mac.zip', '١٫١ م.ب', 'فكّ ضغط الملف، وشغّل التطبيق، واضغط «ابدأ التثبيت».', 'تنزيل المعالج لماك']
+  };
+  const btns = [...document.querySelectorAll('.seg button')];
+  const set = (os) => {
+    const f = files[os];
+    btns.forEach((b) => b.setAttribute('aria-pressed', b.dataset.os === os));
+    const a = document.getElementById('dl'); a.href = f[0]; a.textContent = f[4];
+    document.getElementById('fname').textContent = f[1]; document.getElementById('fsize').textContent = f[2]; document.getElementById('step1').textContent = f[3];
+  };
+  btns.forEach((b) => b.addEventListener('click', () => set(b.dataset.os)));
+  if (/Mac/.test(navigator.platform || navigator.userAgent)) set('mac');
+})();
+
+// ---------- sources: slow crossfade, with its caption ----------
+(() => {
+  const imgs = [...document.querySelectorAll('#pics img')], cap = document.getElementById('pcap');
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || imgs.length < 2) return;
+  let i = 0, timer = null;
+  imgs[0].classList.add('on');
+  const step = () => { imgs[i].classList.remove('on'); i = (i + 1) % imgs.length; imgs[i].classList.add('on'); cap.textContent = imgs[i].dataset.cap; };
+  const run = () => { if (!timer) timer = setInterval(step, 5600); };
+  const stop = () => { clearInterval(timer); timer = null; };
+  const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && !document.hidden ? run() : stop()));
+  io.observe(document.getElementById('pics'));
+  document.addEventListener('visibilitychange', () => document.hidden ? stop() : run());
+})();
+
+// ---------- the manuscript drifts as it scrolls past ----------
+(() => {
+  const img = document.getElementById('zoomer');
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  let ticking = false;
+  const upd = () => {
+    const r = img.getBoundingClientRect(); const p = Math.min(1, Math.max(0, 1 - (r.top + r.height) / (innerHeight + r.height)));
+    img.style.setProperty('--zoom', (1.16 - p * 0.14).toFixed(4)); ticking = false;
+  };
+  addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(upd); } }, { passive: true });
+  upd();
+})();
+
+// ---------- reveal once ----------
+(() => {
+  const els = document.querySelectorAll('[data-reveal]');
+  if (!('IntersectionObserver' in window)) { els.forEach((el) => el.classList.add('is-in')); return; }
+  const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px 12% 0px', threshold: 0 });
+  els.forEach((el) => io.observe(el));
+  let last = 0;
+  const sweep = () => { els.forEach((el) => { if (!el.classList.contains('is-in') && el.getBoundingClientRect().top < innerHeight * 1.12) el.classList.add('is-in'); }); };
+  addEventListener('scroll', () => { const now = Date.now(); if (now - last > 80) { last = now; sweep(); } }, { passive: true });
+  addEventListener('scrollend', sweep, { passive: true });
+  addEventListener('load', () => setTimeout(() => els.forEach((el) => { const r = el.getBoundingClientRect(); if (r.top < innerHeight && r.bottom > 0) el.classList.add('is-in'); }), 2500));
+})();
+</script>
 </body>
 </html>
