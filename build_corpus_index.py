@@ -108,23 +108,30 @@ def parse(path):
                 if line.startswith("#META#Header#End#"):
                     header = False
                 continue
+            cont = line.startswith("~~") and cur is not None
+            t = clean(line)
+            new = (not cont and bool(t) and bool(TOKEN.search(t))
+                   and not re.fullmatch(r"[\d\s\-–.()]+", t))
+            # علامة الصفحة PageVxPy تختم الصفحة التي قبلها. فإن بدأت فقرةٌ جديدة بنصٍّ قبل أول علامة في سطرها
+            # فهي تبدأ في الصفحة التي تختمها تلك العلامة: تُنشأ قبل معالجة العلامات لتُنسب إليها.
+            first = PAGE.search(line)
+            if new and first and TOKEN.search(clean(line[:first.start()])):
+                cur = [None, None, t]
+                paras.append(cur)
+                pending.append(cur)
+                new = False
             for m in PAGE.finditer(line):
                 for p in pending:
                     p[0], p[1] = int(m.group(1)), int(m.group(2))
                 pending.clear()
-            if line.startswith("~~") and cur is not None:
-                t = clean(line)
+            if cont:
                 if t:
                     cur[2] += " " + t
                 continue
-            t = clean(line)
-            if not t or not TOKEN.search(t):
-                continue
-            if re.fullmatch(r"[\d\s\-–.()]+", t):
-                continue
-            cur = [None, None, t]
-            paras.append(cur)
-            pending.append(cur)
+            if new:
+                cur = [None, None, t]
+                paras.append(cur)
+                pending.append(cur)
     return meta, paras
 
 

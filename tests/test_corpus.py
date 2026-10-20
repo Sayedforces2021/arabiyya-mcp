@@ -87,14 +87,18 @@ class TestParse(unittest.TestCase):
         self.assertEqual(meta.get("BookTITLE"), "كتاب الاختبار الأول")
         self.assertEqual((paras[0][0], paras[0][1]), (1, 10))   # علامة الصفحة في سطر «~~» من الفقرة نفسها
 
-    @unittest.expectedFailure
     def test_marker_on_first_line_of_paragraph(self):
-        """عيب مؤكد: إذا جاءت علامة الصفحة في السطر الأول من الفقرة («# نص… PageV01P011») عولجت العلامة قبل
-        إنشاء الفقرة، فلا تُنسب إليها، وتأخذ الفقرة صفحة العلامة التالية (أي صفحة زائدة بواحد) أو لا شيء في آخر الكتاب.
-        مثال حقيقي: بيت «والله أسماك سمى مباركا» في الإنصاف ج1 ص14 عند الشاملة، ويُفهرس في corpus.db على ص15.
-        في نسخة OpenITI من الإنصاف 410 سطرًا من هذا النوع."""
+        """كانت علامة الصفحة في السطر الأول من الفقرة («# نص… PageV01P011») تُعالَج قبل إنشاء الفقرة، فتأخذ الفقرة
+        صفحة العلامة التالية (زائدة بواحد). مثال حقيقي: بيت «والله أسماك سمى مباركا» في الإنصاف ج1 ص14 عند الشاملة،
+        وكان يُفهرس على ص15."""
         _m, paras = bci.parse(_write("a1.txt", BOOK_A))
         self.assertEqual((paras[1][0], paras[1][1]), (1, 11))
+
+    def test_marker_before_text_on_first_line(self):
+        """علامة في أول السطر تختم الصفحة السابقة، فالفقرة التي بعدها تبدأ في الصفحة التالية."""
+        text = BOOK_A.split("#META#Header#End#")[0] + "#META#Header#End#\n# أول PageV01P001\n# PageV01P002 ثان\n~~ تتمة PageV01P003\n"
+        _m, paras = bci.parse(_write("a3.txt", text))
+        self.assertEqual([(v, p, t) for v, p, t in paras], [(1, 1, "أول"), (1, 3, "ثان تتمة")])
 
     def test_continuation_joined_and_original_text_kept(self):
         _m, paras = bci.parse(_write("a2.txt", BOOK_A))
