@@ -44,8 +44,12 @@ class Shamela:
         self.root = root
         import jpype
         if not jpype.isJVMStarted():
-            jvm = glob.glob(os.path.join(root, "app", "win", "64", "jre", "*", "bin", "server", "jvm.dll")) or [None]
-            jars = glob.glob(os.path.join(root, "app", "lucene", "*", "*.jar"))
+            jvm = (glob.glob(os.path.join(root, "app", "win", "64", "jre", "*", "bin", "server", "jvm.dll"))
+                   + glob.glob(os.path.join(root, "**", "libjvm.dylib"), recursive=True)
+                   + glob.glob(os.path.join(root, "**", "libjvm.so"), recursive=True)) or [None]
+            jars = glob.glob(os.path.join(root, "app", "lucene", "*", "*.jar")) or glob.glob(os.path.join(root, "**", "lucene-core-*.jar"), recursive=True)
+            if jars and not glob.glob(os.path.join(root, "app", "lucene", "*", "*.jar")):
+                jars = glob.glob(os.path.join(os.path.dirname(jars[0]), "*.jar"))
             if not jars:
                 raise SystemExit(f"لم أجد مكتبات Lucene في {root}\\app\\lucene؛ تحقق من مسار الشاملة (--root).")
             jpype.startJVM(jvm[0], classpath=jars, convertStrings=True) if jvm[0] else jpype.startJVM(classpath=jars, convertStrings=True)
@@ -150,19 +154,110 @@ def import_book(sh, con, bid, genre, died=None):
             "صفحات بلا رقم": unnumbered, "الكلمات": ntok}
 
 
+SHAMELA_ID = re.compile(r"\.(?:Shamela|Sham19Y|ShamAY|Sham30K)0*(\d+)-")
+
+
+def default_root():
+    """مجلد الشاملة 4: متغير البيئة SHAMELA_ROOT، ثم المواضع المعتادة."""
+    cands = [os.environ.get("SHAMELA_ROOT")] + [f"{d}:\\shamela4{s}" for d in "CDEFG" for s in ("", "_1")] + [
+        os.path.expanduser("~/shamela4"), "/Applications/shamela4", os.path.expanduser("~/Applications/shamela4")]
+    for c in cands:
+        if c and os.path.isdir(os.path.join(c, "database", "store", "page")):
+            return c
+    return None
+
+
+def openiti_shamela_ids(db_path):
+    """{uri في المدوّنة: رقم الكتاب في الشاملة} للكتب المأخوذة في OpenITI من نسخة الشاملة."""
+    paths = {".".join(os.path.basename(p).split(".")[:2]): p for _g, _r, p in bci.CORPUS}
+    for cat in (os.path.join(HERE, "openiti_catalog.tsv"), os.path.join(os.path.dirname(db_path), "openiti_catalog.tsv")):
+        if os.path.exists(cat):
+            for line in open(cat, encoding="utf-8"):
+                c = line.rstrip("\n").split("\t")
+                if len(c) >= 7:
+                    paths.setdefault(c[0], c[6])
+            break
+    out = {}
+    for uri, p in paths.items():
+        m = SHAMELA_ID.search(os.path.basename(p))
+        if m:
+            out[uri] = int(m.group(1))
+    return out
+
+
+def _title_overlap(a, b):
+    wa = {w for w in bci.norm(a).replace("ال", " ").split() if len(w) > 2}
+    wb = {w for w in bci.norm(b).replace("ال", " ").split() if len(w) > 2}
+    return len(wa & wb) / max(1, min(len(wa), len(wb)))
+
+
+def remove_book(con, bid):
+    """حذف كتاب من المدوّنة في معاملة واحدة: الفقرات، وفهرسها النصي، وتكراراته (دون مساس بكلمات الكتب الأخرى)."""
+    counts = Counter()
+    try:
+        for pid, text in con.execute("SELECT id, text FROM paras WHERE book = ?", (bid,)).fetchall():
+            n = bci.norm(text)
+            con.execute("INSERT INTO paras_fts(paras_fts, rowid, body) VALUES('delete', ?, ?)", (pid, n))
+            counts.update(bci.TOKEN.findall(n))
+        con.executemany("UPDATE freq SET n = n - ? WHERE token = ?", ((c, t) for t, c in counts.items()))
+        con.execute("DELETE FROM freq WHERE n <= 0")
+        con.execute("DELETE FROM paras WHERE book = ?", (bid,))
+        con.execute("DELETE FROM books WHERE id = ?", (bid,))
+        con.commit()
+    except Exception:
+        con.rollback()
+        raise
+
+
+def replace_openiti(sh, con, db_path, dry_run=False):
+    """يستبدل بكل كتاب في المدوّنة مأخوذ من الشاملة عبر OpenITI نسخته من الشاملة المثبّتة: يضيف الجديد أولًا، ثم يحذف القديم.
+    لا يستبدل إلا إذا وُجد الكتاب في الشاملة على الجهاز وتقارب عنواناه؛ وإلا تركه وذكر السبب."""
+    ids = openiti_shamela_ids(db_path)
+    report = []
+    for bid, uri, title, genre in con.execute("SELECT id, uri, title, genre FROM books ORDER BY id").fetchall():
+        if "Shamela." in uri:
+            continue
+        sid = ids.get(uri)
+        if not sid:
+            report.append({"الكتاب": title, "الحال": "تُرك: ليس من نسخة الشاملة في OpenITI"}); continue
+        card = sh.book_card(sid)
+        if card is None:
+            report.append({"الكتاب": title, "الحال": f"تُرك: الكتاب {sid} غير منزَّل في الشاملة على الجهاز"}); continue
+        s_title, _a, _d = parse_card(card)
+        if _title_overlap(title, s_title) < 0.5:
+            report.append({"الكتاب": title, "الحال": f"تُرك: عنوانه في الشاملة ({sid}) «{s_title}» لا يطابقه"}); continue
+        if dry_run:
+            report.append({"الكتاب": title, "الحال": f"سيُستبدل بالشاملة {sid}"}); continue
+        died = int(uri[:4]) if uri[:4].isdigit() else None
+        r = import_book(sh, con, sid, genre, died=_d or died)
+        if "أُضيف" not in r:
+            report.append({"الكتاب": title, "الحال": "تُرك: " + str(r.get("تنبيه"))}); continue
+        remove_book(con, bid)
+        report.append({"الكتاب": title, "الحال": f"استُبدل بالشاملة {sid}", "الصفحات": r["الصفحات"], "بلا رقم": r["صفحات بلا رقم"]})
+    return report
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description="استيراد كتب الشاملة 4 المثبّتة إلى المدوّنة التراثية")
-    ap.add_argument("books", nargs="+", type=int, help="أرقام الكتب في الشاملة (مثل 6972 للمغني)")
-    ap.add_argument("--root", default=os.environ.get("SHAMELA_ROOT", r"E:\shamela4_1"), help="مجلد الشاملة 4")
+    ap.add_argument("books", nargs="*", type=int, help="أرقام الكتب في الشاملة (مثل 6972 للمغني)")
+    ap.add_argument("--root", default=None, help="مجلد الشاملة 4 (يُكتشف تلقائيًّا إن تُرك)")
+    ap.add_argument("--replace-openiti", action="store_true", help="استبدال نسخ الشاملة بما في المدوّنة من نسخ OpenITI المأخوذة منها")
+    ap.add_argument("--dry-run", action="store_true", help="مع --replace-openiti: اعرض ما سيُفعل دون كتابة")
     ap.add_argument("--db", default=os.path.join(os.path.expanduser("~"), ".sarf", "corpus.db"))
     ap.add_argument("--genre", default="نحو")
     ap.add_argument("--died", type=int, default=None, help="سنة وفاة المؤلف إن لم تُستخرج من البطاقة (لكتاب واحد)")
     a = ap.parse_args(argv)
     if not os.path.exists(a.db):
         raise SystemExit(f"المدوّنة غير موجودة: {a.db}")
-    sh = Shamela(a.root)
+    root = a.root or default_root()
+    if not root:
+        raise SystemExit("لم أجد مجلد الشاملة 4؛ مرّره بـ --root أو بمتغير البيئة SHAMELA_ROOT.")
+    sh = Shamela(root)
     con = sqlite3.connect(a.db, timeout=60)
     try:
+        if a.replace_openiti:
+            for r in replace_openiti(sh, con, a.db, a.dry_run):
+                print(r, flush=True)
         for bid in a.books:
             print(import_book(sh, con, bid, a.genre, a.died if len(a.books) == 1 else None), flush=True)
     finally:

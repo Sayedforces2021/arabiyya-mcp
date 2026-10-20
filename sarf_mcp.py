@@ -16,6 +16,7 @@
 - scan_poem / text_profile: تقطيع القصيدة كاملة، والتحليل المعجمي لنص أو ديوان.
 - compare_texts: الموازنة الأسلوبية بين نصّين أو شاعرين أو كتابين (الألفاظ والجذور والأوزان المميِّزة والمعجم المشترك).
 - corpus_find_book / corpus_add_book / corpus_remove_book: توسيع المدوّنة بأي كتاب من OpenITI.
+- corpus_add_shamela_book: إضافة كتب من المكتبة الشاملة المثبّتة على الجهاز بصفحاتها المطبوعة.
 - phonetics / huruf: الكتابة الصوتية (IPA) والمقاطع والنبر، ومخارج الحروف وصفاتها.
 - mizan / mushtaqqat / taqalib: الميزان الصرفي وخطوات الإعلال، والمشتقات القياسية، وتقاليب الجذر.
 - irab: الإعراب بمحلل نحوي حديث (Stanza/UD) منقولًا إلى أبواب النحو العربي.
@@ -35,7 +36,7 @@ from camel_tools.morphology.database import MorphologyDB
 from camel_tools.morphology.analyzer import Analyzer
 from camel_tools.tokenizers.word import simple_word_tokenize
 
-INSTRUCTIONS = """أداة «العربية»: عُدّة باحث في علوم العربية تعمل على الجهاز (37 أداة).
+INSTRUCTIONS = """أداة «العربية»: عُدّة باحث في علوم العربية تعمل على الجهاز (38 أداة).
 - الصرف: analyze_word، analyze_text، root_family، conjugate، mizan (الميزان مع الأصل وخطوات الإعلال والإبدال)، mushtaqqat (المشتقات القياسية)، taqalib (تقاليب الجذر).
 - النحو: irab (إعراب الجملة كلمةً كلمة بالأبواب والعلامات، مع ضبط الأواخر).
 - الضبط والعروض والقافية: diacritize، scan_verse وscan_poem (مع الضبط الموجَّه بالوزن)، analyze_qafiya (عناصر القافية وعيوبها).
@@ -45,7 +46,7 @@ INSTRUCTIONS = """أداة «العربية»: عُدّة باحث في علوم
 - القرآن: quran_word، quran_root.
 - الشعر: search_poetry، takhrij_shahid (تخريج البيت ونسبته ورواياته ومواضع الاستشهاد به).
 - الدلالة: semantic_neighbors، word_similarity، substitutes_in_context، semantic_change (التطور الدلالي عبر القرون).
-- المدوّنة التراثية: corpus_concordance، corpus_usage، corpus_collocates، usage_compare (موازنة التعابير)، corpus_find_book / corpus_add_book / corpus_remove_book.
+- المدوّنة التراثية: corpus_concordance، corpus_usage، corpus_collocates، usage_compare (موازنة التعابير)، corpus_find_book / corpus_add_book / corpus_remove_book / corpus_add_shamela_book (من الشاملة المثبّتة).
 - الأسلوب: text_profile، compare_texts، attribute_author (نسبة النص إلى قائله بمقياس Delta).
 - benchmark: قياس دقة الأدوات على بيانات معيارية.
 تنبيهات: التحليل الآلي يقارب ولا يقطع، فما خالف المقرر عند أهل الفن يُنبَّه عليه ولا يُسلَّم به؛ والشعر القديم يُعطى مشكولًا ما أمكن؛ ويُذكر المصدر بالجزء والصفحة كما تُرجعه الأدوات، ويُميَّز بين ما نقلته الأداة وما استنبطته."""
@@ -2213,30 +2214,59 @@ def corpus_add_book(book: str, genre: str | None = None) -> dict:
 @mcp.tool()
 def corpus_remove_book(book: str) -> dict:
     """حذف كتاب من المدوّنة التراثية بمعرّفه (URI) كما يظهر في corpus_find_book بلا مُدخل. لا يمسّ ملفات أخرى."""
-    import sqlite3, re
-    from collections import Counter
+    import sqlite3, sys
     if not os.path.exists(CORPUS_DB):
         return {"تنبيه": "المدوّنة لم تُبنَ بعد."}
+    here = os.path.dirname(os.path.abspath(__file__))
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    import import_shamela
     con = sqlite3.connect(CORPUS_DB, timeout=30)
-    row = con.execute("SELECT id, title FROM books WHERE uri = ?", (book.strip(),)).fetchone()
-    if not row:
+    try:
+        row = con.execute("SELECT id, title, tokens FROM books WHERE uri = ?", (book.strip(),)).fetchone()
+        if not row:
+            return {"تنبيه": f"لا يوجد في المدوّنة كتاب بالمعرّف «{book}». اعرض الكتب بـ corpus_find_book بلا مُدخل."}
+        bid, title, ntok = row
+        import_shamela.remove_book(con, bid)
+    finally:
         con.close()
-        return {"تنبيه": f"لا يوجد في المدوّنة كتاب بالمعرّف «{book}». اعرض الكتب بـ corpus_find_book بلا مُدخل."}
-    bid, title = row
-    counts = Counter()
-    tr = str.maketrans({"أ": "ا", "إ": "ا", "آ": "ا", "ٱ": "ا", "ى": "ي", "ة": "ه", "ؤ": "ء", "ئ": "ء"})
-    har = re.compile("[ً-ْـٰ]")
-    for pid, text in con.execute("SELECT id, text FROM paras WHERE book = ?", (bid,)).fetchall():
-        n = har.sub("", text).translate(tr)
-        con.execute("INSERT INTO paras_fts(paras_fts, rowid, body) VALUES('delete', ?, ?)", (pid, n))
-        counts.update(re.findall("[ء-ي]+", n))
-    con.executemany("UPDATE freq SET n = n - ? WHERE token = ?", ((c, t) for t, c in counts.items()))
-    con.execute("DELETE FROM freq WHERE n < 2")
-    con.execute("DELETE FROM paras WHERE book = ?", (bid,))
-    con.execute("DELETE FROM books WHERE id = ?", (bid,))
-    con.commit()
-    con.close()
-    return {"حُذف": title, "الكلمات": sum(counts.values())}
+    return {"حُذف": title, "الكلمات": ntok}
+
+
+@mcp.tool()
+def corpus_add_shamela_book(book_id: int | None = None, genre: str = "نحو", replace_openiti: bool = False) -> dict:
+    """إضافة كتاب من «المكتبة الشاملة» المثبّتة على جهاز الباحث (الإصدار الرابع) إلى المدوّنة التراثية، بنصّه المشكول
+    وجزئه وصفحته كما يعرضها برنامج الشاملة. يُقرأ المتن وحده دون الحاشية. يعمل بلا إنترنت، ويقرأ ملفات الشاملة ولا يعدّلها.
+    book_id: رقم الكتاب في الشاملة (يظهر في بطاقة الكتاب، مثل 6972 لمغني اللبيب).
+    replace_openiti: إن كان true استُبدل بكل كتاب في المدوّنة أُخذ من الشاملة عبر OpenITI نسختُه من الشاملة المثبّتة (أدقّ ترقيمًا ومشكولة)، دون تكرار.
+    يتطلب برنامج الشاملة 4 وحزمة JPype1؛ ويُحدَّد مجلد الشاملة تلقائيًّا أو بمتغير البيئة SHAMELA_ROOT."""
+    import sqlite3, sys
+    if not os.path.exists(CORPUS_DB):
+        return {"تنبيه": "المدوّنة لم تُبنَ بعد؛ شغّل سكربت التثبيت مرة أخرى."}
+    if book_id is None and not replace_openiti:
+        return {"تنبيه": "مرّر book_id (رقم الكتاب في الشاملة) أو replace_openiti=true."}
+    here = os.path.dirname(os.path.abspath(__file__))
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    import import_shamela as ISH
+    try:
+        import jpype  # noqa: F401
+    except ImportError:
+        return {"تنبيه": "حزمة JPype1 غير مثبّتة؛ ثبّتها بـ: pip install JPype1"}
+    root = ISH.default_root()
+    if not root:
+        return {"تنبيه": "لم أجد برنامج الشاملة 4 على الجهاز. عيّن مجلده في متغير البيئة SHAMELA_ROOT."}
+    sh = ISH.Shamela(root)
+    con = sqlite3.connect(CORPUS_DB, timeout=60)
+    try:
+        out = {}
+        if replace_openiti:
+            out["الاستبدال"] = ISH.replace_openiti(sh, con, CORPUS_DB)
+        if book_id is not None:
+            out["الإضافة"] = ISH.import_book(sh, con, int(book_id), genre)
+    finally:
+        con.close()
+    return out
 
 
 # ───────────── الأصوات: المخارج والصفات والكتابة الصوتية والمقاطع ─────────────

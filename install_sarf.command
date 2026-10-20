@@ -46,7 +46,7 @@ echo "== تثبيت PyArud (العروض) =="
 "$PY" -m pip install -U --ignore-requires-python --no-deps pyarud
 
 echo "== تثبيت قطرب (التصريف) وpyarrow =="
-"$PY" -m pip install -U libqutrub pyarrow stanza onnxruntime tqdm
+"$PY" -m pip install -U libqutrub pyarrow stanza onnxruntime tqdm JPype1
 "$PY" -m pip install -U --no-deps catt-tashkeel
 
 echo "== تنزيل بيانات CAMeL (قد يستغرق دقائق) =="

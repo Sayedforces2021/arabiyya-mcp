@@ -68,7 +68,7 @@ Step 'تثبيت PyArud (العروض)'
 & $Py -m pip install -U --ignore-requires-python --no-deps pyarud
 
 Step 'تثبيت قطرب (التصريف) وpyarrow وStanza (الإعراب)'
-& $Py -m pip install -U libqutrub pyarrow stanza onnxruntime tqdm
+& $Py -m pip install -U libqutrub pyarrow stanza onnxruntime tqdm JPype1
 & $Py -m pip install -U --no-deps catt-tashkeel
 
 Step 'تنزيل بيانات CAMeL (قد يستغرق دقائق)'
@@ -80,7 +80,7 @@ Step 'نسخ ملف الخادم'
 $Dest = Join-Path $env:USERPROFILE 'claude'
 New-Item -ItemType Directory -Force -Path $Dest | Out-Null
 Copy-Item (Join-Path $Here 'sarf_mcp.py') (Join-Path $Dest 'sarf_mcp.py') -Force
-foreach ($f in 'sarf_ilal.py','diac_model.py','train_diacritizer.py','build_poetry_index.py','build_lexicon_index.py','build_corpus_index.py','setup_sarf_data.py','openiti_catalog.tsv') {
+foreach ($f in 'sarf_ilal.py','diac_model.py','train_diacritizer.py','build_poetry_index.py','build_lexicon_index.py','build_corpus_index.py','import_shamela.py','setup_sarf_data.py','openiti_catalog.tsv') {
   Copy-Item (Join-Path $Here $f) (Join-Path $Dest $f) -Force
 }
 $Server = Join-Path $Dest 'sarf_mcp.py'

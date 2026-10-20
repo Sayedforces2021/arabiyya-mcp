@@ -30,5 +30,30 @@ class TestText(unittest.TestCase):
         self.assertIsNone(I.to_int("المقدمة"))
 
 
+class TestRemove(unittest.TestCase):
+    """remove_book: حذف كامل في معاملة، ولا يمس تكرار كلمات الكتب الأخرى (خلافًا لـ corpus_remove_book القديمة)."""
+
+    def test_remove_keeps_other_books(self):
+        import sqlite3
+        con = sqlite3.connect(":memory:")
+        con.executescript("""CREATE TABLE books(id INTEGER PRIMARY KEY, uri TEXT, title TEXT, author TEXT, died INTEGER, genre TEXT, tokens INTEGER);
+            CREATE TABLE paras(id INTEGER PRIMARY KEY, book INTEGER, vol INTEGER, page INTEGER, text TEXT);
+            CREATE VIRTUAL TABLE paras_fts USING fts5(body, content='', tokenize='unicode61 remove_diacritics 0');
+            CREATE TABLE freq(token TEXT PRIMARY KEY, n INTEGER) WITHOUT ROWID;""")
+        pid = 0
+        for bid, uri, text in ((1, "0100A.A", "زَرْنَبَقٌ وَكَلِمَةٌ"), (2, "0200B.B", "قُرْطُبَانٌ وَكَلِمَةٌ")):
+            _t, _n, counts, pid = I.bci.insert_book(con, bid, pid, "نحو", uri, {"BookTITLE": uri}, [[1, bid, text]])
+            con.executemany("INSERT INTO freq(token, n) VALUES (?, ?) ON CONFLICT(token) DO UPDATE SET n = n + excluded.n", counts.items())
+        con.commit()
+        I.remove_book(con, 2)
+        hit = lambda w: con.execute("SELECT count(*) FROM paras_fts WHERE paras_fts MATCH ?", (f'"{w}"',)).fetchone()[0]
+        self.assertEqual(hit("قرطبان"), 0)
+        self.assertEqual(hit("زرنبق"), 1)
+        self.assertEqual(con.execute("SELECT n FROM freq WHERE token='زرنبق'").fetchone(), (1,))
+        self.assertEqual(con.execute("SELECT n FROM freq WHERE token='وكلمه'").fetchone(), (1,))
+        self.assertIsNone(con.execute("SELECT n FROM freq WHERE token='قرطبان'").fetchone())
+        self.assertEqual(con.execute("SELECT count(*) FROM books").fetchone(), (1,))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

@@ -188,10 +188,8 @@ class TestAddRemove(unittest.TestCase):
     def test_remove_unknown_book(self):
         self.assertIn("تنبيه", self.S.corpus_remove_book("0000No.Such"))
 
-    @unittest.expectedFailure
     def test_remove_keeps_rare_words_of_other_books(self):
-        """عيب معروف: الحذف يُجري «DELETE FROM freq WHERE n < 2» على الجدول كله،
-        فيمحو تكرار كلمات نادرة في كتب أخرى لا صلة لها بالكتاب المحذوف."""
+        """كان الحذف يُجري «DELETE FROM freq WHERE n < 2» على الجدول كله، فيمحو تكرار كلمات نادرة في كتب أخرى."""
         self.assertEqual(self.freq("زرنبق"), None)      # في البناء الأول لا يُحفظ ما تكراره < 2
         con = sqlite3.connect(self.db)
         con.execute("INSERT INTO freq(token, n) VALUES ('زرنبق', 1)")   # كما تفعل corpus_add_book لكلمة نادرة
