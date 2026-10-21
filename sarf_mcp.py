@@ -26,6 +26,7 @@
 """
 
 import os
+import re
 from functools import lru_cache
 
 try:  # mcp 2.x
@@ -3540,6 +3541,63 @@ def _word_diff(a: list, b: list) -> list:
     return out
 
 
+_ATTR_TRIGGER = re.compile(r"(?:^|\s)(?:و|ف)?(?:قال|قول|كقول|لقول|بقول|انشد|وانشد|ينشد|انشده|انشدنا|انشدني)\s+")
+_ATTR_STOP = {"في", "يصف", "يمدح", "يرثي", "يذكر", "يهجو", "يفخر", "يخاطب", "من", "وهو", "حين", "لما", "وقد", "ابياتا",
+              "بيتا", "قصيدته", "معلقته", "قصيدة", "شعرا", "رحمه", "رضي", "عليه", "الله", "تعالي"}
+_ATTR_ANON = {"الشاعر", "الاخر", "اخر", "بعضهم", "الراجز", "رجل", "القاءل", "الشعراء", "بعض", "قاءل", "فيه", "فيها",
+              "تعالي", "الله", "النبي", "رسول", "المصنف", "الشيخ", "المصنف", "الشارح", "المؤلف", "ابن", "هذا", "ذلك"}
+_ATTR_ALIAS = {"ابو الطيب": "المتنبي", "ابو العلاء": "المعري", "ابو فراس": "ابو فراس", "حبيب": "ابو تمام",
+               "مجنون": "قيس", "الحطيءه": "الحطيءه"}
+_ATTR_TWO = {"ابو", "ابن", "ام", "امرء", "عبد", "بنت", "ذو", "ذي", "ابي"}
+
+
+def _attr_key(toks: list) -> str:
+    """مفتاح جمع النسبة: الاسم الأول، أو الأولان إن بدأ بكنية أو نسبة مركّبة (أبو، ابن، امرؤ...)."""
+    if not toks:
+        return ""
+    k = " ".join(toks[:2]) if toks[0] in _ATTR_TWO and len(toks) > 1 else toks[0]
+    return _ATTR_ALIAS.get(k, k)
+
+
+def _attribution_in_books(ref: list, hits: dict) -> list:
+    """من نسب البيت إلى قائله في كتب المدوّنة: «قال فلان» أو «قول فلان» أو «أنشد لفلان» قبل البيت مباشرة.
+    hits = {رقم الفقرة: (الوفاة، العنوان، المؤلف، الفن، الجزء، الصفحة، النص)}. يُحصى كل كتاب مرة واحدة،
+    ولا يُحصى «قال الشاعر» و«قال الآخر» (بلا تسمية)."""
+    if len(ref) < 2:
+        return []
+    pat = re.compile(r"\W+".join(re.escape(t) for t in ref[:2]))
+    agg = {}
+    for pid, (died, title, author, genre, vol, page, text) in hits.items():
+        nt = _norm(_strip_tashkeel(text))
+        m = pat.search(nt)
+        if not m:
+            continue
+        before = nt[max(0, m.start() - 90):m.start()]
+        trig = list(_ATTR_TRIGGER.finditer(before))
+        if not trig:
+            continue
+        tail = before[trig[-1].end():]
+        name = []
+        for w in re.findall(r"[ء-ي]+|[:\[(«]", tail):
+            if w in ":[(«" or w in _ATTR_STOP or len(name) >= 5:
+                break
+            name.append(w)
+        if name and name[0].startswith("ل") and trig[-1].group(0).strip().endswith(("انشد", "انشده", "انشدنا", "انشدني")):
+            name[0] = name[0][1:]                          # «أنشد لعنترة» ← عنترة
+        if not name or name[0] in _ATTR_ANON or len(name[0]) < 3:
+            continue
+        k = _attr_key(name)
+        a = agg.setdefault(k, {"names": {}, "books": {}})
+        a["names"][" ".join(name[:3])] = a["names"].get(" ".join(name[:3]), 0) + 1
+        a["books"].setdefault(title, (died or 9999, f"«{title}» (ت {died}هـ){_cite(vol, page)}"))
+    out = []
+    for k, a in agg.items():
+        first = min(a["books"].values())
+        out.append({"الشاعر": max(a["names"].items(), key=lambda x: (x[1], -len(x[0])))[0], "عدد الكتب": len(a["books"]),
+                    "أقدمها": first[1]})
+    return sorted(out, key=lambda x: (-x["عدد الكتب"], x["أقدمها"]))[:6]
+
+
 def _strip_conj(toks: list) -> list:
     """الواو والفاء في أول الشطر لا تُعدّ فرقًا في الرواية عند المطابقة: «إنما الأمم» = «وإنما الأمم»، «يا ليت» = «فيا ليت»."""
     if toks and len(toks[0]) > 2 and toks[0][0] in "وف":
@@ -3651,6 +3709,16 @@ def takhrij_shahid(verse: str, limit: int = 8, citations: bool = True) -> dict:
                 if covered >= 0.6:
                     hits[pid] = (died, title, author, genre, vol, page, text)
         con.close()
+        books_attr = _attribution_in_books(ref, hits)
+        if books_attr:
+            out["قائله في كتب المدوّنة"] = books_attr
+            top = books_attr[0]
+            nis = out.get("النسبة")
+            pk = _attr_key(_ntoks(nis["الشاعر"])) if isinstance(nis, dict) else None
+            if top["عدد الكتب"] >= 2 and pk not in {_attr_key(_ntoks(a["الشاعر"])) for a in books_attr}:
+                out["تنبيه النسبة"] = (f"نسبته كتب المدوّنة إلى «{top['الشاعر']}» في {top['عدد الكتب']} كتبٍ أقدمها {top['أقدمها']}، "
+                                       f"وليس فيها من نسبه إلى «{nis['الشاعر'] if isinstance(nis, dict) else ''}» الذي في «أشعار»؛ "
+                                       "فالأرجح أن ما في «أشعار» تضمينٌ أو نسخة بغير نسبتها، ونسبةُ الكتب أولى بالاعتماد.")
         cites = []
         for pid, (died, title, author, genre, vol, page, text) in sorted(hits.items(), key=lambda x: x[1][0]):
             item = {"الكتاب": f"{title} (ت {died}هـ)", "الفن": genre, "الموضع": _cite(vol, page).lstrip("، ")}

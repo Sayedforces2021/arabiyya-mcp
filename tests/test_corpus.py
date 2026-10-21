@@ -270,6 +270,22 @@ class TestPoetryRanking(unittest.TestCase):
         self.assertEqual(self.S._era_rank(None, "مسكين الدرامي", {}), 3)    # من _KNOWN_ERAS: لا عصر له في «أشعار»
         self.assertEqual(self.S._era_rank(None, "لبيد بن ربيعه", {}), 1)
 
+    def test_attribution_in_books(self):
+        """النسبة من كتب المدوّنة: «قال فلان» قبل البيت؛ وكل كتاب مرة؛ و«قال الشاعر» لا تُحصى."""
+        S = self.S
+        ref = S._ntoks("ولقد ذكرتك والرماح نواهل")
+        hits = {1: (276, "الشعر والشعراء", "", "أدب", 1, 128, "ومن ذلك قول عنترة في معلقته: وَلَقَدْ ذَكَرْتُكِ وَالرِّمَاحُ نَوَاهِلٌ"),
+                2: (285, "الكامل", "", "أدب", 2, 10, "وقال عنترة بن شداد: ولقد ذكرتك والرماح نواهل * مني"),
+                3: (285, "الكامل", "", "أدب", 2, 90, "قال عنترة: ولقد ذكرتك والرماح نواهل"),
+                4: (300, "كتاب آخر", "", "أدب", None, 5, "قال الشاعر: ولقد ذكرتك والرماح نواهل"),
+                5: (400, "كتاب ثالث", "", "أدب", None, 7, "وأنشد لعنترة: ولقد ذكرتك والرماح نواهل")}
+        r = S._attribution_in_books(ref, hits)
+        self.assertEqual(len(r), 1)
+        self.assertEqual(r[0]["عدد الكتب"], 3)
+        self.assertIn("الشعر والشعراء", r[0]["أقدمها"])
+        self.assertEqual(S._attr_key(S._ntoks("أبو الطيب المتنبي")), S._attr_key(S._ntoks("المتنبي")))
+        self.assertEqual(S._attr_key(S._ntoks("امرئ القيس")), S._attr_key(S._ntoks("امرؤ القيس")))
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
