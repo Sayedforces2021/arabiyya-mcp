@@ -1,0 +1,34 @@
+{
+  "name": "arabiyya",
+  "displayName": "العربية",
+  "version": "1.3.0",
+  "description": "علوم العربية موصولةً بالنماذج اللغوية: 38 أداة في الصرف والإعلال والإعراب والعروض والقافية والمعاجم التراثية والشواهد والدلالة والمدوّنات، مع مهارات تعلّم Claude استعمالها والاستشهاد بالجزء والصفحة.",
+  "author": {
+    "name": "Sayed Hassan",
+    "url": "https://x.com/ikagi07"
+  },
+  "homepage": "https://ikagi07.github.io/arabiyya-mcp/",
+  "repository": "https://github.com/ikagi07/arabiyya-mcp",
+  "license": "MIT",
+  "keywords": [
+    "arabic",
+    "nahw",
+    "sarf",
+    "irab",
+    "arud",
+    "lexicon",
+    "corpus",
+    "mcp"
+  ],
+  "mcpServers": {
+    "arabiyya": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/extension/server/launcher.js"
+      ],
+      "env": {
+        "ARABIYYA_SERVER": "${CLAUDE_PLUGIN_ROOT}/sarf_mcp.py"
+      }
+    }
+  }
+}

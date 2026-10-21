@@ -21,11 +21,13 @@ const envs = win
       .map((b) => path.join(b, "envs", "sarf", "bin", "python"));
 const servers = [path.join(home, ".sarf", "app", "sarf_mcp.py"), path.join(home, "claude", "sarf_mcp.py")];
 
+// في الـPlugin يُمرَّر خادم الإضافة نفسه، فتصل تحديثاتها مع تحديث الـPlugin؛ وتبقى بيئة Python من ملف التثبيت.
+if (ok(process.env.ARABIYYA_SERVER)) server = process.env.ARABIYYA_SERVER;
 if (!ok(py)) py = envs.find(ok);
 if (!ok(server)) server = servers.find(ok);
 if (!py || !server) {
   process.stderr.write(
-    "[arabiyya] لم أجد الأداة مثبّتة على هذا الجهاز. شغّل ملف التثبيت من https://github.com/ikagi07/arabiyya-mcp ثم أعد تشغيل Claude.\n" +
+    "[arabiyya] لم أجد الأداة مثبّتة على هذا الجهاز. شغّل ملف التثبيت من https://github.com/ikagi07/arabiyya-mcp (أو المهارة /arabiyya:setup في Claude Code) ثم أعد تشغيل Claude.\n" +
     `python: ${py || "-"}  server: ${server || "-"}\n`);
   process.exit(1);
 }

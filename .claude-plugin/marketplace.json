@@ -1,0 +1,17 @@
+{
+  "name": "arabiyya",
+  "description": "أداة «العربية» لعلوم اللغة العربية",
+  "owner": {
+    "name": "Sayed Hassan",
+    "url": "https://github.com/ikagi07"
+  },
+  "plugins": [
+    {
+      "name": "arabiyya",
+      "source": "./",
+      "description": "38 أداة في علوم العربية مع مهارات الاستعمال ووجوه الإعراب.",
+      "category": "productivity",
+      "homepage": "https://github.com/ikagi07/arabiyya-mcp"
+    }
+  ]
+}
