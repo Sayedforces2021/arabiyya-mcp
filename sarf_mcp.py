@@ -3526,6 +3526,13 @@ def _word_diff(a: list, b: list) -> list:
     return out
 
 
+def _strip_conj(toks: list) -> list:
+    """الواو والفاء في أول الشطر لا تُعدّ فرقًا في الرواية عند المطابقة: «إنما الأمم» = «وإنما الأمم»، «يا ليت» = «فيا ليت»."""
+    if toks and len(toks[0]) > 2 and toks[0][0] in "وف":
+        return [toks[0][1:]] + toks[1:]
+    return toks
+
+
 def _takhrij_key(q: list, sc: float, v, copies: dict | None = None) -> tuple:
     """ترتيب مرشحات النسبة عند تساوي التطابق: ما ليس تضمينًا ولا معارضة (بعنوانه أو بأقواسه) أولًا، ثم ما وقع فيه
     الشطر المبحوث عنه صدرًا لا عجزًا (فمن جعل صدر غيره عجزًا لبيته فقد ضمّنه)، ثم الأقدم عصرًا.
@@ -3559,7 +3566,9 @@ def takhrij_shahid(verse: str, limit: int = 8, citations: bool = True) -> dict:
             if not v:
                 continue
             t = _ntoks(v[0] + " " + v[1])
-            sc = max(_sim(q, t), _sim(q, _ntoks(v[0])) if len(q) <= len(t) * 0.7 else 0, _sim(q, _ntoks(v[1])) if len(q) <= len(t) * 0.7 else 0)
+            qc, half = _strip_conj(q), len(q) <= len(t) * 0.7
+            sc = max(_sim(qc, _strip_conj(t)), _sim(qc, _strip_conj(_ntoks(v[0]))) if half else 0,
+                     _sim(qc, _strip_conj(_ntoks(v[1]))) if half else 0)
             cands.append((sc, v, t))
         copies = {}
         for sc0, v0, _t in cands:
