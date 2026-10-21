@@ -284,6 +284,8 @@ class TestPoetryRanking(unittest.TestCase):
         self.assertIn("الشعر والشعراء", r[0]["أقدمها"])
         self.assertEqual(S._attr_key(S._ntoks("أبو الطيب المتنبي")), S._attr_key(S._ntoks("المتنبي")))
         self.assertEqual(S._attr_key(S._ntoks("امرئ القيس")), S._attr_key(S._ntoks("امرؤ القيس")))
+        self.assertEqual(S._attr_key(S._ntoks("امرىء القيس")), S._attr_key(S._ntoks("امرؤ القيس")))
+        self.assertEqual(S._attr_key(S._ntoks("أبي تمام")), S._attr_key(S._ntoks("أبو تمام")))
 
 
 if __name__ == "__main__":

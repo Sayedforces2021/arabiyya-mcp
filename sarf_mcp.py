@@ -3546,6 +3546,7 @@ _ATTR_STOP = {"في", "يصف", "يمدح", "يرثي", "يذكر", "يهجو", 
               "بيتا", "قصيدته", "معلقته", "قصيدة", "شعرا", "رحمه", "رضي", "عليه", "الله", "تعالي"}
 _ATTR_ANON = {"الشاعر", "الاخر", "اخر", "بعضهم", "الراجز", "رجل", "القاءل", "الشعراء", "بعض", "قاءل", "فيه", "فيها",
               "تعالي", "الله", "النبي", "رسول", "المصنف", "الشيخ", "المصنف", "الشارح", "المؤلف", "ابن", "هذا", "ذلك"}
+_ATTR_CASE = {"ابي": "ابو", "ابا": "ابو", "امريء": "امرء", "امري": "امرء", "امرا": "امرء", "ذا": "ذو", "ذي": "ذو"}
 _ATTR_ALIAS = {"ابو الطيب": "المتنبي", "ابو العلاء": "المعري", "ابو فراس": "ابو فراس", "حبيب": "ابو تمام",
                "مجنون": "قيس", "الحطيءه": "الحطيءه"}
 _ATTR_TWO = {"ابو", "ابن", "ام", "امرء", "عبد", "بنت", "ذو", "ذي", "ابي"}
@@ -3555,6 +3556,7 @@ def _attr_key(toks: list) -> str:
     """مفتاح جمع النسبة: الاسم الأول، أو الأولان إن بدأ بكنية أو نسبة مركّبة (أبو، ابن، امرؤ...)."""
     if not toks:
         return ""
+    toks = [_ATTR_CASE.get(toks[0], toks[0])] + list(toks[1:])
     k = " ".join(toks[:2]) if toks[0] in _ATTR_TWO and len(toks) > 1 else toks[0]
     return _ATTR_ALIAS.get(k, k)
 
@@ -3577,6 +3579,8 @@ def _attribution_in_books(ref: list, hits: dict) -> list:
         if not trig:
             continue
         tail = before[trig[-1].end():]
+        if len(re.findall(r"[ء-ي]+", tail)) > 8:     # بين «قال» والبيت كلام كثير: ليست نسبة
+            continue
         name = []
         for w in re.findall(r"[ء-ي]+|[:\[(«]", tail):
             if w in ":[(«" or w in _ATTR_STOP or len(name) >= 5:
@@ -3595,7 +3599,9 @@ def _attribution_in_books(ref: list, hits: dict) -> list:
         first = min(a["books"].values())
         out.append({"الشاعر": max(a["names"].items(), key=lambda x: (x[1], -len(x[0])))[0], "عدد الكتب": len(a["books"]),
                     "أقدمها": first[1]})
-    return sorted(out, key=lambda x: (-x["عدد الكتب"], x["أقدمها"]))[:6]
+    out.sort(key=lambda x: (-x["عدد الكتب"], x["أقدمها"]))
+    strong = [a for a in out if a["عدد الكتب"] >= 2]
+    return strong[:6] if strong else out[:3]      # ما ورد في كتاب واحد لا يُعرض إلا إذا لم يُوجد غيره
 
 
 def _strip_conj(toks: list) -> list:
