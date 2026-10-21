@@ -132,7 +132,7 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 
 /* ---------- samples: output slips along the edge of a full-bleed folio ---------- */
 .samples{position:relative;overflow:hidden;min-height:100svh;display:flex;flex-direction:column;background:var(--deep)}
-.samples .bgimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.42}
+.samples .bgimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.5}
 .samples .top-area{position:relative;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--gutter);row-gap:32px;padding-block:clamp(56px, 7vw, 104px) 40px}
 .samples .say{grid-column:1 / span 4;align-self:start;padding:28px 28px 32px;background:rgba(10,14,20,.78);color:#F2F2F0} /* taste-skill-ignore: neutral scrim behind the text column on a photograph */
 .samples .say h2{font-size:var(--s-card)}
@@ -281,7 +281,7 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 .back .msg h2{font-size:var(--s-card);font-family:var(--display)}
 .back .msg p{margin-top:14px;font-size:var(--s-body);line-height:1.65;max-width:40ch}
 .back .addr{position:relative;padding-top:8px}
-.back .addr ul{display:grid;gap:12px;font-size:var(--s-body)}
+.back .addr ul{display:grid;gap:12px;font-size:var(--s-body);list-style:none;margin:0;padding:0;padding-inline-end:110px}
 .back .addr a{text-decoration:none}
 .back .addr a:hover{text-decoration:underline}
 .stamp{position:absolute;top:0;inset-inline-end:0;width:88px;padding:6px;background:#F7EBCB;transform:rotate(3deg)}
@@ -378,7 +378,8 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
   .slips{grid-template-columns:repeat(2,minmax(0,1fr))}
   .rcard{padding:28px 22px 32px}
   .back .addr{padding-top:0}
-  .stamp{width:64px}
+  .stamp{position:static;width:72px;margin-bottom:16px}
+  .back .addr ul{padding-inline-end:0}
 }
 </style>
 </head>
@@ -437,7 +438,7 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 
 <!-- samples: real output on slips, and the open page they make -->
 <section class="samples" id="samples" aria-labelledby="t-samples">
-  <img class="bgimg" src="assets/kufic.jpg" width="1600" height="1113" alt="" loading="lazy">
+  <video class="bgimg" id="qalam" autoplay muted loop playsinline preload="metadata" poster="assets/qalam.jpg" width="854" height="356" aria-label="يد خطّاط تكتب «والقلم» بقصبة على ورق"><source src="assets/qalam.webm" type="video/webm"><source src="assets/qalam.mp4" type="video/mp4"></video>
   <div class="top-area wrap">
     <div class="say" data-reveal>
       <h2 id="t-samples">من الكتاب، بالجزء والصفحة</h2>
@@ -702,7 +703,7 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
           <li><a href="#install">التثبيت</a></li>
         </ul>
       </div>
-      <p class="imprint">صور المخطوطات من ويكيميديا كومنز: <a href="https://commons.wikimedia.org/wiki/File:Khalili_Collection_Hajj_and_Arts_of_Pilgrimage_mss_0236_fol_0b-1a.jpg">القاموس المحيط</a>، مجموعة خليلي، <a href="https://creativecommons.org/licenses/by-sa/3.0/igo/deed.en">CC BY-SA 3.0</a>؛ و<a href="https://commons.wikimedia.org/wiki/File:%D8%B4%D8%B1%D8%AD_%D8%A3%D9%84%D9%81%D9%8A%D8%A9_%D8%A7%D8%A8%D9%86_%D9%85%D8%A7%D9%84%D9%83.jpg">شرح ألفية ابن مالك</a>، و<a href="https://commons.wikimedia.org/wiki/File:Multaqa_al_abhur.jpg">ملتقى الأبحر</a>، و<a href="https://commons.wikimedia.org/wiki/File:Folio_from_a_Koran_(8th-9th_century).jpg">ورقة من مصحف كوفي</a>، و<a href="https://commons.wikimedia.org/wiki/File:Anonymous_Arabic_and_Persian_Poetic_Verses_WDL6796.png">أبيات عربية وفارسية</a>، و<a href="https://commons.wikimedia.org/wiki/File:Maqamat_al-Hariri,_BNF_Arabe_3924,_first_page._Dated_1188,_by_al-Q%C4%81sim_ibn_%CA%BFAl%C4%AB_al-_%E1%B8%A4ar%C4%ABr%C4%AB_al-Ba%E1%B9%A3r%C4%AB_(1054-1122).jpg">مقامات الحريري</a>، وكلها <a href="https://creativecommons.org/publicdomain/mark/1.0/">ملك عام</a>. وشكرٌ لمن بُنيت عليهم الأدوات: مختبر CAMeL، وAbjad AI، وARBML، وشعيب النمري، وطه زروقي، وعلي فاضل، وOpenITI وKITAB، وكايس دوكس، وستانفورد، ومختبر MIND، وإكرام هورامي، وAnthropic، والمكتبة الشاملة.</p>
+      <p class="imprint">صور المخطوطات من ويكيميديا كومنز: <a href="https://commons.wikimedia.org/wiki/File:Khalili_Collection_Hajj_and_Arts_of_Pilgrimage_mss_0236_fol_0b-1a.jpg">القاموس المحيط</a>، مجموعة خليلي، <a href="https://creativecommons.org/licenses/by-sa/3.0/igo/deed.en">CC BY-SA 3.0</a>؛ و<a href="https://commons.wikimedia.org/wiki/File:%D8%B4%D8%B1%D8%AD_%D8%A3%D9%84%D9%81%D9%8A%D8%A9_%D8%A7%D8%A8%D9%86_%D9%85%D8%A7%D9%84%D9%83.jpg">شرح ألفية ابن مالك</a>، و<a href="https://commons.wikimedia.org/wiki/File:Multaqa_al_abhur.jpg">ملتقى الأبحر</a>، و<a href="https://commons.wikimedia.org/wiki/File:Folio_from_a_Koran_(8th-9th_century).jpg">ورقة من مصحف كوفي</a>، و<a href="https://commons.wikimedia.org/wiki/File:Anonymous_Arabic_and_Persian_Poetic_Verses_WDL6796.png">أبيات عربية وفارسية</a>، و<a href="https://commons.wikimedia.org/wiki/File:Maqamat_al-Hariri,_BNF_Arabe_3924,_first_page._Dated_1188,_by_al-Q%C4%81sim_ibn_%CA%BFAl%C4%AB_al-_%E1%B8%A4ar%C4%ABr%C4%AB_al-Ba%E1%B9%A3r%C4%AB_(1054-1122).jpg">مقامات الحريري</a>، وكلها <a href="https://creativecommons.org/publicdomain/mark/1.0/">ملك عام</a>. ومقطع الخطّاط مقتطع من <a href="https://commons.wikimedia.org/wiki/File:%D9%81%D9%8A%D9%84%D9%85_%D9%88%D8%AB%D8%A7%D8%A6%D9%82%D9%8A_%D8%AA%D8%A7%D8%B1%D9%8A%D8%AE_%D8%A7%D9%84%D8%AE%D8%B7_%D8%A7%D9%84%D8%B9%D8%B1%D8%A8%D9%8A-_%D9%85%D9%84%D8%A7%D9%85%D8%AD_%D9%85%D8%B5%D8%B1%D9%8A%D8%A9.webm">«فيلم وثائقي: تاريخ الخط العربي، ملامح مصرية»</a> لحمدي خويطر، <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>. وشكرٌ لمن بُنيت عليهم الأدوات: مختبر CAMeL، وAbjad AI، وARBML، وشعيب النمري، وطه زروقي، وعلي فاضل، وOpenITI وKITAB، وكايس دوكس، وستانفورد، ومختبر MIND، وإكرام هورامي، وAnthropic، والمكتبة الشاملة.</p>
     </div>
   </div>
   <p class="wordmark" aria-hidden="true">العربية</p>
@@ -760,6 +761,14 @@ const SAMPLES = [
     if (d) { e.preventDefault(); open((i + d + all.length) % all.length, true); }
   });
   open(4);
+})();
+
+// ---------- the calligrapher's hand: still under reduced motion, paused when off screen ----------
+(() => {
+  const v = document.getElementById('qalam');
+  if (!v) return;
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) { v.removeAttribute('autoplay'); v.pause(); return; }
+  if ('IntersectionObserver' in window) new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting ? v.play().catch(() => {}) : v.pause())).observe(v);
 })();
 
 // ---------- install: choose the system ----------
