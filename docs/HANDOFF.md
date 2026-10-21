@@ -9,16 +9,16 @@
 - لا يُنسب قول ولا تُكتب صفحة لم تُعِدها أداة؛ وما لم يُتحقَّق منه يُعلَّم بذلك.
 - الردود بالعربية، موجزة، بلغة أهل العلم. صاحب المشروع طالب لغة عربية، لا مبرمج.
 
-## الفروع (كلها غير مدموجة في main)
-آخر فرع يحمل كل ما قبله: **`eval/gold-irab`** ← مبني على `feat/plugin` ← `feat/shamela-import` ← `fix/page-marker-first-line` ← `tests/corpus-pipeline`.
-طلب دمج واحد من `eval/gold-irab` (أو `feat/plugin` بدون المجموعة الذهبية) يكفي.
+## الفروع
+كلها دُمجت في `main` وصدرت في **v1.3.0**. يُعمل بعدها في فروع جديدة من `main`.
 
 ## ما أُنجز
-- **المدوّنة** (`~/.sarf/corpus.db` على حاسوبه): 52 كتابًا من الشاملة بنصها المشكول وجزئها وصفحتها المطبوعة، و14 من OpenITI. نسختان احتياطيتان: `corpus.db.bak-repage` و`corpus.db.bak-shamela`.
+- **المدوّنة** (`~/.sarf/corpus.db` على حاسوبه): 927 كتابًا (122 مليون كلمة، 2.2 غ.ب)، منها الفنون اللغوية السبعة كاملةً من الشاملة (861 كتابًا) بنصها المشكول وجزئها وصفحتها المطبوعة. النسخ الاحتياطية: `corpus.db.bak-before-bulk` (قبل الفنون السبعة)، و`corpus.db.bak-repage` و`corpus.db.bak-shamela`. سجل الاستيراد: `C:\Users\USER\claude\repage\bulk_import.jsonl`.
+- **نسبة الشواهد:** `takhrij_shahid` يعرض «قائله في كتب المدوّنة»؛ اختبار 64 بيتًا: `C:\Users\USER\claude\repage\attrib_probe.py` (64/64 بالحكم النهائي في v1.3.0).
 - **`import_shamela.py`** وأداة **`corpus_add_shamela_book`** (38 أداة): تقرأ الشاملة 4 المثبّتة مباشرة (Lucene عبر JPype، قراءة فقط).
 - **إصلاحات:** صفحة زائدة بواحد في تحليل OpenITI؛ حذف الكتب الآمن؛ البحث بالعبارات المركّبة؛ الاستشهاد بالصفحة لكتاب بلا أجزاء؛ ترتيب `search_poetry` (كان يقدّم من ضمّن «قفا نبك» على امرئ القيس)؛ المعارضة لا تُعدّ اختلاف نسبة في `takhrij_shahid`.
 - **الـPlugin** (`.claude-plugin/`، ومهارات `skills/arabiyya`، `skills/wujuh-irab`، `skills/setup`): اجتاز `claude plugin validate`، وجُرّب الخادم من مجلده على حاسوبه (38 أداة).
-- **الاختبارات:** `python tests/test_corpus.py` (17)، `tests/test_import_shamela.py` (10)، `tests/test_ilal.py` (43/43).
+- **الاختبارات:** `python -m unittest discover -s tests` (35)، و`tests/test_ilal.py` (43/43).
 - **فهرس مسائل الإنصاف:** `data/khilaf/insaf_masail.jsonl` (118 مسألة بصفحاتها المتحقَّقة).
 
 ## المحركات الثلاثة (وجوه الإعراب)

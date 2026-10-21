@@ -141,7 +141,7 @@ def import_book(sh, con, bid, genre, died=None, uri=None, replace_id=None):
     died = died or d
     if not died:
         return {"تنبيه": f"لم أستخرج سنة وفاة مؤلف «{title}» من بطاقته؛ أعد التشغيل مع --died.", "البطاقة": card[:300]}
-    uri = uri or f"{died:04d}Shamela.{bid}"
+    uri = uri or f"{max(died, 0):04d}Shamela.{bid}"
     src = _sources(con)
     if src.get(uri, (None,))[0] == "shamela" or (replace_id is None and con.execute("SELECT 1 FROM books WHERE uri=?", (uri,)).fetchone()):
         return {"تنبيه": f"«{title}» في المدوّنة من قبل ({uri})."}
@@ -163,6 +163,71 @@ def import_book(sh, con, bid, genre, died=None, uri=None, replace_id=None):
         raise
     return {"أُضيف": title, "المؤلف": author, "الوفاة": died, "المعرّف": uri, "الصفحات": len(paras),
             "صفحات بلا رقم": unnumbered, "الكلمات": ntok}
+
+
+# الفنون اللغوية في تصنيف الشاملة 4 ← الفن في المدوّنة
+LANG_CATEGORIES = {31: "نحو", 29: "لغة", 35: "بلاغة", 33: "شعر", 34: "شعر", 30: "لغة", 32: "أدب"}
+CATEGORY_NAMES = {31: "النحو والصرف", 29: "كتب اللغة", 35: "البلاغة", 33: "العروض والقوافي", 34: "الشعر ودواوينه",
+                  30: "الغريب والمعاجم", 32: "الأدب"}
+MODERN_DIED = 1450   # من لا سنة وفاة له في البطاقة ولا في فهرس المؤلفين (معاصر أو مجهول): القرن الخامس عشر الهجري
+
+
+def category_books(root, cats):
+    """[(رقم الكتاب، رقم التصنيف، تاريخ الكتاب، وفاة المؤلف من فهرس المؤلفين)] للكتب المنزّلة في التصنيفات المطلوبة."""
+    m = sqlite3.connect(f"file:{os.path.join(root, 'database', 'master.db')}?mode=ro", uri=True)
+    try:
+        out = []
+        for cid in cats:
+            for bid, bdate, ma in m.execute("SELECT book_id, book_date, main_author FROM book "
+                                            "WHERE book_category=? AND major_ondisk>0 ORDER BY book_id", (cid,)):
+                d = m.execute("SELECT death_number FROM author WHERE author_id=?", (ma,)).fetchone() if ma else None
+                out.append((bid, cid, bdate, d[0] if d else None))
+        return out
+    finally:
+        m.close()
+
+
+def resolve_died(card_died, author_death, book_date):
+    """سنة الوفاة ومصدرها: البطاقة، ثم فهرس مؤلفي الشاملة، ثم تاريخ الكتاب فيها، وإلا فمعاصر/مجهول."""
+    for v, how in ((card_died, "البطاقة"), (author_death, "فهرس المؤلفين"), (book_date, "تاريخ الكتاب")):
+        if v and -300 < v < 1500:          # السالب: قبل الهجرة (الشعراء الجاهليون في فهرس مؤلفي الشاملة)
+            return v, how
+    return MODERN_DIED, "معاصر أو مجهول"
+
+
+def existing_shamela_ids(con, db_path):
+    """أرقام كتب الشاملة الموجودة في المدوّنة: المستوردة منها مباشرة، ونسخ OpenITI المأخوذة منها."""
+    have = {i for _u, (_s, i) in _sources(con).items() if i}
+    uris = {r[0] for r in con.execute("SELECT uri FROM books")}
+    return have | {sid for u, sid in openiti_shamela_ids(db_path).items() if u in uris}
+
+
+def import_categories(sh, con, root, db_path, cats, limit=None, log=None):
+    """يستورد كل كتب التصنيفات المطلوبة كاملةً، بلا تكرار، ويُستأنف: ما استورد من قبل يُتخطّى.
+    limit: أكثر عدد من الكتب في هذه الدفعة (للاستيراد على دفعات). يعيد ملخّصًا."""
+    have = existing_shamela_ids(con, db_path)
+    queue = [b for b in category_books(root, cats) if b[0] not in have]
+    todo = queue[:limit] if limit else queue
+    added, notes, errors, words, died_from = [], [], [], 0, {}
+    for bid, cid, bdate, adeath in todo:
+        try:
+            _t, _a, d = parse_card(sh.book_card(bid) or "")
+            died, how = resolve_died(d, adeath, bdate)
+            r = import_book(sh, con, bid, LANG_CATEGORIES.get(cid, "أخرى"), died)
+        except Exception as e:
+            con.rollback()
+            errors.append({"الكتاب": bid, "الخطأ": f"{type(e).__name__}: {e}"[:200]})
+            continue
+        if "أُضيف" in r:
+            added.append(bid)
+            words += r.get("الكلمات", 0)
+            died_from[how] = died_from.get(how, 0) + 1
+        else:
+            notes.append({"الكتاب": bid, **r})
+        if log:
+            log(bid, r)
+    return {"أُضيف": len(added), "الكلمات": words, "مصدر سنة الوفاة": died_from, "تنبيهات": notes[:20], "أخطاء": errors[:20],
+            "الباقي": len(queue) - len(todo), "كان موجودًا": len(have)}
 
 
 SHAMELA_ID = re.compile(r"\.(?:Shamela|Sham19Y|ShamAY|Sham30K)0*(\d+)-")
@@ -267,6 +332,9 @@ def main(argv=None):
     ap.add_argument("--db", default=os.path.join(os.path.expanduser("~"), ".sarf", "corpus.db"))
     ap.add_argument("--genre", default="نحو")
     ap.add_argument("--died", type=int, default=None, help="سنة وفاة المؤلف إن لم تُستخرج من البطاقة (لكتاب واحد)")
+    ap.add_argument("--category", type=int, action="append", default=[], help="رقم تصنيف في الشاملة يُستورد كاملًا (يتكرر)")
+    ap.add_argument("--all-language", action="store_true", help="كل الفنون اللغوية السبعة: النحو والصرف، كتب اللغة، البلاغة، "
+                    "العروض والقوافي، الشعر ودواوينه، الغريب والمعاجم، الأدب")
     a = ap.parse_args(argv)
     if not os.path.exists(a.db):
         raise SystemExit(f"المدوّنة غير موجودة: {a.db}")
@@ -281,6 +349,9 @@ def main(argv=None):
                 print(r, flush=True)
         for bid in a.books:
             print(import_book(sh, con, bid, a.genre, a.died if len(a.books) == 1 else None), flush=True)
+        cats = list(LANG_CATEGORIES) if a.all_language else a.category
+        if cats:
+            print(import_categories(sh, con, root, a.db, cats, log=lambda b, r: print(b, r.get("أُضيف") or r.get("تنبيه"), flush=True)), flush=True)
     finally:
         con.close()
 

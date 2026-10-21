@@ -9,7 +9,7 @@
 <p align="center">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-C9A35C?style=flat-square&labelColor=121A24"></a>
   <img alt="Python 3.11" src="https://img.shields.io/badge/python-3.11-C9A35C?style=flat-square&labelColor=121A24">
-  <img alt="MCP tools" src="https://img.shields.io/badge/MCP-37_tools-C9A35C?style=flat-square&labelColor=121A24">
+  <img alt="MCP tools" src="https://img.shields.io/badge/MCP-38_tools-C9A35C?style=flat-square&labelColor=121A24">
   <a href="tests/test_ilal.py"><img alt="i'lal tests" src="https://img.shields.io/badge/i%CA%BFl%C4%81l_tests-43%2F43-C9A35C?style=flat-square&labelColor=121A24"></a>
   <a href="CITATION.cff"><img alt="Cite" src="https://img.shields.io/badge/cite-CITATION.cff-C9A35C?style=flat-square&labelColor=121A24"></a>
 </p>
@@ -106,6 +106,7 @@ flowchart LR
 | Tashkeela (Fadel et al., 2019) | نصوص تراثية مشكولة مقسومة للتدريب والاختبار | قياس التشكيل وتدريب مشكِّل الشعر |
 | OpenITI: المعاجم | 15 معجمًا من العين (ت 170هـ) إلى تاج العروس (ت 1205هـ) | مادة الجذر بالجزء والصفحة |
 | OpenITI: المدوّنة | 57 مصنَّفًا في النحو واللغة والبلاغة والشعر والأدب، من القرن الثاني إلى الحادي عشر، نحو 11.9 مليون كلمة | لسانيات المدوّنة |
+| المكتبة الشاملة 4 (اختياري، على جهاز الباحث) | ما نزّله الباحث من كتبها، يُقرأ فهرسها (Lucene) وملف كل كتاب مباشرة | توسيع المدوّنة بالجزء والصفحة المطبوعين |
 | فهرس OpenITI | 8,792 نسخة أصلية (primary version) من نصوص عربية، بعناوينها ومؤلفيها | توسيع المدوّنة |
 | OpenITI: كتب اللغة المتخصصة | الفروق اللغوية للعسكري، والأضداد لابن الأنباري، والقلب والإبدال لابن السكيت، والإبدال والإتباع لأبي الطيب، والتعريب لابن بري، والمهذب للسيوطي، والمثلثات للمهلبي | الفروق والأضداد والإبدال والمعرّب |
 | Stanza + AraELECTRA | محلل نحوي بطريقة التبعية (dependency parsing) مدرَّب على شجرة PADT في Universal Dependencies (Qi et al., 2020؛ Antoun et al., 2021) | الإعراب |
@@ -386,6 +387,7 @@ flowchart LR
 | `corpus_collocates` | المتلازمات في نافذة ±k: نسبة الأرجحية (Log-likelihood) على جدول توافق 2×2 (Dunning, 1993)، مع المعلومات المتبادلة النقطية PMI (Church & Hanks, 1990)، بعد حذف حروف المعاني |
 | `corpus_find_book` | البحث في فهرس OpenITI العربي بالعنوان أو المؤلف |
 | `corpus_add_book` / `corpus_remove_book` | تنزيل نص من OpenITI وتقطيعه إلى فقرات وفهرسته وتحديث جدول التكرار، أو حذفه وحذف أثره من الفهرس والتكرار |
+| `corpus_add_shamela_book` | استيراد كتاب من «المكتبة الشاملة» المثبّتة على جهاز الباحث بجزئه وصفحته المطبوعين، أو فنٍّ كامل (النحو والصرف، كتب اللغة، البلاغة، العروض والقوافي، الشعر ودواوينه، الغريب والمعاجم، الأدب)، أو الفنون السبعة جميعًا (نحو 860 كتابًا و110 ملايين كلمة، نحو 2 غ.ب)، على دفعات بلا تكرار. تُقرأ ملفات الشاملة ولا تُعدَّل، ولا تُنشر الكتب: كلٌّ يستورد من نسخته |
 | `usage_compare` | موازنة تعبيرين أو أكثر (مسائل التعدية والاستعمال): الورود، والنسبة لكل مليون كلمة، والتوزع على الفنون والقرون، والشواهد |
 
 ### ٨. الأسلوبية الإحصائية
@@ -456,7 +458,7 @@ flowchart LR
 
 **أُنجز:**
 
-- [x] سبع وثلاثون أداة في عشرة فروع، بمناهجها وحدودها.
+- [x] ثمانٍ وثلاثون أداة في عشرة فروع، بمناهجها وحدودها.
 - [x] محرّك قواعدي للإعلال والإبدال والإدغام يتحقق من نتيجته بنفسه، مع 43 حالة معيارية.
 - [x] التقطيع بالضبط الموجَّه بالعروض، وعلم القافية بعيوبه.
 - [x] التخريج الآلي للشاهد الشعري، ونسبة النصوص بمقاييس Delta.
@@ -663,7 +665,7 @@ flowchart LR
 
 ## English summary
 
-**arabiyya** is a Model Context Protocol (MCP) server that exposes 37 tools for Arabic linguistic research to LLM clients such as Claude Desktop. Its premise is a separation of *phrasing* from *judgement*: the language model reads the question and words the answer, while each judgement comes from a tool with a stated method. Outputs are cited to a source (volume and page) or to the tool that produced them. The server runs locally and, after a one-time data download, works offline.
+**arabiyya** is a Model Context Protocol (MCP) server that exposes 38 tools for Arabic linguistic research to LLM clients such as Claude Desktop. Its premise is a separation of *phrasing* from *judgement*: the language model reads the question and words the answer, while each judgement comes from a tool with a stated method. Outputs are cited to a source (volume and page) or to the tool that produced them. The server runs locally and, after a one-time data download, works offline.
 
 **What it is not.** It is not a language model and does not fine-tune one. Its outputs are not infallible, and a client model may still misreport them; the raw output of every call is visible in the client. Published accuracy figures hold for the stated samples only.
 

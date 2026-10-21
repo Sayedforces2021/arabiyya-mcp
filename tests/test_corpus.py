@@ -157,9 +157,8 @@ class TestCorpusPipeline(unittest.TestCase):
         self.assertEqual(self.S._cite(1, 200), "، ج1 ص200")
         self.assertEqual(self.S._cite(None, None), "")
 
-    @unittest.expectedFailure
     def test_dagger_alif_query(self):
-        """عيب معروف: الفهرس يحذف الألف الخنجرية (ٰ) والاستعلام لا يحذفها، فلا تُوجد «هٰذا» المكتوبة بها."""
+        """كان الفهرس يحذف الألف الخنجرية (ٰ) والاستعلام لا يحذفها، فلا تُوجد «هٰذا» المكتوبة بها."""
         self.assertTrue(self.rows("هذا"))      # الضابط: الكلمة نفسها بلا ألف خنجرية توجد («وَهٰذَا» في الكتاب الأول)
         self.assertTrue(self.rows("هٰذا"))
 
@@ -244,6 +243,50 @@ class TestPoetryRanking(unittest.TestCase):
         self.assertTrue(self.S._is_quotation("( قفا نبك من ذكرى حبيـبٍ و منـزلِ", "معارضة معلقة امرئ القيس"))
         self.assertTrue(self.S._is_quotation("قفا نبك", "معارضة معلقة امرئ القيس"))
         self.assertFalse(self.S._is_quotation("قِفا نَبكِ مِن ذِكرى حَبيبٍ وَمَنزِلِ", "قفا نبك من ذكرى حبيب ومنزِل"))
+
+    def test_takhrij_prefers_sadr_and_poet_era(self):
+        """حالات حقيقية من اختبار ٤٢ بيتًا مشهورًا: نسخة لبيد في «أشعار» بلا عصر، فتقدّم عليه ابن خلكان (المملوكي)
+        الذي جعل صدره عجزًا؛ وكذلك أبو نواس على الأعشى."""
+        S = self.S
+        q = S._ntoks("عفت الديار محلها فمقامها")
+        labid = ("عفت الديار محلها فمقامها", "بمنى تأبد غولها فرجامها", 1, "لبيد بن ربيعة", "عفت الديار محلها فمقامها", "الكامل", None)
+        khallikan = ("قول لبيد في معلقته", "عفت الديار محلها فمقامها", 2, "ابن خلكان", "", "الكامل", "العصر المملوكي")
+        c = sorted([(1.0, khallikan), (1.0, labid)], key=lambda x: S._takhrij_key(q, x[0], x[1]))
+        self.assertEqual(c[0][1][3], "لبيد بن ربيعة")
+        q = S._ntoks("ودع هريرة إن الركب مرتحل")
+        nuwas = ("بادر صبوحك وانعم أيها الرجل", "ودع هريرة إن الركب مرتحل", 7, "ابو نواس", "بادر صبوحك", "البسيط", "العصر العباسي")
+        asha = ("ودع هريرة إن الركب مرتحل", "وهل تطيق وداعا أيها الرجل", 1, "الأعشى", "معلقة الأعشى", "البسيط", None)
+        c = sorted([(1.0, nuwas), (1.0, asha)], key=lambda x: S._takhrij_key(q, x[0], x[1]))
+        self.assertEqual(c[0][1][3], "الأعشى")
+
+    def test_era_from_other_poems(self):
+        eras = {self.S._poet_key("جرير"): "العصر الأموي"}
+        self.assertEqual(self.S._era_rank(None, "جَرير", eras), 3)          # من قصائده الأخرى
+        self.assertEqual(self.S._era_rank("العصر العباسي", "ابو نواس", eras), 4)
+        self.assertEqual(self.S._era_rank(None, "مجهول", eras), 10)
+        self.assertEqual(self.S._era_rank("قبل الإسلام"), 0)
+        self.assertEqual(self.S._era_rank("المغرب والأندلس"), 5)
+        self.assertEqual(self.S._era_rank("المخضرمين"), 1)
+        self.assertEqual(self.S._era_rank(None, "مسكين الدرامي", {}), 3)    # من _KNOWN_ERAS: لا عصر له في «أشعار»
+        self.assertEqual(self.S._era_rank(None, "لبيد بن ربيعه", {}), 1)
+
+    def test_attribution_in_books(self):
+        """النسبة من كتب المدوّنة: «قال فلان» قبل البيت؛ وكل كتاب مرة؛ و«قال الشاعر» لا تُحصى."""
+        S = self.S
+        ref = S._ntoks("ولقد ذكرتك والرماح نواهل")
+        hits = {1: (276, "الشعر والشعراء", "", "أدب", 1, 128, "ومن ذلك قول عنترة في معلقته: وَلَقَدْ ذَكَرْتُكِ وَالرِّمَاحُ نَوَاهِلٌ"),
+                2: (285, "الكامل", "", "أدب", 2, 10, "وقال عنترة بن شداد: ولقد ذكرتك والرماح نواهل * مني"),
+                3: (285, "الكامل", "", "أدب", 2, 90, "قال عنترة: ولقد ذكرتك والرماح نواهل"),
+                4: (300, "كتاب آخر", "", "أدب", None, 5, "قال الشاعر: ولقد ذكرتك والرماح نواهل"),
+                5: (400, "كتاب ثالث", "", "أدب", None, 7, "وأنشد لعنترة: ولقد ذكرتك والرماح نواهل")}
+        r = S._attribution_in_books(ref, hits)
+        self.assertEqual(len(r), 1)
+        self.assertEqual(r[0]["عدد الكتب"], 3)
+        self.assertIn("الشعر والشعراء", r[0]["أقدمها"])
+        self.assertEqual(S._attr_key(S._ntoks("أبو الطيب المتنبي")), S._attr_key(S._ntoks("المتنبي")))
+        self.assertEqual(S._attr_key(S._ntoks("امرئ القيس")), S._attr_key(S._ntoks("امرؤ القيس")))
+        self.assertEqual(S._attr_key(S._ntoks("امرىء القيس")), S._attr_key(S._ntoks("امرؤ القيس")))
+        self.assertEqual(S._attr_key(S._ntoks("أبي تمام")), S._attr_key(S._ntoks("أبو تمام")))
 
 
 if __name__ == "__main__":

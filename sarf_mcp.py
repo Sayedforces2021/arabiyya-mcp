@@ -26,6 +26,7 @@
 """
 
 import os
+import re
 from functools import lru_cache
 
 try:  # mcp 2.x
@@ -642,7 +643,7 @@ HAMZA_FORMS = str.maketrans({"أ": "ء", "إ": "ء", "آ": "ء", "ؤ": "ء", "ئ
 
 
 def _strip_tashkeel(s: str) -> str:
-    return "".join(c for c in s if c not in HARAKAT and c != "ـ")
+    return "".join(c for c in s if c not in HARAKAT and c not in "ـ\u0670")   # والألف الخنجرية كما في فهرس المدوّنة
 
 
 @lru_cache(maxsize=256)
@@ -967,6 +968,16 @@ def search_poetry(query: str = "", meter: str | None = None, era: str | None = N
     # تُجلب المرشحات كلها (إلى حدٍّ معقول) ثم تُرتَّب، لا أن يُقتطع أولها بترتيب التخزين: فالبيت الأصلي قد يكون الخامس
     # بعد أبيات تضمّنته أو عارضته، والأخذ بالأول يُخطئ النسبة (مثل «قفا نبك» يُنسب إلى من ضمّنه).
     rows = con.execute(sql, args + [3000 if q else limit]).fetchall()
+    loose = False
+    if q and not rows and exact_phrase and len(words) > 1:
+        # لا مطابقة حرفية (لاختلاف الرسم مثل «أن ما» و«أنما»، أو رواية أخرى): يُعاد البحث بالكلمات مجتمعةً في البيت
+        def _alts(w):   # الواو والفاء المتصلتان: «إنما» تطابق «وإنما»، و«ولو» تطابق «فلو»
+            b = w[1:] if w[0] in "وف" and len(w) > 2 else w
+            vs = {w, b, "و" + b, "ف" + b}
+            return "(" + " OR ".join(f'"{x}"' for x in sorted(vs)) + ")"
+        args[0] = " AND ".join(_alts(w) for w in words if len(w) > 2) or args[0]
+        rows = con.execute(sql, args + [3000]).fetchall()
+        loose = bool(rows)
     con.close()
     total = len(rows)
     if q:
@@ -981,14 +992,68 @@ def search_poetry(query: str = "", meter: str | None = None, era: str | None = N
     res = {"عدد النتائج المعروضة": len(out), "الأبيات": out}
     if q:
         res["عدد المطابقات"] = total if total < 3000 else "3000 أو أكثر"
+        if loose:
+            res["تنبيه"] = "لم أجد العبارة بلفظها، فهذه أبيات فيها كلماتها كلها أو جلّها بغير ترتيبها؛ تحقق من الرواية."
         res["الترتيب"] = ("ما بدأ صدرُه بالمبحوث عنه أولًا، ثم ما وقع في صدره، ثم في عجزه (وهو غالبًا تضمين أو معارضة)، "
                           "والأقدم عصرًا قبل الأحدث، والبيت التام قبل الناقص. ولا يعني تقدّمُ بيتٍ أنه الأصل؛ "
                           "فللنسبة استعمل takhrij_shahid بالبيت كاملًا.")
     return res
 
 
-_ERAS = [("الجاهلي", 0), ("المخضرم", 1), ("الإسلامي", 2), ("صدر الإسلام", 2), ("الراشدي", 2), ("الأموي", 3),
-         ("العباسي", 4), ("الأندلسي", 5), ("الفاطمي", 6), ("الأيوبي", 6), ("المملوكي", 7), ("العثماني", 8), ("الحديث", 9)]
+_ERAS = [("الجاهلي", 0), ("قبل الإسلام", 0), ("المخضرم", 1), ("الإسلامي", 2), ("صدر الإسلام", 2), ("الراشدي", 2),
+         ("الأموي", 3), ("بين الدولتين", 3.5), ("العباسي", 4), ("الأندلس", 5), ("الفاطمي", 6), ("الأيوبي", 6),
+         ("المملوكي", 7), ("العثماني", 8), ("الحديث", 9)]
+
+
+def _poet_key(name: str | None) -> str:
+    return " ".join(_norm(name or "").split())
+
+
+@lru_cache(maxsize=1)
+def _poet_eras() -> dict:
+    """عصر كل شاعر كما ورد في قصائده الأخرى: فنحو 40٪ من قصائد «أشعار» بلا عصر (ومنها نسخ من معلقات لبيد والأعشى
+    وشعر جرير)، فيتأخر الشاعر القديم عن متأخر ضمّن بيته لأن المتأخر مؤرَّخ. يُؤخذ أكثر عصوره ورودًا."""
+    import sqlite3, collections
+    if not os.path.exists(POETRY_DB):
+        return {}
+    m = collections.defaultdict(collections.Counter)
+    con = sqlite3.connect(f"file:{POETRY_DB}?mode=ro", uri=True)
+    try:
+        for poet, era in con.execute("SELECT poet, era FROM poems WHERE era IS NOT NULL AND era != ''"):
+            m[_poet_key(poet)][era] += 1
+    finally:
+        con.close()
+    return {k: c.most_common(1)[0][0] for k, c in m.items()}
+
+
+# شعراء قدماء مشهورون لا عصر لهم في أيّ قصيدة من قصائدهم في «أشعار» (من أكثرهم قصائدَ بلا عصر)، فيُعامَلون
+# معاملة المجهول ويتقدّم عليهم من ضمّن شعرهم. عصورهم معروفة لا خلاف فيها.
+_KNOWN_ERAS = {
+    "الأموي": ("الكميت بن زيد", "عمر بن أبي ربيعة", "قيس بن الملوح", "قيس بن الملوح (مجنون ليلى)", "نصيب بن رباح",
+               "عدي بن الرقاع", "الطرماح", "جميل بن معمر", "يزيد بن الطثرية", "وضاح اليمن", "مسكين الدارمي",
+               "مسكين الدرامي", "العجاج", "العرجي", "النابغة الشيباني"),
+    "المخضرم": ("لبيد بن ربيعة", "عمرو بن معد يكرب", "العباس بن مرداس", "الشماخ الذبياني", "خفاف بن ندبة السلمي",
+                "تميم بن أبي بن مقبل"),
+    "صدر الإسلام": ("الإمام علي بن أبي طالب", "مالك الأشتر"),
+    "العباسي": ("أبو الطيب المتنبي", "عبيد الله بن عبدالله بن طاهر", "يحيى بن المبارك اليزيدي", "أبو الفضل الميكالي",
+                "علي بن محمد التهامي"),
+    "الأيوبي": ("ابن الساعاتي", "جمال الدين بن مطروح"),
+    "الأندلسي": ("ابن الزقاق البلنسي", "لسان الدين الخطيب", "ابن جبير الشاطبي"),
+}
+
+
+@lru_cache(maxsize=1)
+def _known_eras() -> dict:
+    return {_poet_key(n): e for e, names in _KNOWN_ERAS.items() for n in names}
+
+
+def _era_rank(era: str | None, poet: str | None = None, eras: dict | None = None) -> float:
+    """رتبة العصر (الأقدم أصغر)؛ وإن خلت القصيدة من العصر أُخذ عصر الشاعر من قصائده الأخرى، ثم من _KNOWN_ERAS،
+    وإلا فـ10 (مجهول)."""
+    if not era and poet:
+        k = _poet_key(poet)
+        era = (_poet_eras() if eras is None else eras).get(k) or _known_eras().get(k)
+    return next((r for k, r in _ERAS if era and k in era), 10)
 
 
 _QUOTE_TITLES = ("معارضه", "تخميس", "مخمس", "تشطير", "مشطر", "تضمين")
@@ -1015,9 +1080,9 @@ def _poetry_rank(q, sadr, ajuz, poet, era, meter, title, theme):
     where = {"أول الصدر": 0, "الصدر": 1, "البيت": 2, "العجز": 3}[_poetry_where(q, sadr, ajuz)]
     a = (ajuz or "").strip()
     incomplete = 1 if (not a or a == "#") else 0
-    era_rank = next((r for k, r in _ERAS if era and k in era), 10)
+    era_rank = _era_rank(era, poet)
     title_match = 0 if title and _norm(title).startswith(q[:20]) else 1   # القصيدة التي مطلعها البيت نفسه
-    return (where, incomplete, title_match, era_rank)
+    return (where, incomplete, era_rank, title_match)
 
 
 # ───────────── المدوّنة القرآنية (Quranic Arabic Corpus v0.4، برخصة GPL) ─────────────
@@ -1254,7 +1319,7 @@ def maajim(root: str, books: list[str] | None = None, max_chars_per_entry: int =
             if len(text) > max_chars_per_entry and len(body) >= max_chars_per_entry:
                 body += " …[مقطوع]"
             entries.append({
-                "المعجم": f"{name} (ت {died}هـ)",
+                "المعجم": f"{name} ({_died_label(died)})",
                 "الموضع": f"ج{vol} ص{page}" if vol else None,
                 "العنوان": title,
                 "المطابقة": match,
@@ -1498,7 +1563,7 @@ def corpus_concordance(word: str, genre: str | None = None, century_from: int | 
                     "قبل": " ".join(toks[max(0, i - window):i]),
                     "الكلمة": " ".join(toks[i:j]),
                     "بعد": " ".join(toks[j:j + window]),
-                    "المصدر": f"{title} (ت {died}هـ)" + _cite(vol, page),
+                    "المصدر": f"{title} ({_died_label(died)})" + _cite(vol, page),
                     "الفن": g,
                 })
                 break
@@ -1506,6 +1571,17 @@ def corpus_concordance(word: str, genre: str | None = None, century_from: int | 
             break
     return {"الكلمة": word, "الصيغ المبحوث عنها": sorted(vs), "السياقات": out,
             "ملاحظة": "مرتبة بوفاة المؤلف؛ سياق واحد من كل فقرة. الجزء والصفحة كما في مصدر النص (الشاملة أو OpenITI)."}
+
+
+def _died_label(died) -> str:
+    """«ت 577هـ»، و«ت 61 ق.هـ» لمن مات قبل الهجرة، و«معاصر أو مجهول الوفاة» لما جُعل 1450 عند الاستيراد لخلوّ بطاقته من سنة وفاة."""
+    if died is None:
+        return "الوفاة غير معروفة"
+    if died >= 1450:
+        return "معاصر أو مجهول الوفاة"
+    if died <= 0:
+        return f"ت {abs(died)} ق.هـ" if died < 0 else "ت قبل الهجرة"
+    return f"ت {died}هـ"
 
 
 def _cite(vol, page) -> str:
@@ -1532,7 +1608,7 @@ def corpus_usage(word: str, genre: str | None = None, clitics: bool = True) -> d
         c = (died - 1) // 100 + 1
         by_c[c] = by_c.get(c, 0) + n
         by_g[g] = by_g.get(g, 0) + n
-        by_b[f"{title} (ت {died}هـ)"] = by_b.get(f"{title} (ت {died}هـ)", 0) + n
+        by_b[f"{title} ({_died_label(died)})"] = by_b.get(f"{title} ({_died_label(died)})", 0) + n
     con.close()
     return {
         "الكلمة": word,
@@ -2017,7 +2093,7 @@ def _load_corpus_book(book: str, max_words: int):
         if n >= max_words:
             break
     con.close()
-    return "\n".join(parts), {"الكتاب": f"{b[1]} لـ{_short_author(b[2])} (ت {b[3]}هـ)", "الكلمات المأخوذة": min(n, b[4] or n),
+    return "\n".join(parts), {"الكتاب": f"{b[1]} لـ{_short_author(b[2])} ({_died_label(b[3])})", "الكلمات المأخوذة": min(n, b[4] or n),
                               "حجم الكتاب": b[4]}
 
 
@@ -2290,17 +2366,21 @@ def corpus_remove_book(book: str) -> dict:
 
 
 @mcp.tool()
-def corpus_add_shamela_book(book_id: int | None = None, genre: str = "نحو", replace_openiti: bool = False) -> dict:
+def corpus_add_shamela_book(book_id: int | None = None, genre: str = "نحو", replace_openiti: bool = False,
+                            category: str | None = None, limit: int = 40) -> dict:
     """إضافة كتاب من «المكتبة الشاملة» المثبّتة على جهاز الباحث (الإصدار الرابع) إلى المدوّنة التراثية، بنصّه المشكول
     وجزئه وصفحته كما يعرضها برنامج الشاملة. يُقرأ المتن وحده دون الحاشية. يعمل بلا إنترنت، ويقرأ ملفات الشاملة ولا يعدّلها.
     book_id: رقم الكتاب في الشاملة (يظهر في بطاقة الكتاب، مثل 6972 لمغني اللبيب).
     replace_openiti: إن كان true استُبدل بكل كتاب في المدوّنة أُخذ من الشاملة عبر OpenITI نسختُه من الشاملة المثبّتة (أدقّ ترقيمًا ومشكولة)، دون تكرار.
+    category: لاستيراد فنٍّ كاملًا من الشاملة: «النحو والصرف»، «كتب اللغة»، «البلاغة»، «العروض والقوافي»، «الشعر ودواوينه»،
+    «الغريب والمعاجم»، «الأدب»، أو «الكل» للفنون السبعة. يُستورد على دفعات (limit كتابًا في كل استدعاء، والافتراضي 40)
+    بلا تكرار، فأعد الاستدعاء حتى يصير «الباقي» صفرًا. الفنون السبعة كاملةً نحو 860 كتابًا و155 مليون كلمة (نحو 3.3 غ.ب).
     يتطلب برنامج الشاملة 4 وحزمة JPype1؛ ويُحدَّد مجلد الشاملة تلقائيًّا أو بمتغير البيئة SHAMELA_ROOT."""
     import sqlite3, sys
     if not os.path.exists(CORPUS_DB):
         return {"تنبيه": "المدوّنة لم تُبنَ بعد؛ شغّل سكربت التثبيت مرة أخرى."}
-    if book_id is None and not replace_openiti:
-        return {"تنبيه": "مرّر book_id (رقم الكتاب في الشاملة) أو replace_openiti=true."}
+    if book_id is None and not replace_openiti and not category:
+        return {"تنبيه": "مرّر book_id (رقم الكتاب في الشاملة) أو category (فنًّا يُستورد كاملًا) أو replace_openiti=true."}
     here = os.path.dirname(os.path.abspath(__file__))
     if here not in sys.path:
         sys.path.insert(0, here)
@@ -2320,6 +2400,15 @@ def corpus_add_shamela_book(book_id: int | None = None, genre: str = "نحو", r
             out["الاستبدال"] = ISH.replace_openiti(sh, con, CORPUS_DB)
         if book_id is not None:
             out["الإضافة"] = ISH.import_book(sh, con, int(book_id), genre)
+        if category:
+            c = _norm(category).strip()
+            cats = (list(ISH.LANG_CATEGORIES) if c in ("الكل", "كل", "الكل اللغوي")
+                    else [k for k, n in ISH.CATEGORY_NAMES.items() if c and (c in _norm(n) or _norm(n) in c)])
+            if not cats:
+                out["تنبيه"] = "فنٌّ غير معروف؛ الفنون: " + "، ".join(ISH.CATEGORY_NAMES.values()) + "، أو «الكل»."
+            else:
+                out["الفنون"] = [ISH.CATEGORY_NAMES[k] for k in cats]
+                out["الاستيراد"] = ISH.import_categories(sh, con, root, CORPUS_DB, cats, limit=max(1, min(int(limit), 300)))
     finally:
         con.close()
     return out
@@ -3634,6 +3723,87 @@ def _word_diff(a: list, b: list) -> list:
     return out
 
 
+_ATTR_TRIGGER = re.compile(r"(?:^|\s)(?:و|ف)?(?:قال|قول|كقول|لقول|بقول|انشد|وانشد|ينشد|انشده|انشدنا|انشدني)\s+")
+_ATTR_STOP = {"في", "يصف", "يمدح", "يرثي", "يذكر", "يهجو", "يفخر", "يخاطب", "من", "وهو", "حين", "لما", "وقد", "ابياتا",
+              "بيتا", "قصيدته", "معلقته", "قصيدة", "شعرا", "رحمه", "رضي", "عليه", "الله", "تعالي"}
+_ATTR_ANON = {"الشاعر", "الاخر", "اخر", "بعضهم", "الراجز", "رجل", "القاءل", "الشعراء", "بعض", "قاءل", "فيه", "فيها",
+              "تعالي", "الله", "النبي", "رسول", "ايضا", "فيهم", "لهم", "له", "لي", "عنه", "المصنف", "الشيخ", "المصنف", "الشارح", "المؤلف", "ابن", "هذا", "ذلك"}
+_ATTR_CASE = {"ابي": "ابو", "ابا": "ابو", "امريء": "امرء", "امري": "امرء", "امرا": "امرء", "ذا": "ذو", "ذي": "ذو"}
+_ATTR_ALIAS = {"ابو الطيب": "المتنبي", "ابو العلاء": "المعري", "ابو فراس": "ابو فراس", "حبيب": "ابو تمام",
+               "مجنون": "قيس", "الحطيءه": "الحطيءه"}
+_ATTR_TWO = {"ابو", "ابن", "ام", "امرء", "عبد", "بنت", "ذو", "ذي", "ابي"}
+
+
+def _attr_key(toks: list) -> str:
+    """مفتاح جمع النسبة: الاسم الأول، أو الأولان إن بدأ بكنية أو نسبة مركّبة (أبو، ابن، امرؤ...)."""
+    if not toks:
+        return ""
+    toks = [_ATTR_CASE.get(toks[0], toks[0])] + list(toks[1:])
+    k = " ".join(toks[:2]) if toks[0] in _ATTR_TWO and len(toks) > 1 else toks[0]
+    return _ATTR_ALIAS.get(k, k).replace("ء", "ا")       # «السموءل» = «السموأل»
+
+
+def _attribution_in_books(ref: list, hits: dict, names: dict | None = None) -> list:
+    """من نسب البيت إلى قائله في كتب المدوّنة: «قال فلان» أو «قول فلان» أو «أنشد لفلان» قبل البيت مباشرة.
+    hits = {رقم الفقرة: (الوفاة، العنوان، المؤلف، الفن، الجزء، الصفحة، النص)}. يُحصى كل كتاب مرة واحدة،
+    ولا يُحصى «قال الشاعر» و«قال الآخر» (بلا تسمية). names: {مفتاح النسبة: اسم الشاعر كما في «أشعار»} لعرض الاسم تامًّا."""
+    if len(ref) < 2:
+        return []
+    pat = re.compile(r"\W+".join(re.escape(t) for t in ref[:2]))
+    agg = {}
+    for pid, (died, title, author, genre, vol, page, text) in hits.items():
+        nt = _norm(_strip_tashkeel(text))
+        m = pat.search(nt)
+        if not m:
+            continue
+        before = nt[max(0, m.start() - 90):m.start()]
+        trig = list(_ATTR_TRIGGER.finditer(before))
+        if not trig:
+            continue
+        tail = before[trig[-1].end():]
+        if len(re.findall(r"[ء-ي]+", tail)) > 8:     # بين «قال» والبيت كلام كثير: ليست نسبة
+            continue
+        name = []
+        for w in re.findall(r"[ء-ي]+|[:\[(«]", tail):
+            if w in ":[(«" or w in _ATTR_STOP or len(name) >= 5:
+                break
+            name.append(w)
+        if name and name[0].startswith("ل") and trig[-1].group(0).strip().endswith(("انشد", "انشده", "انشدنا", "انشدني")):
+            name[0] = name[0][1:]                          # «أنشد لعنترة» ← عنترة
+        if not name or name[0] in _ATTR_ANON or len(name[0]) < 3:
+            continue
+        k = _attr_key(name)
+        a = agg.setdefault(k, {"key": k, "names": {}, "books": {}})
+        a["names"][" ".join(name[:3])] = a["names"].get(" ".join(name[:3]), 0) + 1
+        a["books"].setdefault(title, (died or 9999, f"«{title}» ({_died_label(died)}){_cite(vol, page)}"))
+    out = []
+    for k, a in agg.items():
+        first = min(a["books"].values())
+        out.append({"الشاعر": (names or {}).get(k) or max(a["names"].items(), key=lambda x: (x[1], -len(x[0])))[0],
+                    "عدد الكتب": len(a["books"]), "أقدمها": first[1]})
+    out.sort(key=lambda x: (-x["عدد الكتب"], x["أقدمها"]))
+    strong = [a for a in out if a["عدد الكتب"] >= 2]
+    return strong[:6] if strong else out[:3]      # ما ورد في كتاب واحد لا يُعرض إلا إذا لم يُوجد غيره
+
+
+def _strip_conj(toks: list) -> list:
+    """الواو والفاء في أول الشطر لا تُعدّ فرقًا في الرواية عند المطابقة: «إنما الأمم» = «وإنما الأمم»، «يا ليت» = «فيا ليت»."""
+    if toks and len(toks[0]) > 2 and toks[0][0] in "وف":
+        return [toks[0][1:]] + toks[1:]
+    return toks
+
+
+def _takhrij_key(q: list, sc: float, v, copies: dict | None = None) -> tuple:
+    """ترتيب مرشحات النسبة عند تساوي التطابق: ما ليس تضمينًا ولا معارضة (بعنوانه أو بأقواسه) أولًا، ثم ما وقع فيه
+    الشطر المبحوث عنه صدرًا لا عجزًا (فمن جعل صدر غيره عجزًا لبيته فقد ضمّنه)، ثم الأقدم عصرًا.
+    v = (الصدر، العجز، الرقم، الشاعر، القصيدة، البحر، العصر، ...)."""
+    pos = 0
+    if len(q) <= len(_ntoks((v[0] or "") + " " + (v[1] or ""))) * 0.7 and _sim(q, _ntoks(v[1])) > _sim(q, _ntoks(v[0])):
+        pos = 1
+    # ثم عند تساوي العصر: من نسبته إليه نسخٌ أكثر في المدوّنة (كالمتنبي وأبي العتاهية في «ما كل ما يتمنى المرء يدركه»)
+    return (-round(sc, 2), _is_quotation(v[0], v[4]), pos, _era_rank(v[6], v[3]), -(copies or {}).get(_poet_key(v[3]), 0))
+
+
 @mcp.tool()
 def takhrij_shahid(verse: str, limit: int = 8, citations: bool = True) -> dict:
     """تخريج بيت الشعر: نسبته إلى قائله وقصيدته وبحره وعصره من مدوّنة «أشعار»، واختلاف رواياته (الألفاظ التي تختلف بين المصادر، واختلاف النسبة إن نُسب إلى أكثر من شاعر)،
@@ -3656,30 +3826,41 @@ def takhrij_shahid(verse: str, limit: int = 8, citations: bool = True) -> dict:
             if not v:
                 continue
             t = _ntoks(v[0] + " " + v[1])
-            sc = max(_sim(q, t), _sim(q, _ntoks(v[0])) if len(q) <= len(t) * 0.7 else 0, _sim(q, _ntoks(v[1])) if len(q) <= len(t) * 0.7 else 0)
+            qc, half = _strip_conj(q), len(q) <= len(t) * 0.7
+            sc = max(_sim(qc, _strip_conj(t)), _sim(qc, _strip_conj(_ntoks(v[0]))) if half else 0,
+                     _sim(qc, _strip_conj(_ntoks(v[1]))) if half else 0)
             cands.append((sc, v, t))
-        # عند تقارب التطابق: الأقدم عصرًا أولًا، وما كان تضمينًا أو معارضة (بعنوانه أو بوضعه بين أقواس) آخرًا
-        cands.sort(key=lambda x: (-round(x[0], 2), _is_quotation(x[1][0], x[1][4]),
-                                  next((r for k, r in _ERAS if x[1][6] and k in x[1][6]), 10)))
-        cands = [c for c in cands if c[0] >= 0.55][:max(1, min(int(limit), 30))]
+        copies = {}
+        for sc0, v0, _t in cands:
+            if sc0 >= 0.85 and not _is_quotation(v0[0], v0[4]) and _takhrij_key(q, sc0, v0)[2] == 0:
+                copies[_poet_key(v0[3])] = copies.get(_poet_key(v0[3]), 0) + 1
+        cands.sort(key=lambda x: _takhrij_key(q, x[0], x[1], copies))
+        allc = [c for c in cands if c[0] >= 0.55]
+        cands = allc[:max(1, min(int(limit), 30))]
         con.close()
         if cands:
             best = cands[0]
             sc, v, t = best
             out["النسبة"] = {"الشاعر": v[3], "العصر": v[6], "القصيدة": v[4], "البحر": v[5], "رقم البيت": v[2],
                              "نص البيت": f"{v[0]} * {v[1]}", "نسبة التطابق": round(sc, 2)}
+            if _era_rank(v[6], v[3]) >= 9:
+                out["تنبيه النسبة"] = ("أقدم من وجدته يقول هذا في المدوّنة شاعرٌ حديث أو مجهول العصر؛ فإن كان البيت معروفًا لقديم "
+                                       "فأصله ليس في المدوّنة، وما هنا تضمينٌ له أو نسخة بلا عصر. لا تعتمد هذه النسبة حتى توثّقها من ديوانه.")
             poets, names = {}, {}
             rw, near, seen_t = [], [], set()
+            # اختلاف النسبة يُحصى من المرشحات كلها لا من المعروض وحده، وإلا سقط من القائلين من تأخر ترتيبه
+            # (كالعرجي في «أضاعوني وأي فتى أضاعوا»)
+            for sc2, v2, t2 in allc:
+                if sc2 >= 0.85 and not _is_quotation(v2[0], v2[4]) and _takhrij_key(q, sc2, v2)[2] == 0:
+                    pn = _norm(_strip_tashkeel(v2[3] or ""))
+                    poets[pn] = poets.get(pn, 0) + 1
+                    names.setdefault(pn, v2[3])
             for sc2, v2, t2 in cands:
                 key = " ".join(t2)
                 if key in seen_t:
                     continue
                 seen_t.add(key)
                 quoted = _is_quotation(v2[0], v2[4])
-                if sc2 >= 0.85 and not quoted:
-                    pn = _norm(_strip_tashkeel(v2[3] or ""))
-                    poets[pn] = poets.get(pn, 0) + 1
-                    names.setdefault(pn, v2[3])
                 d = _word_diff(q, t2) if sc2 < 0.999 else []
                 if sc2 < 0.999 and d:
                     item = {"الشاعر": v2[3], "القصيدة": v2[4], "النص": f"{v2[0]} * {v2[1]}", "الفروق": d[:6], "التطابق": round(sc2, 2)}
@@ -3716,9 +3897,22 @@ def takhrij_shahid(verse: str, limit: int = 8, citations: bool = True) -> dict:
                 if covered >= 0.6:
                     hits[pid] = (died, title, author, genre, vol, page, text)
         con.close()
+        known = {}
+        for _sc, _v, _t in (allc if "allc" in locals() else []):
+            known.setdefault(_attr_key(_ntoks(_v[3] or "")), " ".join((_v[3] or "").split()))
+        books_attr = _attribution_in_books(ref, hits, known)
+        if books_attr:
+            out["قائله في كتب المدوّنة"] = books_attr
+            top = books_attr[0]
+            nis = out.get("النسبة")
+            pk = _attr_key(_ntoks(nis["الشاعر"])) if isinstance(nis, dict) else None
+            if top["عدد الكتب"] >= 2 and pk not in {_attr_key(_ntoks(a["الشاعر"])) for a in books_attr}:
+                out["تنبيه النسبة"] = (f"نسبته كتب المدوّنة إلى «{top['الشاعر']}» في {top['عدد الكتب']} كتبٍ أقدمها {top['أقدمها']}، "
+                                       f"وليس فيها من نسبه إلى «{nis['الشاعر'] if isinstance(nis, dict) else ''}» الذي في «أشعار»؛ "
+                                       "فالأرجح أن ما في «أشعار» تضمينٌ أو نسخة بغير نسبتها، ونسبةُ الكتب أولى بالاعتماد.")
         cites = []
         for pid, (died, title, author, genre, vol, page, text) in sorted(hits.items(), key=lambda x: x[1][0]):
-            item = {"الكتاب": f"{title} (ت {died}هـ)", "الفن": genre, "الموضع": _cite(vol, page).lstrip("، ")}
+            item = {"الكتاب": f"{title} ({_died_label(died)})", "الفن": genre, "الموضع": _cite(vol, page).lstrip("، ")}
             import re
             m = re.search(r"(?:والشاهد|الشاهد|وشاهده|استشهد|والاستشهاد)[^.]{0,220}", _strip_tashkeel(text))
             if m:
@@ -3776,7 +3970,7 @@ def usage_compare(expressions: list[str], genre: str | None = None, examples: in
             by_c[c] = by_c.get(c, 0) + k
             if len(ex) < examples:
                 i = next((m.start() for p in pats for m in [p.search(nt)] if m), 0)
-                ex.append({"الشاهد": nt[max(0, i - 80):i + 100], "المصدر": f"{title} (ت {died}هـ)" + _cite(vol, page)})
+                ex.append({"الشاهد": nt[max(0, i - 80):i + 100], "المصدر": f"{title} ({_died_label(died)})" + _cite(vol, page)})
         res.append({"التعبير": e, "الورود": n, "لكل مليون كلمة": round(n * 1e6 / total, 2),
                     "بحسب الفن": by_g, "بحسب القرن": dict(sorted(by_c.items())), "شواهد": ex})
     con.close()
