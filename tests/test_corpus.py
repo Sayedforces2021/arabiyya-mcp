@@ -157,9 +157,8 @@ class TestCorpusPipeline(unittest.TestCase):
         self.assertEqual(self.S._cite(1, 200), "، ج1 ص200")
         self.assertEqual(self.S._cite(None, None), "")
 
-    @unittest.expectedFailure
     def test_dagger_alif_query(self):
-        """عيب معروف: الفهرس يحذف الألف الخنجرية (ٰ) والاستعلام لا يحذفها، فلا تُوجد «هٰذا» المكتوبة بها."""
+        """كان الفهرس يحذف الألف الخنجرية (ٰ) والاستعلام لا يحذفها، فلا تُوجد «هٰذا» المكتوبة بها."""
         self.assertTrue(self.rows("هذا"))      # الضابط: الكلمة نفسها بلا ألف خنجرية توجد («وَهٰذَا» في الكتاب الأول)
         self.assertTrue(self.rows("هٰذا"))
 

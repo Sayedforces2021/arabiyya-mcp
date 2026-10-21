@@ -643,7 +643,7 @@ HAMZA_FORMS = str.maketrans({"أ": "ء", "إ": "ء", "آ": "ء", "ؤ": "ء", "ئ
 
 
 def _strip_tashkeel(s: str) -> str:
-    return "".join(c for c in s if c not in HARAKAT and c != "ـ")
+    return "".join(c for c in s if c not in HARAKAT and c not in "ـ\u0670")   # والألف الخنجرية كما في فهرس المدوّنة
 
 
 @lru_cache(maxsize=256)
