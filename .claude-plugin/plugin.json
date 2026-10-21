@@ -30,5 +30,6 @@
         "ARABIYYA_SERVER": "${CLAUDE_PLUGIN_ROOT}/sarf_mcp.py"
       }
     }
-  }
+  },
+  "icon": "./.claude-plugin/icon.png"
 }

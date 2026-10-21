@@ -526,6 +526,15 @@ flowchart LR
 
 **الإضافة لتطبيق Claude (اختيارية):** بعد التثبيت، نزّل [`arabiyya.mcpb`](https://github.com/ikagi07/arabiyya-mcp/raw/main/arabiyya.mcpb) وانقره نقرتين، ثم اضغط «تثبيت». فتظهر الأداة في إضافات Claude باسمها وأيقونتها، وتُدار وتُحذف من الإعدادات. والإضافة غلاف خفيف يشغّل الأداة المثبّتة على الجهاز (مصدره في `extension/`)، فإن ثُبّتت أزال ملف التثبيت السطر اليدوي من إعدادات Claude تفاديًا للتكرار.
 
+**في Claude Code (Plugin):** تُثبَّت الأداة ومعها مهارات تعلّم Claude استعمالها (`arabiyya`، و`wujuh-irab` لوجوه الإعراب بمصادرها، و`setup` للتجهيز):
+
+```
+/plugin marketplace add ikagi07/arabiyya-mcp
+/plugin install arabiyya@arabiyya
+```
+
+ثم شغّل `/arabiyya:setup` مرة واحدة إن لم تكن الأداة مثبّتة على الجهاز من قبل؛ فهو يشغّل ملف التثبيت المناسب لنظامك. والـPlugin يتحدّث مع المستودع، ويستعمل بيئة Python التي أنشأها ملف التثبيت.
+
 **التشغيل اليدوي في أي عميل MCP:**
 
 <div dir="ltr">
@@ -687,6 +696,15 @@ flowchart LR
 
 **Stylometry**
 - Keyness, standardized TTR and Jaccard overlap, and authorship attribution with Burrows's Delta and Cosine Delta.
+
+**Install.** Windows and macOS installers set up the Python environment and data (see the Arabic section). In Claude Code it also installs as a plugin, with skills for tool use, *wujūh al-iʿrāb* (grammarians' views on a contested position, cited by volume and page) and first-run setup:
+
+```
+/plugin marketplace add ikagi07/arabiyya-mcp
+/plugin install arabiyya@arabiyya
+```
+
+Then run `/arabiyya:setup` once if the tool is not yet installed on the machine.
 
 **Roadmap.** Next come a poetry-specific diacritizer and hosted access as a remote connector. After those, a hand-annotated *iʿrāb* test set, broader morphological gold cases, expert human evaluation, and a paper.
 
