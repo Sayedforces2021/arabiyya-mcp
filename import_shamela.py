@@ -111,6 +111,37 @@ def parse_card(card):
     return title, short or author, died
 
 
+def master_meta(root, bid):
+    """(عنوان الكتاب، اسم مؤلفه) من فهرس الشاملة master.db؛ أو (None, None)."""
+    root = root or os.environ.get("SHAMELA_ROOT")
+    p = os.path.join(root, "database", "master.db") if root else None
+    if not p or not os.path.exists(p):
+        return None, None
+    m = sqlite3.connect(f"file:{p}?mode=ro", uri=True)
+    try:
+        r = m.execute("SELECT b.book_name, a.author_name FROM book b LEFT JOIN author a ON a.author_id = b.main_author "
+                      "WHERE b.book_id = ?", (bid,)).fetchone()
+        return (r[0], r[1]) if r else (None, None)
+    finally:
+        m.close()
+
+
+def repair_metadata(con, root):
+    """يصلح عنوان الكتاب ومؤلفه في المدوّنة لما استُورد من الشاملة وبطاقته ناقصة (المؤلف «Shamela» أو العنوان رقم)."""
+    fixed = []
+    rows = con.execute("SELECT b.id, b.uri, b.title, b.author, s.shamela_id FROM books b JOIN sources s ON s.uri = b.uri "
+                       "WHERE s.source = 'shamela' AND (b.author = 'Shamela' OR b.author = '' OR b.title GLOB '[0-9]*')").fetchall()
+    for bid, uri, title, author, sid in rows:
+        mt, ma = master_meta(root, sid)
+        nt = mt if (not title or title.isdigit()) and mt else title
+        na = ma if author in ("", "Shamela") and ma else author
+        if (nt, na) != (title, author):
+            con.execute("UPDATE books SET title = ?, author = ? WHERE id = ?", (nt, na, bid))
+            fixed.append((uri, nt, na))
+    con.commit()
+    return fixed
+
+
 def book_paras(sh, bid):
     texts, nums = sh.page_texts(bid), sh.page_numbers(bid)
     paras, unnumbered = [], 0
@@ -138,6 +169,10 @@ def import_book(sh, con, bid, genre, died=None, uri=None, replace_id=None):
     if card is None:
         return {"تنبيه": f"الكتاب {bid} غير موجود في فهرس الشاملة على هذا الجهاز."}
     title, author, d = parse_card(card)
+    if not title or not author or title.isdigit():     # بطاقة بلا «الكتاب:» أو «المؤلف:»: من فهرس الشاملة نفسه
+        mt, ma = master_meta(getattr(sh, "root", None), bid)
+        title = title if title and not title.isdigit() else (mt or title)
+        author = author or ma or author
     died = died or d
     if not died:
         return {"تنبيه": f"لم أستخرج سنة وفاة مؤلف «{title}» من بطاقته؛ أعد التشغيل مع --died.", "البطاقة": card[:300]}

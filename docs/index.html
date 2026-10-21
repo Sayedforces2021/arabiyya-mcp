@@ -406,12 +406,12 @@ figcaption{margin-top:14px;font-size:var(--s-small);color:var(--muted);max-width
 <section class="wrap grid hero" aria-labelledby="t-hero">
   <div class="hero-text">
     <h1 id="t-hero" data-rise style="--i:0">العربية</h1>
-    <p class="lead" data-rise style="--i:1">أدوات لعلوم العربية يستدعيها النموذج اللغوي: المعاجم والمدوّنات والمحلّلات. يصوغ النموذجُ الجواب، ويصدر الحكمُ عن مصدرٍ يُراجَع أو قاعدةٍ تُختبَر.</p>
+    <p class="lead" data-rise style="--i:1">أدوات لعلوم العربية يستدعيها النموذج اللغوي، ومهاراتٌ تعلّمه كيف يحكم بها. الأداة تأتي بالدليل: نصٌّ يُراجَع، أو قاعدةٌ تُختبَر. والنموذج يحكم فيما يتعلّق بالمعنى، ويبيّن ما صحّحه على الأداة.</p>
     <div class="acts" data-rise style="--i:2">
       <a class="btn" href="#install">نزّل معالج التثبيت</a>
       <a class="tlink" href="https://github.com/ikagi07/arabiyya-mcp" target="_blank" rel="noopener">الشيفرة على GitHub</a>
     </div>
-    <p class="facts" data-rise style="--i:3">ثمانٍ وثلاثون أداة، تعمل على جهازك بلا اتصال بعد التثبيت، مع Claude ومع أي عميل يدعم بروتوكول سياق النموذج (MCP). مفتوحة المصدر برخصة MIT.</p>
+    <p class="facts" data-rise style="--i:3">تسعٌ وثلاثون أداة، ومهارات لـ Claude Code تُثبَّت معها في إضافة (Plugin) واحدة. تعمل على جهازك بلا اتصال بعد التثبيت، مع Claude ومع أي عميل يدعم بروتوكول سياق النموذج (MCP). مفتوحة المصدر برخصة MIT.</p>
   </div>
 
   <div class="hero-ui" data-rise style="--i:2">
@@ -521,8 +521,8 @@ figcaption{margin-top:14px;font-size:var(--s-small);color:var(--muted);max-width
       <p>بينهما بروتوكول سياق النموذج (MCP). وتعمل الأداة على جهاز الباحث بلا اتصال، فلا تخرج النصوص منه ولا كلفة استضافة.</p>
     </div>
     <div class="step" data-step="3">
-      <h3>ثم يصوغ النموذج الجواب، والحكم في حاشيته.</h3>
-      <p>مُخرَج الأداة ظاهر في تطبيق العميل لمن أراد مراجعته، كما تُراجَع حاشية الكتاب. وهي لا تُدرّب النموذج ولا تُغيّره، وإنما يرجع إليها كما يرجع الباحث إلى كتاب.</p>
+      <h3>ثم يحكم النموذج ويصوغ الجواب، والدليل في حاشيته.</h3>
+      <p>ما نقلته الأداة أو حسمته قاعدةٌ يُنقل كما هو. وما رجّحته آليًّا، كأبواب الإعراب، تَسِمه الأداة بذلك، فيراجعه النموذج بالمعنى، ثم يُقرّه أو يصحّحه ويذكر ما صحّحه وسببه. هذا المنهج تعلّمه إياه مهارات الإضافة. ومُخرَج الأداة ظاهر لمن أراد مراجعته، كما تُراجَع حاشية الكتاب.</p>
     </div>
   </div>
 </section>
@@ -546,7 +546,7 @@ figcaption{margin-top:14px;font-size:var(--s-small);color:var(--muted);max-width
 
 <!-- tools: branch tabs, banded list -->
 <section class="wrap grid sec tools-sec" id="tools" aria-labelledby="t-tools">
-  <h2 class="h" id="t-tools" data-reveal><span class="soft">ثمانٍ وثلاثون أداة</span><br>في عشرة فروع</h2>
+  <h2 class="h" id="t-tools" data-reveal><span class="soft">تسعٌ وثلاثون أداة</span><br>في عشرة فروع</h2>
   <div class="branches" role="tablist" aria-label="فروع الأدوات" aria-orientation="vertical" id="branches" data-reveal style="--i:1"></div>
   <div class="toolpanes" id="toolpanes" data-reveal style="--i:2"></div>
 </section>
@@ -592,7 +592,7 @@ figcaption{margin-top:14px;font-size:var(--s-small);color:var(--muted);max-width
       <tr><td class="v">15.2%</td><td class="t"><b>خطأ تشكيل الشعر</b><span>40 بيتًا مشكولًا من «أشعار»، نسبة الحروف المخطوءة</span></td></tr>
     </tbody>
   </table>
-  <p class="notes" data-reveal>الفرق بين تشكيل النثر والشعر هو علّة الضبط الموجَّه بالعروض. ونسبة النصوص قيست على شعراء أكثرهم معاصرون، فلا تُعمَّم على الشعر القديم. والإعراب والبديع والدلالة لم تُقَس بعد، لفقد مجموعات اختبار مصحّحة بمصطلح النحو العربي.</p>
+  <p class="notes" data-reveal>الفرق بين تشكيل النثر والشعر هو علّة الضبط الموجَّه بالعروض. ونسبة النصوص قيست على شعراء أكثرهم معاصرون، فلا تُعمَّم على الشعر القديم. والإعراب قيس على مجموعة ذهبية مصحّحة (83 جملة)، لكن قواعده ضُبطت عليها، وأول قياس على جمل لم تُرَ قبلُ أصاب الباب في 82 من 96 كلمة؛ ولذلك تَسِم الأداة ما رجّحته آليًّا ليراجعه النموذج. والبديع والدلالة لم تُقَس بعد.</p>
   <div class="road" id="road">
     <div class="rh2" data-reveal>
       <h3>وما لم يُقَس بعد</h3>
@@ -600,18 +600,23 @@ figcaption{margin-top:14px;font-size:var(--s-small);color:var(--muted);max-width
     </div>
     <div class="c" data-reveal style="--i:1"><h3>أُنجز</h3><ul class="l">
       <li>معالج تثبيت رسومي لويندوز وماك</li>
-      <li>ثمانٍ وثلاثون أداة بمناهجها وحدودها</li>
+      <li>تسعٌ وثلاثون أداة بمناهجها وحدودها</li>
+      <li>إضافة لـ Claude Code بمهارات: الإعراب يراجعه النموذج ويصحّحه، ووجوه الإعراب بمصادرها</li>
+      <li>سجلّ لخلاف النحاة: مسائل الإنصاف كلها والتبيين، ومواضعها في الهمع والارتشاف</li>
+      <li>تسعة عشر كتابًا في إعراب القرآن، لكل آية موضعها في كل كتاب</li>
+      <li>مجموعة اختبار للإعراب مصحّحة يدويًّا</li>
       <li>محرّك للإعلال يتحقق من نتيجته بنفسه</li>
       <li>التقطيع بالضبط الموجَّه، وعلم القافية بعيوبه</li>
       <li>التخريج الآلي للشاهد، ونسبة النصوص</li>
       <li>أداة قياس على بيانات معيارية معلنة</li>
     </ul></div>
     <div class="c" data-reveal style="--i:2"><h3>قيد العمل</h3><ul class="l">
+      <li>مهارة لكل فن: الأداة بالدليل، والنموذج بالحكم</li>
       <li>مشكِّل خاص بالشعر، يُعتمد إن فاق المشكِّل الحالي</li>
       <li>استضافة على الشبكة تُغني عن التثبيت</li>
     </ul></div>
     <div class="c later" data-reveal style="--i:3"><h3>مخطط</h3><ul class="l">
-      <li>مجموعة اختبار للإعراب مصحّحة يدويًّا</li>
+      <li>مجموعة اختبار ثالثة للإعراب والخلاف لم تُرَ قبل</li>
       <li>توسيع حالات الصرف المعيارية إلى أبوابه كلها</li>
       <li>تقويم بشري يشارك فيه متخصصون</li>
       <li>ورقة علمية تصف المنهج ونتائج القياس</li>
@@ -633,10 +638,11 @@ figcaption{margin-top:14px;font-size:var(--s-small);color:var(--muted);max-width
     <details name="faq" data-reveal style="--i:1"><summary>هل أحكامها معصومة؟<i class="pm" aria-hidden="true"></i></summary><div class="a"><p>لا. أحكامها على مراتب متفاوتة: النقل والقاعدة والترجيح، وما كان ترجيحًا يُعرض بوجوهه ولا يُجزم به.</p></div></details>
     <details name="faq" data-reveal style="--i:2"><summary>هل تغني عن المصادر؟<i class="pm" aria-hidden="true"></i></summary><div class="a"><p>لا. تختصر الطريق إلى الموضع بالجزء والصفحة، والتحقيق بعدها للباحث.</p></div></details>
     <details name="faq" data-reveal style="--i:3"><summary>هل تضمن أن ينقل النموذج مُخرَجها بأمانة؟<i class="pm" aria-hidden="true"></i></summary><div class="a"><p>لا. العبرة بمُخرَج الأداة نفسه، وهو ظاهر في تطبيق العميل لمن أراد مراجعته.</p></div></details>
-    <details name="faq" data-reveal style="--i:4"><summary>هل تعمل بلا اتصال بالشبكة؟<i class="pm" aria-hidden="true"></i></summary><div class="a"><p>نعم، بعد التثبيت. تُنزَّل البيانات مرة واحدة، ثم تعمل الأدوات على جهازك، إلا <code>lexicon_lookup</code> فإنها تبحث في موقع على الشبكة.</p></div></details>
-    <details name="faq" data-reveal style="--i:5"><summary>هل تعمل مع غير Claude؟<i class="pm" aria-hidden="true"></i></summary><div class="a"><p>نعم، مع أي عميل يدعم بروتوكول سياق النموذج. والمعالج يربطها بتطبيق Claude Desktop تلقائيًّا.</p></div></details>
-    <details name="faq" data-reveal style="--i:6"><summary>ظهرت رسالة تحذير عند فتح المعالج؟<i class="pm" aria-hidden="true"></i></summary><div class="a"><p>الملفان غير موقَّعين رقميًّا (التوقيع يكلّف مئات الدولارات سنويًّا)، فيُنبّهك النظام. والمعالج مفتوح المصدر في <a class="tlink" href="https://github.com/ikagi07/arabiyya-mcp/tree/main/installer" target="_blank" rel="noopener">المستودع</a> لتفحصه.</p><p>في ويندوز اضغط «مزيد من المعلومات» ثم «تشغيل على أي حال». وفي ماك انقر بالزر الأيمن على التطبيق واختر «فتح»، فإن لم يظهر الخيار ففي «إعدادات النظام ← الخصوصية والأمان» اضغط «فتح على أي حال».</p></div></details>
-    <details name="faq" data-reveal style="--i:7"><summary>كيف أحذفها؟<i class="pm" aria-hidden="true"></i></summary><div class="a"><p>من «التطبيقات المثبّتة» في ويندوز، أو احذف التطبيق من مجلد التطبيقات في ماك.</p></div></details>
+    <details name="faq" data-reveal style="--i:4"><summary>ما الفرق بين الأداة والمهارة؟<i class="pm" aria-hidden="true"></i></summary><div class="a"><p>الأداة برنامج يُخرج دليلًا يُتحقَّق منه: نصًّا من كتاب بجزئه وصفحته، أو حكمًا من قاعدة. والمهارة تعليمات للنموذج: متى يستدعي الأداة، وكيف ينقل مُخرَجها، وما الذي يحكم فيه هو بالمعنى. فلا تُغني المهارة عن الأداة، لأن النموذج إذا أجاب من حفظه قد ينسب قولًا لم يُقَل أو صفحةً لا وجود لها.</p></div></details>
+    <details name="faq" data-reveal style="--i:5"><summary>هل تعمل بلا اتصال بالشبكة؟<i class="pm" aria-hidden="true"></i></summary><div class="a"><p>نعم، بعد التثبيت. تُنزَّل البيانات مرة واحدة، ثم تعمل الأدوات على جهازك، إلا <code>lexicon_lookup</code> فإنها تبحث في موقع على الشبكة.</p></div></details>
+    <details name="faq" data-reveal style="--i:6"><summary>هل تعمل مع غير Claude؟<i class="pm" aria-hidden="true"></i></summary><div class="a"><p>نعم، مع أي عميل يدعم بروتوكول سياق النموذج. والمعالج يربطها بتطبيق Claude Desktop تلقائيًّا.</p></div></details>
+    <details name="faq" data-reveal style="--i:7"><summary>ظهرت رسالة تحذير عند فتح المعالج؟<i class="pm" aria-hidden="true"></i></summary><div class="a"><p>الملفان غير موقَّعين رقميًّا (التوقيع يكلّف مئات الدولارات سنويًّا)، فيُنبّهك النظام. والمعالج مفتوح المصدر في <a class="tlink" href="https://github.com/ikagi07/arabiyya-mcp/tree/main/installer" target="_blank" rel="noopener">المستودع</a> لتفحصه.</p><p>في ويندوز اضغط «مزيد من المعلومات» ثم «تشغيل على أي حال». وفي ماك انقر بالزر الأيمن على التطبيق واختر «فتح»، فإن لم يظهر الخيار ففي «إعدادات النظام ← الخصوصية والأمان» اضغط «فتح على أي حال».</p></div></details>
+    <details name="faq" data-reveal style="--i:8"><summary>كيف أحذفها؟<i class="pm" aria-hidden="true"></i></summary><div class="a"><p>من «التطبيقات المثبّتة» في ويندوز، أو احذف التطبيق من مجلد التطبيقات في ماك.</p></div></details>
   </div>
 </section>
 
@@ -645,7 +651,7 @@ figcaption{margin-top:14px;font-size:var(--s-small);color:var(--muted);max-width
   <div class="say">
     <h2 id="t-install" data-reveal>نزّل، وافتح، وانتظر</h2>
     <p class="lead" data-reveal style="--i:1">معالج رسومي بالعربية يتولّى كل شيء، بلا سطر أوامر. يقيس تقدّمه أمامك، ويربط الأداة بـ Claude في آخره.</p>
-    <p class="fine" data-reveal style="--i:2">يلزم تطبيق <a class="tlink" href="https://claude.ai/download" target="_blank" rel="noopener">Claude Desktop</a>، واتصالٌ بالشبكة أثناء التثبيت وحده. وتستطيع أن <a class="tlink" href="wizard-preview.html">تجرّب المعالج هنا</a> قبل تنزيله.</p>
+    <p class="fine" data-reveal style="--i:2">يلزم تطبيق <a class="tlink" href="https://claude.ai/download" target="_blank" rel="noopener">Claude Desktop</a>، واتصالٌ بالشبكة أثناء التثبيت وحده. وفي Claude Code تُثبَّت الإضافة بمهاراتها بأمرين: <code dir="ltr">/plugin marketplace add ikagi07/arabiyya-mcp</code> ثم <code dir="ltr">/plugin install arabiyya@arabiyya</code>. وتستطيع أن <a class="tlink" href="wizard-preview.html">تجرّب المعالج هنا</a> قبل تنزيله.</p>
   </div>
   <div class="wizard" data-ui data-reveal style="--i:1">
     <div class="bar"><i aria-hidden="true">ع</i><span>العربية: معالج التثبيت</span></div>
@@ -738,14 +744,15 @@ const TIERS = {
     ['كيف يُعرض', 'بلفظه، معزوًّا إلى موضعه بالجزء والصفحة', 'النتيجة بخطواتها، كما يعرضها أهل الفن', 'بوجوهه، ولا يُجزم به'],
     ['إذا أُعيد', 'النص نفسه ما دامت النسخة واحدة', 'النتيجة نفسها، وتُختبر بحالات معيارية', 'يتغيّر بتغيّر السياق، ويضعف خارج جنس التدريب'],
     ['جهة الخطأ', 'النسخة الرقمية: تصحيفٌ أو نقص، أو تقطيع المعجم إلى مواد', 'قاعدة ناقصة أو حالة لم تُستوعب، فتُصلَح القاعدة نفسها', 'الخروج عن جنس بيانات التدريب، كالشعر والتراكيب النادرة'],
-    ['من أدواته', 'maajim lughawiyyat quran_word quran_root search_poetry corpus_concordance', 'mizan mushtaqqat taqalib analyze_qafiya huruf phonetics detect_badi', 'diacritize irab scan_poem semantic_change attribute_author takhrij_shahid']
+    ['من أدواته', 'maajim lughawiyyat quran_word quran_root search_poetry corpus_concordance wujuh_irab', 'mizan mushtaqqat taqalib analyze_qafiya huruf phonetics detect_badi', 'diacritize irab scan_poem semantic_change attribute_author takhrij_shahid']
   ]
 };
 const BRANCHES = [
   ['الصرف والميزان', 'التحليل الصرفي بلا سياق وبالسياق، والميزان بأصل الكلمة وخطوات إعلالها، لا يُقبل إلا إذا أعاد الأصلَ إلى الكلمة نفسها.', [
     ['analyze_word', 'تحليل الكلمة المنفردة بكل ما تحتمله من وجوه'], ['analyze_text', 'تحليل النص صرفيًّا في سياقه'], ['root_family', 'أسرة الجذر: ما ورد من مشتقاته'], ['conjugate', 'تصريف الفعل في الأزمنة والضمائر'], ['mizan', 'الميزان بالأصل وخطوات الإعلال والإبدال والإدغام بعبارة الصرفيين'], ['mushtaqqat', 'المشتقات القياسية من الفعل']]],
-  ['النحو والإعراب', 'محلّل التبعية تُنقل علاقاته إلى أبواب النحو العربي.', [
-    ['irab', 'إعراب الجملة كلمةً كلمة: الباب والحكم والعلامة الأصلية أو الفرعية، وضبط الأواخر']]],
+  ['النحو والإعراب', 'محلّل التبعية تُنقل علاقاته إلى أبواب النحو بقواعد، وتُوسَم كل كلمة: أحسمت بابَها قاعدةٌ أم رجّحه المحلّل، فيراجع النموذج الثانية بالمعنى. وسجلٌّ لخلاف النحاة يُقرأ من نصوص كتبه.', [
+    ['irab', 'إعراب الجملة كلمةً كلمة: الباب والحكم والعلامة الأصلية أو الفرعية، وضبط الأواخر، ووسم ما يُراجَع بالمعنى'],
+    ['wujuh_irab', 'وجوه الإعراب وخلاف النحاة في موضع من الجملة، بأقوالهم من نص الإنصاف والتبيين، ومواضعها في الهمع والارتشاف؛ وفي الآية ما قاله فيها تسعة عشر كتابًا من كتب إعراب القرآن، من الفراء إلى السمين الحلبي، بالجزء والصفحة']]],
   ['الضبط والعروض', 'إذا لم يستقم البيت بُحث عن أقل تغيير في الضبط يقيم وزنه، ويُعرض على أنه ضبطٌ يقتضيه الوزن لا رواية محقّقة.', [
     ['diacritize', 'التشكيل الآلي للنص'], ['scan_verse', 'تقطيع البيت: البحر والتفعيلات والزحافات والعلل والقافية'], ['scan_poem', 'تقطيع القصيدة وبيان المختلّ، مع الضبط الموجَّه بالوزن']]],
   ['القافية والبديع', 'علم القافية بعناصره وعيوبه، ورصد مرشّحات البديع.', [

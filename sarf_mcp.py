@@ -37,9 +37,9 @@ from camel_tools.morphology.database import MorphologyDB
 from camel_tools.morphology.analyzer import Analyzer
 from camel_tools.tokenizers.word import simple_word_tokenize
 
-INSTRUCTIONS = """أداة «العربية»: عُدّة باحث في علوم العربية تعمل على الجهاز (38 أداة).
+INSTRUCTIONS = """أداة «العربية»: عُدّة باحث في علوم العربية تعمل على الجهاز (39 أداة).
 - الصرف: analyze_word، analyze_text، root_family، conjugate، mizan (الميزان مع الأصل وخطوات الإعلال والإبدال)، mushtaqqat (المشتقات القياسية)، taqalib (تقاليب الجذر).
-- النحو: irab (إعراب الجملة كلمةً كلمة بالأبواب والعلامات، مع ضبط الأواخر).
+- النحو: irab (إعراب الجملة كلمةً كلمة بالأبواب والعلامات، مع ضبط الأواخر)، wujuh_irab (وجوه الإعراب وخلاف النحاة في مواضع الجملة بقائليها ومصادرها، بلا ترجيح).
 - الضبط والعروض والقافية: diacritize، scan_verse وscan_poem (مع الضبط الموجَّه بالوزن)، analyze_qafiya (عناصر القافية وعيوبها).
 - الأصوات: phonetics (IPA والمقاطع والنبر)، huruf (المخارج والصفات).
 - البلاغة: detect_badi (الجناس والطباق والمقابلة والتصريع وردّ العجز والسجع والاقتباس).
@@ -3123,6 +3123,9 @@ def _bare_ar(s: str) -> str:
     return _norm(_strip_tashkeel(s or ""))
 
 
+_FIVE_PRON = re.compile(r"^(أب|أخ|حم|ذ)([واي])(ه|ها|هما|هم|هن|ك|كما|كم|كن|نا)$")   # «أخوك»، «أبيهما»: من الأسماء الخمسة مضافًا إلى ضمير
+
+
 def _sign(w, f, case_or_mood: str) -> str:
     """علامة الإعراب الأصلية أو الفرعية بحسب نوع الكلمة."""
     t = _strip_tashkeel(w.text or "")
@@ -3144,12 +3147,19 @@ def _sign(w, f, case_or_mood: str) -> str:
         return ""
     if num == "Dual":
         return "الألف لأنه مثنى" if case_or_mood == "Nom" else "الياء لأنه مثنى"
+    if num == "Plur" and gen is None and w.upos in ("NOUN", "ADJ") and t.removeprefix("ال") in (_bare_ar(w.lemma) + "ون", _bare_ar(w.lemma) + "ين"):
+        gen = "Masc"                                   # «المعلمين» من «معلم»: سالم لا مكسَّر («المساكين» من «مسكين»)
     if num == "Plur" and gen == "Masc" and t.endswith(("ون", "ين", "و", "ي")) and w.upos in ("NOUN", "ADJ", "PROPN"):
         return "الواو لأنه جمع مذكر سالم" if case_or_mood == "Nom" else "الياء لأنه جمع مذكر سالم"
     if num == "Plur" and gen == "Fem" and t.endswith("ات") and case_or_mood == "Acc":
         return "الكسرة نيابة عن الفتحة لأنه جمع مؤنث سالم"
     if _bare_ar(w.lemma) in ("اب", "اخ", "حم", "فو", "ذو") and t.endswith(("و", "ا", "ي")) and f.get("Definite") == "Cons":
         return {"Nom": "الواو", "Acc": "الألف", "Gen": "الياء"}[case_or_mood] + " لأنه من الأسماء الخمسة"
+    m5 = _FIVE_PRON.match(t)
+    if m5:
+        return {"و": "الواو", "ا": "الألف", "ي": "الياء"}[m5.group(2)] + " لأنه من الأسماء الخمسة"
+    if t.endswith("ا") and case_or_mood == "Acc" and not t.startswith("ال") and f.get("Definite") != "Cons":
+        return "الفتحة الظاهرة على آخره"            # ألف تنوين النصب («زيدًا»، «باردًا»)، لا ألف مقصورة
     if t.endswith(("ى", "ا")) and len(t) > 2 and not t.endswith("اء"):
         return {"Nom": "الضمة", "Acc": "الفتحة", "Gen": "الكسرة"}[case_or_mood] + " المقدرة على الألف للتعذر"
     if t.endswith("ي") and w.upos in ("NOUN", "ADJ") and f.get("Definite") in ("Def", "Cons") and case_or_mood != "Acc" and len(t) > 3:
@@ -3715,8 +3725,8 @@ def _irab_syntax_rules(doc, sentence: str):
                 for sf, needs in (("هما", ""), ("كما", ""), ("هم", ""), ("كم", ""), ("ها", ""), ("ه", "ُِ"), ("ك", "َِ")):
                     if t.endswith(sf) and len(t) - len(sf) >= 2:
                         before = L[len(t) - len(sf) - 1]
-                        last_ok = not needs or mk(L[-1]) in needs
-                        if mk(before) in "َُِ" and last_ok and not (sf in ("ه", "ك") and "ّ" in before[1]):
+                        last_ok = not needs or (mk(L[-1]) or "-") in needs
+                        if (mk(before) or "-") in "َُِ" and last_ok and not (sf in ("ه", "ك") and "ّ" in before[1]):
                             c = {"ُ": "Nom", "َ": "Acc", "ِ": "Gen"}[mk(before)]
                             w.pron_suffix = sf
                             w.feats = ""
@@ -3738,6 +3748,8 @@ def _irab_syntax_rules(doc, sentence: str):
 
             # ── الفعل المشكول على وزنه في صدر الكلام أو بعد الواو والفاء، وقد عدّه المحلل اسمًا ──
             vw_ = next((x for x in words if x.upos not in ("CCONJ", "ADP", "PART", "PRON", "PUNCT")), w)
+            if vw_.upos == "INTJ" and L:          # «اسْمَعْ» عدّه المحلل اسم صوت
+                vw_.upos = "X"
             psuf = _strip_tashkeel(words[-1].text) if len(words) > 1 and words[-1].upos == "PRON" and vw_ is not words[-1] else ""
             if core_l and len(core_l) >= 3 and vw_.upos in ("NOUN", "X", "ADJ", "PROPN", "VERB") and not tanwin(tok) \
                     and not core.startswith("ال") and core not in ("نعم", "بئس"):
@@ -3804,7 +3816,7 @@ def _irab_syntax_rules(doc, sentence: str):
                     and t[:1] in "أيتن":
                 words[1].irab_override = ""
                 words[0].text = t
-            if pt in ("لا", "لم") and len(words) == 1 and t[:1] in "أيتن" and L and mk(L[0]) in "َُ" and vowel(tok) == "a" \
+            if pt in ("لا", "لم") and len(words) == 1 and t[:1] in "أيتن" and L and (mk(L[0]) or "-") in "َُ" and vowel(tok) == "a" \
                     and not tanwin(tok) and not (nxt is not None and bare(nxt).startswith("ال")):
                 vw2 = words[0]
                 vw2.upos, vw2.feats = "VERB", ""
@@ -3812,6 +3824,33 @@ def _irab_syntax_rules(doc, sentence: str):
                 vw2.jus_weak, vw2.mood_rule = True, "haraka"
             if pt == "لا" and len(words) >= 1 and words[0].upos == "VERB" and _feats(words[0]).get("Mood") == "Jus":
                 words[0].mood_note_jus = "بـ«لا» الناهية"
+
+            # ── «اللهم»: منادى، والميم المشددة عوض عن حرف النداء ──
+            if t == "اللهم":
+                w.irab_override = "لفظ الجلالة منادى مبني على الضم في محل نصب، والميم المشددة عوض عن حرف النداء المحذوف (وفي الميم خلاف)"
+                w.upos, w.deprel = "PROPN", "vocative"
+
+            # ── الجار المتصل بضمير ولم يقسّمه المحلل: «لي»، «له»، «بها» ──
+            if len(words) == 1 and t[:1] in "لبك" and t[1:] in ("ي", "ه", "ها", "ك", "نا", "كم", "هم", "هما", "كن", "هن") and w.upos in ("PRON", "X", "NOUN"):
+                jar_n = {"ل": "اللام", "ب": "الباء", "ك": "الكاف"}[t[0]]
+                w.irab_override = f"{jar_n} حرف جر مبني لا محل له من الإعراب، و«{t[1:]}» ضمير متصل مبني في محل جر بالحرف"
+
+            # ── الأمر بهمزة الوصل وقد عدّه المحلل مضارعًا للمتكلم («اغفر»): المضارع للمتكلم همزته قطع «أ» ──
+            if w.upos == "VERB" and _feats(w).get("Aspect") == "Imp" and core[:1] == "ا" and not core.startswith("ال") \
+                    and len(core) >= 3 and not (L and (mk(core_l[0]) or "-") in "َُ"):
+                w.feats = ""
+                _set_feat(w, "Mood", "Imp")
+
+            # ── الماضي غير المشكول المسند إلى التاء ولم يعرفه المحلل، والجملة بلا فعل: «سرت والنيل» ──
+            if k == 0 and len(words) == 1 and w.upos == "X" and not L and t.endswith("ت") and 3 <= len(t) <= 5 \
+                    and not any(x.upos == "VERB" for x in s_.words):
+                try:
+                    if any(a.get("pos") == "verb" for a in _analyzer().analyze(t)):
+                        w.upos, w.feats = "VERB", ""
+                        _set_feat(w, "Aspect", "Perf")
+                        w.post = getattr(w, "post", "") + "، والتاء ضمير متصل مبني في محل رفع فاعل"
+                except Exception:
+                    pass
 
             # ── «نعم» و«بئس» ──
             if core in ("نعم", "بئس") and nxt is not None and bare(nxt).startswith("ال"):
@@ -3868,7 +3907,7 @@ def _irab_syntax_rules(doc, sentence: str):
                     o = main_word(after)
                     o.role_override, o.deprel = "مفعول به", "obj"
                     _set_feat(o, "Case", "Acc")
-                elif main_word(nxt).upos == "VERB" or (nL and len(nL) >= 3 and mk(nL[0]) in "َُ" and nt[:1] in "يتنأ"):
+                elif main_word(nxt).upos == "VERB" or (nL and len(nL) >= 3 and (mk(nL[0]) or "-") in "َُ" and nt[:1] in "يتنأ"):
                     if not question:
                         w.irab_override = "حرف نفي مبني على السكون لا محل له من الإعراب"
 
@@ -4021,7 +4060,7 @@ def _irab_syntax_rules(doc, sentence: str):
 
             # ── الاسم المرفوع قبل فعله مبتدأ، والجملة الفعلية خبره: «الطالبُ كتبَ الدرسَ» ──
             n = main_word(tok)
-            if nominal(n) and (n.deprel or "").startswith("nsubj") and not getattr(n, "role_override", None):
+            if nominal(n) and (n.deprel or "").startswith("nsubj") and not getattr(n, "role_override", None)                     and getattr(n, "irab_override", None) is None:
                 h = by_id.get(n.head)
                 if h is not None and h.upos == "VERB" and h.id > n.id and not pt and vowel(tok) in (None, "u") \
                         and not any(_strip_tashkeel(x.text) in _NASIKH_INNA for x in s_.words if x.id < n.id):
@@ -4079,6 +4118,23 @@ def _irab_syntax_rules(doc, sentence: str):
                 if c:
                     _set_feat(n, "Case", c)
 
+            # ── المفعول معه بالحركة: اسم منصوب بعد الواو وما قبله مرفوع، والمنصوب لا يُعطف على المرفوع («جاء الأميرُ والجيشَ») ──
+            if t[:1] == "و" and prv is not None and vowel(tok) == "a" and vowel(prv) == "u" and nominal(main_word(prv)) \
+                    and not getattr(n, "role_override", None) and not getattr(n, "irab_override", None):
+                if len(words) == 2 and _strip_tashkeel(words[0].text) == "و" and nominal(words[1]):
+                    words[0].irab_override = "الواو واو المعية حرف مبني على الفتح لا محل له من الإعراب"
+                    words[1].role_override = "مفعول معه"
+                    _set_feat(words[1], "Case", "Acc")
+                elif len(words) == 1 and nominal(w) and len(t) > 3:
+                    w.pre = f"الواو واو المعية حرف مبني على الفتح لا محل له من الإعراب، و«{t[1:]}» "
+                    w.role_override = "مفعول معه"
+                    _set_feat(w, "Case", "Acc")
+
+            # ── «والنيل» بلا شكل ولم يعرفه المحلل: العطف والمعية لا يُفرَّق بينهما إلا بالحركة، فيُقال ذلك ولا يُخمَّن ──
+            if not voweled and len(words) == 1 and w.upos in ("X", "NOUN") and (w.deprel or "") in ("dep", "root", "nmod")                     and t.startswith("وال") and len(t) > 4 and prv is not None and not getattr(w, "role_override", None):
+                w.irab_override = (f"الواو عاطفة أو للمعية، و«{t[1:]}» معطوف على ما قبله إن كان مرفوعًا، أو مفعول معه إن كان منصوبًا "
+                                   "والفعل لا يقع منه؛ والحكم بالحركة، فاشكل الجملة")
+
             # ── المعطوف المرفوع بعد الواو وقد جعله المحلل مضافًا إليه ──
             if len(words) == 2 and _strip_tashkeel(words[0].text) == "و" and nominal(words[1]) and vowel(tok) == "u" \
                     and (words[1].deprel or "").startswith("nmod"):
@@ -4108,7 +4164,7 @@ def _irab_syntax_rules(doc, sentence: str):
                 _set_feat(n, "Case", "Acc")
 
             if prefix and len(words) == 2 and words[1].upos in ("NOUN", "ADJ", "X") and core[:1] in "أيتن" and len(core) >= 3 \
-                    and core_l and mk(core_l[0]) in "َُ" and not tanwin(tok) and not core.endswith(("ة", "ات")) and vowel(tok) in ("a", "u", "o") \
+                    and core_l and (mk(core_l[0]) or "-") in "َُ" and not tanwin(tok) and not core.endswith(("ة", "ات")) and vowel(tok) in ("a", "u", "o") \
                     and prv is not None and any(x.upos == "VERB" for x in prv.words):
                 vw3 = words[1]
                 vw3.upos, vw3.feats = "VERB", ""
@@ -4125,7 +4181,7 @@ def _irab_syntax_rules(doc, sentence: str):
                         vw3.mood_note = "بأن مضمرة وجوبًا بعد واو المعية"
 
             if len(words) == 1 and w.upos in ("X", "NOUN", "ADJ") and len(t) >= 4 and t[0] in "فو" and t[1] in "أيتن" and L \
-                    and mk(L[0]) == "َ" and mk(L[1]) in "َُ" and vowel(tok) == "a" and not tanwin(tok) and not t.endswith(("ة", "ات")) \
+                    and mk(L[0]) == "َ" and (mk(L[1]) or "-") in "َُ" and vowel(tok) == "a" and not tanwin(tok) and not t.endswith(("ة", "ات")) \
                     and prv is not None and any(x.upos == "VERB" for x in prv.words):
                 pv = next(x for x in prv.words if x.upos == "VERB")
                 if _feats(pv).get("Mood") in ("Imp", "Jus") or pt.startswith("ا"):
@@ -4140,7 +4196,7 @@ def _irab_syntax_rules(doc, sentence: str):
                         w.mood_note = "بأن مضمرة وجوبًا بعد واو المعية"
 
             # ── المضارع المشكول الذي لم يعرفه المحلل («أَظُنُّ» بعد «كنتُ»)، والجملة خبر «كان» ──
-            if len(words) == 1 and w.upos in ("X", "NOUN", "ADJ") and not getattr(w, "role_override", None) and L and len(L) >= 3 and t[0] in "أيتن" and mk(L[0]) in "َُ" \
+            if len(words) == 1 and w.upos in ("X", "NOUN", "ADJ") and not getattr(w, "role_override", None) and L and len(L) >= 3 and t[0] in "أيتن" and (mk(L[0]) or "-") in "َُ" \
                     and not t.startswith("ال") and vowel(tok) in ("u", "a", "o") and not tanwin(tok) and (w.deprel or "").startswith(("advcl", "ccomp", "xcomp", "dep", "root")):
                 w.upos, w.feats = "VERB", ""
                 _set_feat(w, "Aspect", "Imp")
@@ -4181,7 +4237,7 @@ def _irab_syntax_rules(doc, sentence: str):
             t0 = bare(toks[0])
             v1 = next((x for x in t1.words if x.upos == "VERB"), None)
             b1, L1 = bare(t1), lts(t1)
-            if v1 is None and len(t1.words) == 1 and L1 and b1[:1] in "أيتن" and 3 <= len(b1) <= 5 and mk(L1[0]) in "َُ" \
+            if v1 is None and len(t1.words) == 1 and L1 and b1[:1] in "أيتن" and 3 <= len(b1) <= 5 and (mk(L1[0]) or "-") in "َُ" \
                     and not any(x.upos == "VERB" for x in toks[0].words) and not b1.endswith(("كم", "هم", "ها", "نا", "هما")) \
                     and vowel(t1) in ("i", "o") and not tanwin(t1) and not b1.startswith("ال"):
                 v1 = t1.words[0]
@@ -4192,7 +4248,7 @@ def _irab_syntax_rules(doc, sentence: str):
                 if vowel(t1) == "i" and not nx.startswith("ا"):
                     v1.jus_weak = True
             after_sabab = any("السببية" in str(getattr(x, "irab_override", "")) or "المعية" in str(getattr(x, "irab_override", "")) for x in t1.words)
-            if v1 is not None and len(t1.words) == 1 and b1[:1] in "أيتن" and vowel(t1) in ("i", "o") and L1 and mk(L1[0]) in "َُ":
+            if v1 is not None and len(t1.words) == 1 and b1[:1] in "أيتن" and vowel(t1) in ("i", "o") and L1 and (mk(L1[0]) or "-") in "َُ":
                 v1.feats = ""
                 _set_feat(v1, "Aspect", "Imp"); _set_feat(v1, "Mood", "Jus")
                 v1.mood_rule = "haraka"
@@ -4241,6 +4297,9 @@ def _irab_word(w, sent, by_id, kids) -> str:
     if ov is not None:
         return ov
     r = _irab_word_core(w, sent, by_id, kids)
+    m5 = _FIVE_PRON.match(_strip_tashkeel(w.text))
+    if m5 and r and "الأسماء الخمسة" in r and "مضاف إليه" not in r:
+        r = r.replace("، وهو مضاف", "") + f"، وهو مضاف، و«{m5.group(3)}» ضمير متصل مبني في محل جر مضاف إليه"
     if w.upos != "VERB" and r and getattr(w, "pre", ""):
         r = w.pre + r
     if r and getattr(w, "post_note", ""):
@@ -4291,8 +4350,11 @@ def _irab_word_core(w, sent, by_id, kids) -> str:
         if role:
             return f"{kind + ' ' if kind else ''}مبني {_CASE_MAHALL.get(case, '')} {role}".replace("  ", " ").strip()
         return f"{kind + ' ' if kind else ''}مبني".strip()
+    generic = not role
     if not role:
         role = {"Nom": "اسم مرفوع", "Acc": "اسم منصوب", "Gen": "اسم مجرور"}.get(case, "")
+    if case in _CASE_AR and generic:
+        return f"{role} وعلامة {({'Nom': 'رفعه', 'Acc': 'نصبه', 'Gen': 'جره'})[case]} {_sign(w, f, case)}" + ("، وهو مضاف" if f.get("Definite") == "Cons" else "")
     if case in _CASE_AR:
         sign = getattr(w, "sign_override", None) or _sign(w, f, case)
         verb = {"Nom": "رفعه", "Acc": "نصبه", "Gen": "جره"}[case]
@@ -4320,20 +4382,40 @@ def _end_mark(w, case_or_mood) -> str:
     return m[1] if ind else m[0]
 
 
+_RULE_ATTRS = ("irab_override", "role_override", "mood_note", "mood_note_jus", "jus_weak", "mood_rule", "zarf")
+
+
+def _irab_snapshot(w):
+    return w.head          # تغيير العامل قاعدةٌ في البنية؛ أما تغيير العلاقة وحدها («منصوب فهو مفعول به») فظنّ
+
+
+def _irab_certainty(w, before, standalone: bool) -> str:
+    """«بقاعدة» إن حسمت قاعدةٌ بابَ الكلمة، أو كانت حرف جر، أو حرف عطف مستقلًّا؛ وإلا فـ«ترجيح آلي».
+    حركة المستخدم وحدها تحسم الحكم لا الباب («نفسًا» منصوبة، أمفعول هي أم تمييز؟)، فلا تكفي."""
+    if w.upos == "ADP" or w.deprel == "case" or (standalone and (w.upos == "CCONJ" or w.deprel == "cc")):
+        return "بقاعدة"                      # الواو المتصلة قد يقتطعها المحلل من الكلمة («ورثة»)، فلا تُحسم
+    if any(getattr(w, a, None) for a in _RULE_ATTRS) or (before is not None and before != _irab_snapshot(w)):
+        return "بقاعدة"
+    return "ترجيح آلي"
+
+
 @mcp.tool()
 def irab(sentence: str, detail: bool = True) -> dict:
     """إعراب الجملة كلمةً كلمة: الباب النحوي (فاعل، نائب فاعل، مبتدأ، خبر، اسم كان وخبرها، اسم إنّ وخبرها، مفعول به، مفعول مطلق، ظرف، حال، تمييز، نعت، معطوف، بدل، مضاف إليه، اسم مجرور...)
     والحكم (مرفوع، منصوب، مجرور، مجزوم، مبني) وعلامة الإعراب الأصلية أو الفرعية (الألف للمثنى، والواو والياء لجمع المذكر، والكسرة نيابة عن الفتحة لجمع المؤنث، وثبوت النون وحذفها للأفعال الخمسة، والمقدّرة للتعذر والثقل...)،
     مع الضبط المقترح لأواخر الكلمات بحسب مواقعها.
     يعتمد على المحلل النحوي Stanza (نموذج AraELECTRA المدرَّب على شجرة PADT في Universal Dependencies)، ثم تُنقل علاقاته إلى أبواب النحو العربي بقواعد.
+    كل جزء موسوم بـ«اليقين»: «بقاعدة» (حسمت قاعدةٌ بابَه) أو «ترجيح آلي» (باب المحلل وحده، فيُراجَع بالمعنى).
     sentence: جملة أو جمل قليلة. detail: يعرض علاقة كل كلمة بعاملها في الشجرة."""
     try:
         nlp, pkg = _stanza()
     except Exception as e:
         return {"تنبيه": str(e)}
-    doc = _irab_syntax_rules(_irab_haraka_rules(_irab_rules(nlp(_strip_tashkeel(sentence))), sentence), sentence)
+    doc = nlp(_strip_tashkeel(sentence))
+    before = {(i, w.id): _irab_snapshot(w) for i, s_ in enumerate(doc.sentences) for w in s_.words}
+    doc = _irab_syntax_rules(_irab_haraka_rules(_irab_rules(doc), sentence), sentence)
     out_sents = []
-    for s_ in doc.sentences:
+    for si, s_ in enumerate(doc.sentences):
         by_id = {w.id: w for w in s_.words}
         kids = {}
         for w in s_.words:
@@ -4345,14 +4427,14 @@ def irab(sentence: str, detail: bool = True) -> dict:
                 i = _irab_word(w, s_, by_id, kids)
                 if not i:
                     continue
-                part = {"الجزء": w.text, "الإعراب": i}
+                part = {"الجزء": w.text, "الإعراب": i, "اليقين": _irab_certainty(w, before.get((si, w.id)), len(tok.words) == 1)}
                 if detail:
                     head = by_id.get(w.head)
                     part["العامل في الشجرة"] = head.text if head else "—"
                     part["العلاقة (UD)"] = w.deprel
                 parts.append(part)
             if not parts and not all(w.upos == "PUNCT" for w in tok.words):
-                parts.append({"الجزء": tok.text, "الإعراب": "لم يتبيّن للمحلل إعرابها؛ فراجعها"})   # لا تسقط كلمة من الإعراب
+                parts.append({"الجزء": tok.text, "الإعراب": "لم يتبيّن للمحلل إعرابها؛ فراجعها", "اليقين": "ترجيح آلي"})   # لا تسقط كلمة من الإعراب
             if parts:
                 rows.append({"الكلمة": tok.text, "الأجزاء": parts} if len(parts) > 1 else {"الكلمة": tok.text, **parts[0]})
         # الضبط المقترح للأواخر
@@ -4365,10 +4447,240 @@ def irab(sentence: str, detail: bool = True) -> dict:
                 cm = f.get("Case") or case if w.upos != "VERB" else (f.get("Mood") or "Ind")
                 seg.append(w.text + (_end_mark(w, cm) if w.upos in ("NOUN", "ADJ", "PROPN", "VERB") and f.get("Aspect") != "Perf" else ""))
             voc.append("".join(seg) if len(tok.words) > 1 else seg[0])
-        out_sents.append({"الجملة": s_.text, "الإعراب": rows, "ضبط الأواخر المقترح": " ".join(voc)})
+        review = [row["الكلمة"] for row in rows if any(p["اليقين"] != "بقاعدة" for p in row.get("الأجزاء", [row]))]
+        out_sents.append({"الجملة": s_.text, "الإعراب": rows, "ضبط الأواخر المقترح": " ".join(voc),
+                          "يُراجَع بالمعنى": review})
     return {"الجمل": out_sents, "النموذج": f"Stanza ({pkg})",
+            "اليقين": "«بقاعدة»: حسمت بابَه قاعدة نحوية صريحة، أو هو حرف جر أو عطف مستقل. وحركة المستخدم تحسم الحكم لا الباب. "
+                      "«ترجيح آلي»: باب اختاره المحلل الإحصائي وحده، فيُراجَع بالمعنى قبل اعتماده؛ وهذه الكلمات مجموعة في «يُراجَع بالمعنى».",
             "تنبيه": "الإعراب آليّ: المحلل مدرَّب على نصوص صحفية معاصرة، فتقلّ دقته في الشعر والتقديم والتأخير؛ وما احتمل وجهين (كالحال والتمييز، والمفعول لأجله، والظرف) يُذكر بوجهيه. "
                       "فراجع الإعراب على قواعد النحو قبل اعتماده، ولا سيما في النصوص التراثية."}
+
+
+# ───────────── وجوه الإعراب وخلاف النحاة ─────────────
+
+# علامة في وصف الإعراب ← مفتاح التركيب في سجلّ الوجوه (data/khilaf/wujuh.jsonl)
+_KHILAF_MARKS = [
+    ("مفعول معه", "مفعول معه"), ("بعد واو المعية", "مضارع بعد واو المعية"), ("بعد فاء السببية", "مضارع بعد فاء السببية"),
+    ("بعد لام التعليل", "مضارع بعد لام التعليل"), ("اسم «لا» النافية للجنس", "اسم لا النافية للجنس"),
+    ("منادى مفرد علم", "المنادى المفرد العلم"), ("لإنشاء المدح", "نعم وبئس"), ("لإنشاء الذم", "نعم وبئس"),
+    ("لإنشاء التعجب", "التعجب"), ("«ما» التعجبية", "ما التعجبية"), ("المخصوص ب", "المخصوص بالمدح"), ("مفعول به لفعل محذوف وجوبًا يفسّره", "الاشتغال"),
+    ("فاعل لفعل محذوف يفسّره", "الاسم بعد إن الشرطية"), ("ضمير فصل", "ضمير الفصل"), ("اسم شرط", "اسم الشرط مبتدأ"),
+    ("وهو جواب الشرط", "جواب الشرط المجزوم"), ("«إذا» الفجائية", "إذا الفجائية"), ("أجازه الكسائي", "المسألة الزنبورية"),
+    ("بدل (أو عطف بيان)", "البدل أو عطف البيان"), ("مستثنى بـ«إلا»", "المستثنى بإلا"),
+]
+_KHILAF_WORDS = {"اللهم": "اللهم", "مذ": "مذ ومنذ", "منذ": "مذ ومنذ", "حاشا": "حاشا", "حاشى": "حاشا", "كم": "كم", "سوى": "سوى"}
+
+
+def _khilaf_positions(sentence: str) -> list:
+    """[(الكلمة، وصف إعرابها، [مفاتيح التراكيب])] من إعراب الجملة بأداة irab."""
+    r = irab(sentence, detail=False)
+    rows = [row for s_ in r.get("الجمل", []) for row in s_["الإعراب"]]
+    descs = [(row["الكلمة"], " | ".join(p["الإعراب"] for p in row["الأجزاء"]) if "الأجزاء" in row else row["الإعراب"]) for row in rows]
+    out = []
+    for i, (w, d) in enumerate(descs):
+        keys = [k for m, k in _KHILAF_MARKS if m in d]
+        b = _strip_tashkeel(w)
+        if b in _KHILAF_WORDS:
+            keys.append(_KHILAF_WORDS[b])
+        prev = _strip_tashkeel(descs[i - 1][0]) if i else ""
+        if "امتناع لوجود" in (descs[i - 1][1] if i else "") and "مبتدأ" in d:
+            keys.append("الاسم بعد لولا")
+        if prev == "إلا" and "بدل" in d:
+            keys.append("الإتباع بعد إلا")       # المرفوع بعد «إلا»: وجه الإتباع، لا مسألة عامل النصب
+        if "اسم استفهام" in d and i + 1 < len(descs) and _strip_tashkeel(descs[i + 1][0]) == "ذا":
+            keys.append("من ذا")
+        if "معطوف" in d and any(_strip_tashkeel(x)[:2] in ("إن", "أن") and "حرف ناسخ" in y for x, y in descs[:i]) \
+                and any("خبر إنّ" in y or "خبر «إنّ»" in y or "خبر أنّ" in y for _, y in descs[i + 1:]):
+            keys.append("العطف على اسم إن قبل الخبر")
+        if keys:
+            out.append((w, d, list(dict.fromkeys(keys))))
+    return out
+
+
+def _cite_book(title, author, died):
+    name = author.split("،")[0] if (not title or title.isdigit()) else title
+    return f"{name}" + (f" (ت {died}هـ)" if died and died < 1450 else "")
+
+
+def _khilaf_item(K, con, e, other_books=True):
+    """وصف مدخل السجلّ: مسألة الإنصاف بنص أقوالها (ومعها التبيين إن رُبطت به)، أو مسألة التبيين، أو وجه موثّق."""
+    item = {"المسألة": e["title"], "المعرّف": e["id"]}
+    s = e.get("source", {})
+    if e["kind"] == "مسألة":
+        item["المصدر"] = f"{s['book']}، المسألة {s['masala']}، ج{s['vol']} ص{s['page']}"
+        t = K.insaf_text(con, s["masala"], s["vol"], s["page"]) if con else None
+        if t:
+            item["الأقوال (نص الإنصاف)"] = [{"القائل": q, "القول": v} for q, v in K.views(t["text"])]
+        else:
+            item["القائلون"] = e.get("qailun", [])
+            item["تنبيه"] = "نص المسألة غير موجود في المدوّنة المحلية؛ فالأقوال تُقرأ في المصدر نفسه."
+        for tb in e.get("tabyin", []):
+            tt = K.tabyin_text(con, tb["masala"], tb["page"]) if con else None
+            item.setdefault("في التبيين للعكبري", []).append(
+                {"المصدر": f"التبيين عن مذاهب النحويين، المسألة {tb['masala']} «{tb['title']}»، ص{tb['page']}"} |
+                ({"الأقوال (نص التبيين)": [{"القائل": q, "القول": v} for q, v in K.views_tabyin(tt["text"])]} if tt else {}))
+        for sp in e.get("spread", []):
+            uri, title, auth = K.SPREAD_BOOKS[sp["book"]]
+            ex = K.excerpt(con, uri, sp["vol"], sp["page"], sp["term"], size=600) if con else None
+            item.setdefault("في الهمع والارتشاف", []).append(
+                {"المصدر": f"{title} ({auth})، ج{sp['vol']} ص{sp['page']}"} |
+                ({"مقتطف من النص": ex["text"], "مذكورون فيه": ex["who"]} if ex else {"تنبيه": "الكتاب غير موجود في المدوّنة المحلية."}))
+        if other_books and e.get("also"):
+            item["مواضعها في كتب أخرى"] = [f"{_cite_book(a['book'], a['author'], a['died'])}" +
+                                          (f" ج{a['vol']}" if a.get("vol") else "") + f" ص{a['page']}" for a in e["also"]]
+    elif e["kind"] == "مسألة-تبيين":
+        item["المصدر"] = f"{s['book']} ({s['author']})، المسألة {s['masala']}، ص{s['page']}"
+        tt = K.tabyin_text(con, s["masala"], s["page"]) if con else None
+        if tt:
+            item["الأقوال (نص التبيين)"] = [{"القائل": q, "القول": v} for q, v in K.views_tabyin(tt["text"])]
+        else:
+            item["القائلون"] = e.get("qailun", [])
+    else:
+        item["الأقوال"] = [({"القائل": a["qail"]} if a.get("qail") else {}) | {"القول": a["qawl"]} for a in e["aqwal"]]
+        item["المصادر"] = [f"{x['book']}" + (f" ج{x['vol']}" if x.get("vol") else "") + f" ص{x['page']}" for x in e["sources"]]
+        item["تنبيه"] = "الأقوال هنا بصياغة مختصرة، ونصها في المصادر المذكورة."
+        if e.get("note"):
+            item["ملاحظة"] = e["note"]
+    return item
+
+
+def _khilaf_topic(reg, topic, limit=5):
+    """مداخل السجلّ الأقرب إلى موضوع مسمّى («الاسم بعد مذ ومنذ»): بتداخل ألفاظ العنوان والمواضع."""
+    def toks(x):
+        out = set()
+        for w in re.findall("[ء-ي]+", _norm(_strip_tashkeel(x or ""))):
+            w = w[2:] if w.startswith("ال") and len(w) > 4 else w
+            if w not in ("في", "من", "على", "ام", "او", "بعد", "مع", "عن", "الي", "هل", "ما", "القول"):
+                out.add(w)
+        return out
+    q = toks(topic)
+    scored = []
+    for e in reg:
+        t = toks(e["title"] + " " + " ".join(e.get("pos", [])) + " " + " ".join(e.get("keys", [])))
+        sc = len(q & t) / max(1, len(q))
+        if sc > 0:
+            scored.append((sc, e))
+    scored.sort(key=lambda x: -x[0])
+    return [e for sc, e in scored if sc >= scored[0][0] * 0.6][:limit] if scored else []
+
+
+@lru_cache(maxsize=1)
+def _quran_loose():
+    """([(السورة، الآية، الصورة المرخّاة)]، {ثلاث كلمات متتالية: [مواضعها]}): للمطابقة بلا أثر للرسم العثماني."""
+    import khilaf as K
+    qw = [(s_, a_, K._loose(t)) for s_, a_, t in _quran_words()]
+    idx = {}
+    for i in range(len(qw) - 2):
+        idx.setdefault((qw[i][2], qw[i + 1][2], qw[i + 2][2]), []).append(i)
+    return qw, idx
+
+
+def _quran_aya_of(sentence: str, all_: bool = False):
+    """(السورة، الآية) إن كانت الجملة آيةً أو جزءًا متصلًا منها (أكثر كلماتها)، وإلا None.
+    all_: كل الآيات التي تطابقها بالقدر نفسه (كصدر البقرة 62 والمائدة 69)."""
+    import khilaf as K
+    toks = [K._loose(t) for t in _ntoks(sentence)]
+    if len(toks) < 3:
+        return None
+    qw, idx = _quran_loose()
+    best, where = 0, []
+    for i in range(len(toks) - 2):
+        for j in idx.get(tuple(toks[i:i + 3]), [])[:50]:
+            k = 3
+            while i + k < len(toks) and j + k < len(qw) and toks[i + k] == qw[j + k][2]:
+                k += 1
+            if k > best:
+                best, where = k, [j]
+            elif k == best:
+                where.append(j)
+    if not where or best < max(3, 0.6 * len(toks)):
+        return None
+    ayat = list(dict.fromkeys((qw[j][0], qw[j][1]) for j in where))
+    return ayat if all_ else ayat[0]
+
+
+def _irab_quran_books(K, con, sura: int, aya: int, word: str | None) -> list:
+    words = [t for (s_, a_, t) in _quran_words() if s_ == sura and a_ == aya]
+    out = []
+    for x in K.ayah_passages(con, sura, aya, words, word):
+        loc = (f"ج{x['vol']} " if x["vol"] else "") + (f"ص{x['page']}" if x["page"] else "")
+        author = K.IRAB_AUTHORS.get(x["uri"]) or re.split(r"[،,(\[]", x["author"] or "")[0].strip()
+        out.append({"الكتاب": x["title"], "المؤلف": author, **({"الوفاة": f"{x['died']}هـ"} if x["died"] and x["died"] < 1450 else {}),
+                    "الرتبة": "حديث" if (x["died"] or 9999) >= 1300 else "متقدم", "الموضع": loc or "بلا رقم صفحة",
+                    **({"تنبيه": "الموضع بالبحث عن ألفاظ الآية في صفحات السورة، لا من فهرس الكتاب"} if x["level"] == "السورة" else {}),
+                    "المقتطف": x["text"], **({"يذكر": x["who"]} if x["who"] else {})})
+    return out
+
+
+@mcp.tool()
+def wujuh_irab(sentence: str = "", word: str | None = None, topic: str | None = None, other_books: bool = True,
+               aya: str | None = None) -> dict:
+    """وجوه الإعراب وخلاف النحاة، منسوبةً إلى قائليها بالكتاب والجزء والصفحة، بلا ترجيح.
+    مع sentence: تُعرب الجملة (أداة irab)، ثم تُطابَق تراكيبها بسجلّ الوجوه. ومع topic: يُبحث في السجلّ عن مسألة مسمّاة
+    («المفعول معه»، «الاسم بعد مذ ومنذ»، «حاشا»).
+    السجلّ: مسائل «الإنصاف» كلها (118) تُقرأ أقوالها من نص المسألة في المدوّنة التراثية المحلية، ومعها مقتطف موضعها في «همع الهوامع»
+    و«ارتشاف الضرب» حيث عُرف، وما يقابلها في «التبيين» للعكبري
+    ومسائل انفرد بها، ووجوه قُرئت نصوصها في كتب الإعراب والشروح، ومواضع المسألة في كتب النحو الأخرى في المدوّنة.
+    وإن كانت الجملة آيةً (أو مُرّر aya مثل «20:63») أُضيف ما في كتب إعراب القرآن ومعانيه عنها: الفراء والزجاج والنحاس ومكي
+    والعكبري والمنتجب الهمذاني وأبي حيان والسمين الحلبي وغيرهم، ومن المحدثين درويش وصافي والدعاس والخراط، بالجزء والصفحة.
+    word: كلمة بعينها من الجملة (اختياري). other_books: أضف مواضع المسألة في الكتب الأخرى.
+    ما لم يجده السجلّ لا يعني أن لا خلاف فيه."""
+    import khilaf as K
+    reg = K.load_registry()
+    if not reg:
+        return {"تنبيه": "سجلّ الوجوه غير موجود (data/khilaf/wujuh.jsonl)."}
+    con = K.connect()
+    alts = [] if aya or not sentence else (_quran_aya_of(sentence, all_=True) or [])
+    q = tuple(int(x) for x in re.findall(r"\d+", aya)[:2]) if aya else (alts[0] if alts else None)
+    qbooks = {}
+    if q and len(q) == 2 and con is not None:
+        qb = _irab_quran_books(K, con, q[0], q[1], word)
+        qbooks = {"الآية": f"سورة {q[0]}، الآية {q[1]}",
+                  **({"ويحتمل أن تكون": [f"سورة {s_}، الآية {a_}" for s_, a_ in alts[1:6]],
+                      "عن الاحتمال": "ألفاظ الجملة في أكثر من آية؛ فإن قصدتَ غير الأولى فأعد الاستدعاء بـ aya."} if len(alts) > 1 else {}),
+                  "في كتب إعراب القرآن": qb or "لم أجد الموضع في كتب إعراب القرآن المفهرسة.",
+                  "عن كتب إعراب القرآن": "مقتطف من موضع الآية (أو الكلمة) في كل كتاب، مرتبًا بوفاة المؤلف، كما في نصه بلا ترجيح؛ "
+                                         "فاقرأ المقتطف قبل نسبة وجهٍ إلى صاحبه، واطلب الصفحة كاملة بـ corpus_concordance إن احتجت."}
+    if q and not sentence and not topic:
+        return qbooks
+    if topic and not sentence:
+        hits = _khilaf_topic(reg, topic)
+        if not hits:
+            return {"الموضوع": topic, "النتيجة": "لم أجد في سجلّ الوجوه مسألة بهذا الموضوع."}
+        return {"الموضوع": topic, "المسائل": [_khilaf_item(K, con, e, other_books) for e in hits],
+                "تنبيه": "الأقوال منسوبة إلى قائليها بلا ترجيح من الأداة."}
+    pos = _khilaf_positions(sentence)
+    nsent = _norm(_strip_tashkeel(sentence))
+    want = _norm(_strip_tashkeel(word)) if word else None
+    neg = any(_strip_tashkeel(x) in ("ما", "لا", "لم", "لن", "ليس", "هل") for x in sentence.split())
+    found = []
+    for w, d, keys in pos:
+        if want and want not in _norm(_strip_tashkeel(w)):
+            continue
+        for e in reg:
+            if set(e.get("keys", [])) & set(keys) and (e.get("when") != "نفي" or neg):
+                found.append((w, d, e))
+    for e in reg:          # وجوه في نص بعينه (آية أو شاهد)
+        if e.get("text") and _norm(e["text"]) in nsent and (not want or want in _norm(e.get("word", ""))):
+            found.append((e.get("word", ""), "", e))
+    voweled = any(c in HARAKAT for c in sentence)
+    tip = None if voweled else "الجملة غير مشكولة: بعض المواضع لا يُعرف إلا بالحركة (كالمفعول معه، والمضارع بعد الواو والفاء، ولام الأمر)، فاشكلها ليُحسم."
+    if not found:
+        return {"الجملة": sentence, "الإعراب": irab(sentence, detail=False).get("الجمل"), **qbooks,
+                "النتيجة": "لم أجد في سجلّ الوجوه خلافًا موثّقًا في مواضع هذه الجملة." + (" وانظر ما في كتب إعراب القرآن." if qbooks else ""),
+                "تنبيه": "السجلّ يغطي مسائل بعينها من الإنصاف والتبيين وكتب الإعراب، فغياب الخلاف فيه لا يعني أن لا خلاف في الموضع.",
+                **({"الشكل": tip} if tip else {})}
+    out, seen = [], set()
+    for w, d, e in found:
+        if (w, e["id"]) in seen:
+            continue
+        seen.add((w, e["id"]))
+        item = {"الكلمة": w} | ({"الإعراب الذي بُني عليه": d} if d else {}) | _khilaf_item(K, con, e, other_books)
+        out.append(item)
+    return {"الجملة": sentence, "المواضع": out, **qbooks, **({"الشكل": tip} if tip else {}),
+            "تنبيه": "الأقوال منسوبة إلى قائليها بلا ترجيح من الأداة. والموضع يُعيَّن من الإعراب الآلي، فإن أخطأ الإعراب أخطأ التعيين: "
+                      "راجع «الإعراب الذي بُني عليه»."}
 
 
 # ───────────── أدوات البحث: تخريج الشاهد، وموازنة التعابير، ونسبة النص، والتطور الدلالي، وكتب اللغة، والبديع ─────────────
