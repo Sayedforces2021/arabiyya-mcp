@@ -970,8 +970,9 @@ def search_poetry(query: str = "", meter: str | None = None, era: str | None = N
     loose = False
     if q and not rows and exact_phrase and len(words) > 1:
         # لا مطابقة حرفية (لاختلاف الرسم مثل «أن ما» و«أنما»، أو رواية أخرى): يُعاد البحث بالكلمات مجتمعةً في البيت
-        def _alts(w):   # الواو والفاء المتصلتان: «إنما» تطابق «وإنما»، و«وإنما» تطابق «إنما»
-            vs = {w, "و" + w, "ف" + w} | ({w[1:]} if w[0] in "وف" and len(w) > 3 else set())
+        def _alts(w):   # الواو والفاء المتصلتان: «إنما» تطابق «وإنما»، و«ولو» تطابق «فلو»
+            b = w[1:] if w[0] in "وف" and len(w) > 2 else w
+            vs = {w, b, "و" + b, "ف" + b}
             return "(" + " OR ".join(f'"{x}"' for x in sorted(vs)) + ")"
         args[0] = " AND ".join(_alts(w) for w in words if len(w) > 2) or args[0]
         rows = con.execute(sql, args + [3000]).fetchall()
