@@ -1054,7 +1054,7 @@ def _poetry_rank(q, sadr, ajuz, poet, era, meter, title, theme):
     incomplete = 1 if (not a or a == "#") else 0
     era_rank = _era_rank(era, poet)
     title_match = 0 if title and _norm(title).startswith(q[:20]) else 1   # القصيدة التي مطلعها البيت نفسه
-    return (where, incomplete, title_match, era_rank)
+    return (where, incomplete, era_rank, title_match)
 
 
 # ───────────── المدوّنة القرآنية (Quranic Arabic Corpus v0.4، برخصة GPL) ─────────────
@@ -3535,7 +3535,8 @@ def takhrij_shahid(verse: str, limit: int = 8, citations: bool = True) -> dict:
             sc = max(_sim(q, t), _sim(q, _ntoks(v[0])) if len(q) <= len(t) * 0.7 else 0, _sim(q, _ntoks(v[1])) if len(q) <= len(t) * 0.7 else 0)
             cands.append((sc, v, t))
         cands.sort(key=lambda x: _takhrij_key(q, x[0], x[1]))
-        cands = [c for c in cands if c[0] >= 0.55][:max(1, min(int(limit), 30))]
+        allc = [c for c in cands if c[0] >= 0.55]
+        cands = allc[:max(1, min(int(limit), 30))]
         con.close()
         if cands:
             best = cands[0]
@@ -3547,16 +3548,19 @@ def takhrij_shahid(verse: str, limit: int = 8, citations: bool = True) -> dict:
                                        "فأصله ليس في المدوّنة، وما هنا تضمينٌ له أو نسخة بلا عصر. لا تعتمد هذه النسبة حتى توثّقها من ديوانه.")
             poets, names = {}, {}
             rw, near, seen_t = [], [], set()
+            # اختلاف النسبة يُحصى من المرشحات كلها لا من المعروض وحده، وإلا سقط من القائلين من تأخر ترتيبه
+            # (كالعرجي في «أضاعوني وأي فتى أضاعوا»)
+            for sc2, v2, t2 in allc:
+                if sc2 >= 0.85 and not _is_quotation(v2[0], v2[4]) and _takhrij_key(q, sc2, v2)[2] == 0:
+                    pn = _norm(_strip_tashkeel(v2[3] or ""))
+                    poets[pn] = poets.get(pn, 0) + 1
+                    names.setdefault(pn, v2[3])
             for sc2, v2, t2 in cands:
                 key = " ".join(t2)
                 if key in seen_t:
                     continue
                 seen_t.add(key)
                 quoted = _is_quotation(v2[0], v2[4])
-                if sc2 >= 0.85 and not quoted:
-                    pn = _norm(_strip_tashkeel(v2[3] or ""))
-                    poets[pn] = poets.get(pn, 0) + 1
-                    names.setdefault(pn, v2[3])
                 d = _word_diff(q, t2) if sc2 < 0.999 else []
                 if sc2 < 0.999 and d:
                     item = {"الشاعر": v2[3], "القصيدة": v2[4], "النص": f"{v2[0]} * {v2[1]}", "الفروق": d[:6], "التطابق": round(sc2, 2)}
