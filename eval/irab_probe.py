@@ -39,7 +39,8 @@ def main():
     base = AutoModel.from_pretrained(a.model)
     model = T.Tagger(base, len(labels))
     st = torch.load(out / "model.pt", map_location="cpu")
-    model.load_state_dict(st["model"]); thr = st["thr"]
+    model.load_state_dict(st["model"], strict=False); thr = st["thr"]
+    vowels = "all" if st.get("vowels") else "none"
     dev = "cuda" if torch.cuda.is_available() else "cpu"
     model.to(dev).eval()
     sents = a.sentences or DEFAULT
@@ -47,8 +48,8 @@ def main():
     for s in sents:
         words = s.split()
         plain = [T.MARKS.sub("", w) if hasattr(T, "MARKS") else w for w in words]
-        b = {"plain": plain, "diac": words, "labels": [[] for _ in words], "src": "M"}
-        enc, _y, m = T.encode([b], tok, lab2i, "plain")
+        b = {"plain": plain, "diac": words, "labels": [[] for _ in words], "src": "M", "vow": [T.final_vowel(w) for w in words]}
+        enc, _y, m = T.encode([b], tok, lab2i, "plain", vowels=vowels)
         enc = {k: v.to(dev) for k, v in enc.items()}
         with torch.no_grad():
             p = torch.sigmoid(model(**enc).float()).cpu()[0][m[0]]

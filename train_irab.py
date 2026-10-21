@@ -13,6 +13,8 @@
 التشغيل:  python train_irab.py            (التدريب الكامل)
           python train_irab.py --smoke    (اختبار سريع بلا تنزيل، لسلامة الشيفرة فقط)
           python train_irab.py --no-eqtb  (MASAQ وحدها)
+          python train_irab.py --gen ~/.sarf/corpora/gen_irab.jsonl --vowels --out ~/.sarf/models/irab_parser_v2
+              (مع الجمل المولّدة من gen_irab_sentences.py، وحركة آخر الكلمة خاصيةً للنموذج)
 النتائج:  ~/.sarf/models/irab_parser/{model.pt, labels.json, report.txt, report.json}
 """
 import argparse
@@ -45,9 +47,15 @@ K_PREFIX = "ك:"               # وسوم «فضّية» من كتب الإعر�
 U_PREFIX = "ن:"               # علاقات UD (PADT وPUD): نثر صحفي معاصر
 MIN_LABEL_COUNT = 30          # الوسوم الأقل شيوعًا في التدريب تُهمَل
 MARKS = re.compile("[ً-ٰٟـ]")
-SRC_ID = {"M": 0, "E": 1, "U": 2, "P": 3, "K": 4}      # P = PUD (للقياس فقط)
-SRC_NS = {"M": "M", "E": "E", "U": "U", "P": "U", "K": "K"}   # أيّ نظام وسوم تتبعه كل مدوّنة
-SRC_NAME = {"M": "MASAQ", "E": "الشجرة القرآنية الموسّعة", "U": "PADT", "P": "PUD", "K": "كتب الإعراب (فضّي)"}
+SRC_ID = {"M": 0, "E": 1, "U": 2, "P": 3, "K": 4, "G": 5}      # P = PUD (للقياس فقط)
+SRC_NS = {"M": "M", "E": "E", "U": "U", "P": "U", "K": "K", "G": "M"}   # أيّ نظام وسوم تتبعه كل مدوّنة (المولّدة بوسوم ماساق)
+SRC_NAME = {"M": "MASAQ", "E": "الشجرة القرآنية الموسّعة", "U": "PADT", "P": "PUD", "K": "كتب الإعراب (فضّي)",
+            "G": "جمل مولّدة (gen_irab_sentences.py)"}
+# حركة آخر الكلمة خاصيةٌ مستقلة: مُرمِّز CAMeLBERT يجعل الكلمة المشكولة [UNK]، فلا يرى الشكل إلا هكذا.
+# 0 بلا شكل، 1 ضمة، 2 فتحة، 3 كسرة، 4 سكون، 5 تنوين ضم، 6 تنوين فتح، 7 تنوين كسر (والرسم العثماني: ۡ سكون، ࣰࣱࣲ تنوين)
+VOW = {"\u064f": 1, "\u064e": 2, "\u0650": 3, "\u0652": 4, "\u06e1": 4, "\u064c": 5, "\u08f1": 5,
+       "\u064b": 6, "\u08f0": 6, "\u064d": 7, "\u08f2": 7}
+N_VOW = 8
 
 
 def log(msg):
@@ -56,6 +64,25 @@ def log(msg):
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     with open(LOG_DIR / "train.log", "a", encoding="utf-8") as f:
         f.write(line + "\n")
+
+
+def final_vowel(w):
+    """رقم حركة آخر الكلمة المشكولة (VOW)، أو 0. الألف بعد تنوين الفتح («خبزًا») يُنظر فيها إلى ما قبلها."""
+    w = re.sub("[^\u0621-\u06ff\u08f0-\u08f2]+$", "", w or "")
+    def is_mark(c):
+        return c in VOW or "\u064b" <= c <= "\u065f" or c in "\u0670\u06d6\u06d7\u06d8\u06d9\u06da\u06db\u06dc\u06df\u06e0\u06e1\u06e2\u06e3\u06e4\u06e5\u06e6\u06e7\u06e8\u06ea\u06eb\u06ec\u06ed"
+    base = [i for i, c in enumerate(w) if not is_mark(c)]
+    if not base:
+        return 0
+    last = base[-1]
+    marks = [VOW[c] for c in w[last + 1:] if c in VOW]
+    if marks:
+        return marks[-1]
+    if w[last] in "\u0627\u0649" and len(base) > 1:
+        prev = [VOW[c] for c in w[base[-2] + 1:last] if c in VOW]
+        if prev and prev[-1] == 6:
+            return 6
+    return 0
 
 
 def ns_of(label):
@@ -214,6 +241,19 @@ def load_books(path):
     return out
 
 
+def load_generated(path):
+    """الجمل المولّدة (gen_irab_sentences.py) بوسوم ماساق؛ تُقسَم بتجزئة نص الجملة كما تُقسم الكتب."""
+    import hashlib
+    out = []
+    for line in open(path, encoding="utf-8"):
+        d = json.loads(line)
+        plain = [MARKS.sub("", w).replace("\u0671", "\u0627") for w in d["words"]]
+        h = int(hashlib.md5(" ".join(d["words"]).encode("utf-8")).hexdigest(), 16) % 10
+        out.append({"src": "G", "split": "test" if h == 7 else "dev" if h == 3 else "train", "sura": 0, "verse": len(out),
+                    "plain": plain, "diac": d["words"], "labels": d["labels"]})
+    return out
+
+
 def split_of(sura):
     """التقسيم بحسب السورة لا بحسب الآية، كي لا يتسرّب شيء من آيات السورة نفسها."""
     return "test" if sura % 10 == 7 else "dev" if sura % 10 == 3 else "train"
@@ -227,25 +267,36 @@ def chunk(verses, maxw=60):
     return out
 
 
-def encode(batch, tok, lab2i, field, maxlen=320):
+def encode(batch, tok, lab2i, field, maxlen=320, vowels="none", rng=None):
+    """vowels: «none» بلا حركات، «all» حركة آخر كل كلمة كما في النص، «aug» للتدريب: نصف الجمل بلا حركات،
+    والباقي تسقط حركة عُشر كلماته، ليصلح النموذج للنص المشكول وغير المشكول معًا. تُعطى في enc["vow"]."""
     enc = tok([b[field] for b in batch], is_split_into_words=True, truncation=True,
               max_length=maxlen, padding=True, return_tensors="pt")
     B, T = enc["input_ids"].shape
     y = torch.zeros(B, T, len(lab2i))
     m = torch.zeros(B, T, dtype=torch.bool)
+    vw = torch.zeros(B, T, dtype=torch.long)
+    rng = rng or random
     for bi, b in enumerate(batch):
         prev = None
+        vs = b.get("vow") or [0] * len(b[field])
+        if vowels == "none" or (vowels == "aug" and rng.random() < 0.5):
+            vs = [0] * len(vs)
+        elif vowels == "aug":
+            vs = [0 if rng.random() < 0.1 else x for x in vs]
         for ti, wid in enumerate(enc.word_ids(bi)):
             if wid is None or wid == prev:
                 prev = wid
                 continue
             prev = wid
+            vw[bi, ti] = vs[wid] if wid < len(vs) else 0
             if b["src"] == "K" and not b["labels"][wid]:
                 continue                      # كلمة لم يرد إعرابها في الكتاب: تُتجاهَل ولا تُعدّ سالبة
             m[bi, ti] = True
             for l in b["labels"][wid]:
                 if l in lab2i:
                     y[bi, ti, lab2i[l]] = 1
+    enc["vow"] = vw
     return enc, y, m
 
 
@@ -256,9 +307,14 @@ class Tagger(nn.Module):
         self.enc = base
         self.drop = nn.Dropout(0.1)
         self.out = nn.Linear(base.config.hidden_size, n_labels)
+        self.vow = nn.Embedding(N_VOW, base.config.hidden_size)   # حركة آخر الكلمة؛ تبدأ صفرًا فلا تغيّر النموذج القديم
+        nn.init.zeros_(self.vow.weight)
 
-    def forward(self, **kw):
-        return self.out(self.drop(self.enc(**kw).last_hidden_state))
+    def forward(self, vow=None, **kw):
+        h = self.enc(**kw).last_hidden_state
+        if vow is not None:
+            h = h + self.vow(vow)
+        return self.out(self.drop(h))
 
 
 def make_smoke(data):
@@ -278,12 +334,12 @@ def make_smoke(data):
 
 # ───────────────────────── القياس ─────────────────────────
 @torch.no_grad()
-def predict(model, data, tok, lab2i, field, dev, bs=32):
+def predict(model, data, tok, lab2i, field, dev, bs=32, vowels="none"):
     model.eval()
     P, Y, S = [], [], []
     for i in range(0, len(data), bs):
         batch = data[i:i + bs]
-        enc, y, m = encode(batch, tok, lab2i, field)
+        enc, y, m = encode(batch, tok, lab2i, field, vowels=vowels)
         enc = {k: v.to(dev) for k, v in enc.items()}
         p = torch.sigmoid(model(**enc).float()).cpu()
         P.append(p[m])
@@ -316,7 +372,7 @@ def mean_key_f1(P, Y, S, thr, key_by_ns):
     vals = []
     for ns, sid in SRC_ID.items():
         sel = S == sid
-        if sel.any() and key_by_ns[SRC_NS[ns]] and ns not in ("P", "K"):      # PUD لا يدخل في اختيار أفضل نقطة
+        if sel.any() and key_by_ns[SRC_NS[ns]] and ns not in ("P", "K", "G"):      # PUD والفضّي والمولّد لا تدخل في اختيار أفضل نقطة
             vals.append(key_micro_f1(P[sel], Y[sel], thr, key_by_ns[SRC_NS[ns]]))
     return sum(vals) / max(1, len(vals))
 
@@ -358,6 +414,8 @@ def main():
     ap.add_argument("--no-ud", action="store_true", help="بلا PADT وPUD")
     ap.add_argument("--books", help="ملف JSONL من build_irab_books.py (كتب الإعراب الفضّية)")
     ap.add_argument("--ud")
+    ap.add_argument("--gen", help="ملف JSONL من gen_irab_sentences.py (جمل مولّدة بوسوم ماساق)")
+    ap.add_argument("--vowels", action="store_true", help="حركة آخر الكلمة خاصيةً للنموذج (تدريب مختلط: مشكول وغير مشكول)")
     ap.add_argument("--model", default=MODEL_NAME)
     ap.add_argument("--epochs", type=int, default=10)
     ap.add_argument("--batch", type=int, default=16)
@@ -404,6 +462,12 @@ def main():
         bk = load_books(a.books)
         log(f"كتب الإعراب (فضّي): {len(bk)} بيتًا")
         verses += bk
+    if a.gen:
+        gv = load_generated(a.gen)
+        log(f"{SRC_NAME['G']}: {len(gv)} جملة")
+        verses += gv
+    for v in verses:
+        v["vow"] = [final_vowel(d) for d in v["diac"]]
     if a.max_verses:
         step = max(1, len(verses) // a.max_verses)        # عيّنة موزّعة على السور كلها
         verses = verses[::step]
@@ -468,7 +532,8 @@ def main():
         t0, tot, nb = time.time(), 0.0, 0
         for i in range(0, len(order), a.batch):
             batch = [parts["train"][j] for j in order[i:i + a.batch]]
-            enc, y, m = encode(batch, tok, lab2i, field)
+            enc, y, m = encode(batch, tok, lab2i, field, vowels="aug" if a.vowels else "none",
+                               rng=random.Random(ep * 1000003 + i))
             W = torch.stack([nsmask[SRC_NS[b["src"]]] for b in batch]).to(dev)   # لا يُحاسَب النموذج إلا على وسوم مدوّنة العيّنة
             enc = {k: v.to(dev) for k, v in enc.items()}
             y, m = y.to(dev), m.to(dev)
@@ -489,7 +554,7 @@ def main():
         if f > best_f:
             best_f, bad = f, 0
             torch.save({"model": model.state_dict(), "labels": labels, "thr": thr, "field": field,
-                        "base": a.model}, best_path)
+                        "base": a.model, "vowels": a.vowels}, best_path)
         else:
             bad += 1
         torch.save({"model": model.state_dict(), "opt": opt.state_dict(), "sched": sched.state_dict(),
@@ -500,7 +565,7 @@ def main():
 
     # ── التقرير على الاختبار ──
     st = torch.load(best_path, map_location="cpu")
-    model.load_state_dict(st["model"]); thr = st["thr"]
+    model.load_state_dict(st["model"], strict=False); thr = st["thr"]
     P, Y, S = predict(model, parts["test"], tok, lab2i, field, dev)
     B = lookup_baseline(parts["train"], parts["test"], lab2i)
     rep = {"input": field, "threshold": thr, "n_test_words": int(len(Y)),
@@ -545,6 +610,16 @@ def main():
             lines.append(f"{l} | {e['support']} | {e['P']} | {e['R']} | {e['F1']} | {e['baseline_F1']}")
     lines += ["", "التقسيم بحسب السورة. تنبيه: في القرآن عبارات مكرّرة بين السور فقد تتسرّب بعض الأحكام.",
               "المدوّنات: MASAQ (جامعة الأردن) CC BY 3.0, doi:10.17632/9yvrzxktmr.2 ؛ الشجرة القرآنية الموسّعة (Nashir وآخرون 2025) ؛ UD Arabic PADT وPUD (Universal Dependencies)."]
+    if a.vowels:   # القياس نفسه والنص مشكول: كم تنفع الحركة
+        Pv, Yv, Sv = predict(model, parts["test"], tok, lab2i, field, dev, vowels="all")
+        lines += ["", "== مع حركة آخر الكلمة (النص مشكول) =="]
+        rep["with_vowels"] = {}
+        for src, sid in SRC_ID.items():
+            sel = Sv == sid
+            if sel.any() and key_by_ns[SRC_NS[src]] and src in rep["per_corpus"]:
+                f = round(key_micro_f1(Pv[sel], Yv[sel], thr, key_by_ns[SRC_NS[src]]), 4)
+                rep["with_vowels"][src] = f
+                lines.append(f"{SRC_NAME[src]}: F1 المجمَّع للوظائف الرئيسة {f} (بلا شكل {rep['per_corpus'][src]['model_key_micro_f1']})")
     sfx = "_dedup" if a.dedupe_test else ""
     (out / f"report{sfx}.json").write_text(json.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8")
     (out / f"report{sfx}.txt").write_text("\n".join(lines), encoding="utf-8")
