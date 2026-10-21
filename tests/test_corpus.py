@@ -139,6 +139,24 @@ class TestCorpusPipeline(unittest.TestCase):
         self.assertTrue(self.rows("الواو"))        # «بِتَوَسُّطِ الْوَاوِ»
         self.assertTrue(self.rows("فعل"))          # «بِالْفِعْلِ» ← بال + فعل
 
+    def test_concordance_phrase(self):
+        """العبارة المركّبة («المفعول معه») تُطابَق كلمةً كلمة، وكانت تعيد صفرًا من السياقات."""
+        out = self.S.corpus_concordance("المفعول معه", window=3)
+        ctx = out["السياقات"]
+        self.assertEqual(len(ctx), 2)
+        self.assertEqual(ctx[0]["الكلمة"], "الْمَفْعُولِ مَعَهُ")
+        self.assertIn("ج1 ص10", ctx[0]["المصدر"])
+
+    def test_concordance_single_word_still_works(self):
+        ctx = self.S.corpus_concordance("الزجاج", window=2)["السياقات"]
+        self.assertEqual([c["الكلمة"] for c in ctx], ["الزَّجَّاجُ"])
+
+    def test_cite_without_volume(self):
+        """كتاب بلا أجزاء (مثل المغني من الشاملة) يُستشهد به بالصفحة وحدها، وكانت تسقط."""
+        self.assertEqual(self.S._cite(None, 615), "، ص615")
+        self.assertEqual(self.S._cite(1, 200), "، ج1 ص200")
+        self.assertEqual(self.S._cite(None, None), "")
+
     @unittest.expectedFailure
     def test_dagger_alif_query(self):
         """عيب معروف: الفهرس يحذف الألف الخنجرية (ٰ) والاستعلام لا يحذفها، فلا تُوجد «هٰذا» المكتوبة بها."""

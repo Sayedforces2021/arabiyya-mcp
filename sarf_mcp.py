@@ -1441,22 +1441,34 @@ def corpus_concordance(word: str, genre: str | None = None, century_from: int | 
     con, vs, rows = _corpus_rows(word, clitics, genre, century_from, century_to, book, limit * 3)
     con.close()
     out = []
+    rest = [_cn(w) for w in word.split()[1:]]            # بقية كلمات العبارة تُطابَق بلا سوابق
+    firsts = {v.split()[0] for v in vs}
+    punct = ".,،؛:!?()[]«»\"'"
     for _pid, text, vol, page, title, died, g, _bid in rows:
         toks = text.split()
-        for i, t in enumerate(toks):
-            if _cn(t).strip(".,،؛:!?()[]«»\"'") in vs:
+        norm = [_cn(t).strip(punct) for t in toks]
+        for i in range(len(toks)):
+            if norm[i] in firsts and norm[i + 1:i + 1 + len(rest)] == rest:
+                j = i + 1 + len(rest)
                 out.append({
                     "قبل": " ".join(toks[max(0, i - window):i]),
-                    "الكلمة": t,
-                    "بعد": " ".join(toks[i + 1:i + 1 + window]),
-                    "المصدر": f"{title} (ت {died}هـ)" + (f"، ج{vol} ص{page}" if vol else ""),
+                    "الكلمة": " ".join(toks[i:j]),
+                    "بعد": " ".join(toks[j:j + window]),
+                    "المصدر": f"{title} (ت {died}هـ)" + _cite(vol, page),
                     "الفن": g,
                 })
                 break
         if len(out) >= limit:
             break
     return {"الكلمة": word, "الصيغ المبحوث عنها": sorted(vs), "السياقات": out,
-            "ملاحظة": "مرتبة بوفاة المؤلف؛ سياق واحد من كل فقرة. النصوص من OpenITI بلا تشكيل في الغالب."}
+            "ملاحظة": "مرتبة بوفاة المؤلف؛ سياق واحد من كل فقرة. الجزء والصفحة كما في مصدر النص (الشاملة أو OpenITI)."}
+
+
+def _cite(vol, page) -> str:
+    """«، ج1 ص200» أو «، ص615» لكتاب بلا أجزاء؛ ولا شيء إن لم تُعرف الصفحة."""
+    if page is None or page == 0:
+        return ""
+    return f"، ج{vol} ص{page}" if vol else f"، ص{page}"
 
 
 @mcp.tool()
@@ -3486,7 +3498,7 @@ def takhrij_shahid(verse: str, limit: int = 8, citations: bool = True) -> dict:
         con.close()
         cites = []
         for pid, (died, title, author, genre, vol, page, text) in sorted(hits.items(), key=lambda x: x[1][0]):
-            item = {"الكتاب": f"{title} (ت {died}هـ)", "الفن": genre, "الموضع": f"ج{vol} ص{page}" if vol else ""}
+            item = {"الكتاب": f"{title} (ت {died}هـ)", "الفن": genre, "الموضع": _cite(vol, page).lstrip("، ")}
             import re
             m = re.search(r"(?:والشاهد|الشاهد|وشاهده|استشهد|والاستشهاد)[^.]{0,220}", _strip_tashkeel(text))
             if m:
@@ -3544,7 +3556,7 @@ def usage_compare(expressions: list[str], genre: str | None = None, examples: in
             by_c[c] = by_c.get(c, 0) + k
             if len(ex) < examples:
                 i = next((m.start() for p in pats for m in [p.search(nt)] if m), 0)
-                ex.append({"الشاهد": nt[max(0, i - 80):i + 100], "المصدر": f"{title} (ت {died}هـ)" + (f"، ج{vol} ص{page}" if vol else "")})
+                ex.append({"الشاهد": nt[max(0, i - 80):i + 100], "المصدر": f"{title} (ت {died}هـ)" + _cite(vol, page)})
         res.append({"التعبير": e, "الورود": n, "لكل مليون كلمة": round(n * 1e6 / total, 2),
                     "بحسب الفن": by_g, "بحسب القرن": dict(sorted(by_c.items())), "شواهد": ex})
     con.close()
