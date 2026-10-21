@@ -967,6 +967,12 @@ def search_poetry(query: str = "", meter: str | None = None, era: str | None = N
     # تُجلب المرشحات كلها (إلى حدٍّ معقول) ثم تُرتَّب، لا أن يُقتطع أولها بترتيب التخزين: فالبيت الأصلي قد يكون الخامس
     # بعد أبيات تضمّنته أو عارضته، والأخذ بالأول يُخطئ النسبة (مثل «قفا نبك» يُنسب إلى من ضمّنه).
     rows = con.execute(sql, args + [3000 if q else limit]).fetchall()
+    loose = False
+    if q and not rows and exact_phrase and len(words) > 1:
+        # لا مطابقة حرفية (لاختلاف الرسم مثل «أن ما» و«أنما»، أو رواية أخرى): يُعاد البحث بالكلمات مجتمعةً في البيت
+        args[0] = " AND ".join(f'"{w}"' for w in words if len(w) > 2) or args[0]
+        rows = con.execute(sql, args + [3000]).fetchall()
+        loose = bool(rows)
     con.close()
     total = len(rows)
     if q:
@@ -981,14 +987,45 @@ def search_poetry(query: str = "", meter: str | None = None, era: str | None = N
     res = {"عدد النتائج المعروضة": len(out), "الأبيات": out}
     if q:
         res["عدد المطابقات"] = total if total < 3000 else "3000 أو أكثر"
+        if loose:
+            res["تنبيه"] = "لم أجد العبارة بلفظها، فهذه أبيات فيها كلماتها كلها أو جلّها بغير ترتيبها؛ تحقق من الرواية."
         res["الترتيب"] = ("ما بدأ صدرُه بالمبحوث عنه أولًا، ثم ما وقع في صدره، ثم في عجزه (وهو غالبًا تضمين أو معارضة)، "
                           "والأقدم عصرًا قبل الأحدث، والبيت التام قبل الناقص. ولا يعني تقدّمُ بيتٍ أنه الأصل؛ "
                           "فللنسبة استعمل takhrij_shahid بالبيت كاملًا.")
     return res
 
 
-_ERAS = [("الجاهلي", 0), ("المخضرم", 1), ("الإسلامي", 2), ("صدر الإسلام", 2), ("الراشدي", 2), ("الأموي", 3),
-         ("العباسي", 4), ("الأندلسي", 5), ("الفاطمي", 6), ("الأيوبي", 6), ("المملوكي", 7), ("العثماني", 8), ("الحديث", 9)]
+_ERAS = [("الجاهلي", 0), ("قبل الإسلام", 0), ("المخضرم", 1), ("الإسلامي", 2), ("صدر الإسلام", 2), ("الراشدي", 2),
+         ("الأموي", 3), ("بين الدولتين", 3.5), ("العباسي", 4), ("الأندلس", 5), ("الفاطمي", 6), ("الأيوبي", 6),
+         ("المملوكي", 7), ("العثماني", 8), ("الحديث", 9)]
+
+
+def _poet_key(name: str | None) -> str:
+    return " ".join(_norm(name or "").split())
+
+
+@lru_cache(maxsize=1)
+def _poet_eras() -> dict:
+    """عصر كل شاعر كما ورد في قصائده الأخرى: فنحو 40٪ من قصائد «أشعار» بلا عصر (ومنها نسخ من معلقات لبيد والأعشى
+    وشعر جرير)، فيتأخر الشاعر القديم عن متأخر ضمّن بيته لأن المتأخر مؤرَّخ. يُؤخذ أكثر عصوره ورودًا."""
+    import sqlite3, collections
+    if not os.path.exists(POETRY_DB):
+        return {}
+    m = collections.defaultdict(collections.Counter)
+    con = sqlite3.connect(f"file:{POETRY_DB}?mode=ro", uri=True)
+    try:
+        for poet, era in con.execute("SELECT poet, era FROM poems WHERE era IS NOT NULL AND era != ''"):
+            m[_poet_key(poet)][era] += 1
+    finally:
+        con.close()
+    return {k: c.most_common(1)[0][0] for k, c in m.items()}
+
+
+def _era_rank(era: str | None, poet: str | None = None, eras: dict | None = None) -> float:
+    """رتبة العصر (الأقدم أصغر)؛ وإن خلت القصيدة من العصر أُخذ عصر الشاعر من قصائده الأخرى، وإلا فـ10 (مجهول)."""
+    if not era and poet:
+        era = (_poet_eras() if eras is None else eras).get(_poet_key(poet))
+    return next((r for k, r in _ERAS if era and k in era), 10)
 
 
 _QUOTE_TITLES = ("معارضه", "تخميس", "مخمس", "تشطير", "مشطر", "تضمين")
@@ -1015,7 +1052,7 @@ def _poetry_rank(q, sadr, ajuz, poet, era, meter, title, theme):
     where = {"أول الصدر": 0, "الصدر": 1, "البيت": 2, "العجز": 3}[_poetry_where(q, sadr, ajuz)]
     a = (ajuz or "").strip()
     incomplete = 1 if (not a or a == "#") else 0
-    era_rank = next((r for k, r in _ERAS if era and k in era), 10)
+    era_rank = _era_rank(era, poet)
     title_match = 0 if title and _norm(title).startswith(q[:20]) else 1   # القصيدة التي مطلعها البيت نفسه
     return (where, incomplete, title_match, era_rank)
 
@@ -3463,6 +3500,16 @@ def _word_diff(a: list, b: list) -> list:
     return out
 
 
+def _takhrij_key(q: list, sc: float, v) -> tuple:
+    """ترتيب مرشحات النسبة عند تساوي التطابق: ما ليس تضمينًا ولا معارضة (بعنوانه أو بأقواسه) أولًا، ثم ما وقع فيه
+    الشطر المبحوث عنه صدرًا لا عجزًا (فمن جعل صدر غيره عجزًا لبيته فقد ضمّنه)، ثم الأقدم عصرًا.
+    v = (الصدر، العجز، الرقم، الشاعر، القصيدة، البحر، العصر، ...)."""
+    pos = 0
+    if len(q) <= len(_ntoks((v[0] or "") + " " + (v[1] or ""))) * 0.7 and _sim(q, _ntoks(v[1])) > _sim(q, _ntoks(v[0])):
+        pos = 1
+    return (-round(sc, 2), _is_quotation(v[0], v[4]), pos, _era_rank(v[6], v[3]))
+
+
 @mcp.tool()
 def takhrij_shahid(verse: str, limit: int = 8, citations: bool = True) -> dict:
     """تخريج بيت الشعر: نسبته إلى قائله وقصيدته وبحره وعصره من مدوّنة «أشعار»، واختلاف رواياته (الألفاظ التي تختلف بين المصادر، واختلاف النسبة إن نُسب إلى أكثر من شاعر)،
@@ -3487,9 +3534,7 @@ def takhrij_shahid(verse: str, limit: int = 8, citations: bool = True) -> dict:
             t = _ntoks(v[0] + " " + v[1])
             sc = max(_sim(q, t), _sim(q, _ntoks(v[0])) if len(q) <= len(t) * 0.7 else 0, _sim(q, _ntoks(v[1])) if len(q) <= len(t) * 0.7 else 0)
             cands.append((sc, v, t))
-        # عند تقارب التطابق: الأقدم عصرًا أولًا، وما كان تضمينًا أو معارضة (بعنوانه أو بوضعه بين أقواس) آخرًا
-        cands.sort(key=lambda x: (-round(x[0], 2), _is_quotation(x[1][0], x[1][4]),
-                                  next((r for k, r in _ERAS if x[1][6] and k in x[1][6]), 10)))
+        cands.sort(key=lambda x: _takhrij_key(q, x[0], x[1]))
         cands = [c for c in cands if c[0] >= 0.55][:max(1, min(int(limit), 30))]
         con.close()
         if cands:
@@ -3497,6 +3542,9 @@ def takhrij_shahid(verse: str, limit: int = 8, citations: bool = True) -> dict:
             sc, v, t = best
             out["النسبة"] = {"الشاعر": v[3], "العصر": v[6], "القصيدة": v[4], "البحر": v[5], "رقم البيت": v[2],
                              "نص البيت": f"{v[0]} * {v[1]}", "نسبة التطابق": round(sc, 2)}
+            if _era_rank(v[6], v[3]) >= 9:
+                out["تنبيه النسبة"] = ("أقدم من وجدته يقول هذا في المدوّنة شاعرٌ حديث أو مجهول العصر؛ فإن كان البيت معروفًا لقديم "
+                                       "فأصله ليس في المدوّنة، وما هنا تضمينٌ له أو نسخة بلا عصر. لا تعتمد هذه النسبة حتى توثّقها من ديوانه.")
             poets, names = {}, {}
             rw, near, seen_t = [], [], set()
             for sc2, v2, t2 in cands:

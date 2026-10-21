@@ -244,6 +244,30 @@ class TestPoetryRanking(unittest.TestCase):
         self.assertTrue(self.S._is_quotation("قفا نبك", "معارضة معلقة امرئ القيس"))
         self.assertFalse(self.S._is_quotation("قِفا نَبكِ مِن ذِكرى حَبيبٍ وَمَنزِلِ", "قفا نبك من ذكرى حبيب ومنزِل"))
 
+    def test_takhrij_prefers_sadr_and_poet_era(self):
+        """حالات حقيقية من اختبار ٤٢ بيتًا مشهورًا: نسخة لبيد في «أشعار» بلا عصر، فتقدّم عليه ابن خلكان (المملوكي)
+        الذي جعل صدره عجزًا؛ وكذلك أبو نواس على الأعشى."""
+        S = self.S
+        q = S._ntoks("عفت الديار محلها فمقامها")
+        labid = ("عفت الديار محلها فمقامها", "بمنى تأبد غولها فرجامها", 1, "لبيد بن ربيعة", "عفت الديار محلها فمقامها", "الكامل", None)
+        khallikan = ("قول لبيد في معلقته", "عفت الديار محلها فمقامها", 2, "ابن خلكان", "", "الكامل", "العصر المملوكي")
+        c = sorted([(1.0, khallikan), (1.0, labid)], key=lambda x: S._takhrij_key(q, x[0], x[1]))
+        self.assertEqual(c[0][1][3], "لبيد بن ربيعة")
+        q = S._ntoks("ودع هريرة إن الركب مرتحل")
+        nuwas = ("بادر صبوحك وانعم أيها الرجل", "ودع هريرة إن الركب مرتحل", 7, "ابو نواس", "بادر صبوحك", "البسيط", "العصر العباسي")
+        asha = ("ودع هريرة إن الركب مرتحل", "وهل تطيق وداعا أيها الرجل", 1, "الأعشى", "معلقة الأعشى", "البسيط", None)
+        c = sorted([(1.0, nuwas), (1.0, asha)], key=lambda x: S._takhrij_key(q, x[0], x[1]))
+        self.assertEqual(c[0][1][3], "الأعشى")
+
+    def test_era_from_other_poems(self):
+        eras = {self.S._poet_key("جرير"): "العصر الأموي"}
+        self.assertEqual(self.S._era_rank(None, "جَرير", eras), 3)          # من قصائده الأخرى
+        self.assertEqual(self.S._era_rank("العصر العباسي", "ابو نواس", eras), 4)
+        self.assertEqual(self.S._era_rank(None, "مجهول", eras), 10)
+        self.assertEqual(self.S._era_rank("قبل الإسلام"), 0)
+        self.assertEqual(self.S._era_rank("المغرب والأندلس"), 5)
+        self.assertEqual(self.S._era_rank("المخضرمين"), 1)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
