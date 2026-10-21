@@ -188,8 +188,9 @@ class TestAddRemove(unittest.TestCase):
         return r[0] if r else None
 
     def test_remove_clears_text_and_index(self):
-        before = len(self.S._corpus_rows("قرطبان", False, None, None, None, None, 50)[2])
-        self.assertEqual(before, 1)
+        con, _v, rows = self.S._corpus_rows("قرطبان", False, None, None, None, None, 50)
+        con.close()   # في Windows يبقى الملف مقفلًا ما دام الاتصال مفتوحًا، فيفشل بناء القاعدة في الاختبار التالي
+        self.assertEqual(len(rows), 1)
         out = self.S.corpus_remove_book(URI_B)
         self.assertEqual(out.get("حُذف"), "كتاب الاختبار الثاني")
         con, _v, rows = self.S._corpus_rows("قرطبان", False, None, None, None, None, 50)
