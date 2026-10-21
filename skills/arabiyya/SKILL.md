@@ -27,7 +27,7 @@ description: كيف تُستعمل أدوات «العربية» الـ38 في �
 | الدلالة: المجاورات، البدائل في السياق، التطور عبر القرون | `semantic_neighbors` · `substitutes_in_context` · `word_similarity` · `semantic_change` |
 | الكلمة في المدوّنة التراثية: سياقاتها وتكرارها ومصاحباتها | `corpus_concordance` · `corpus_usage` · `corpus_collocates` · `usage_compare` |
 | الأسلوب ونسبة النص | `text_profile` · `compare_texts` · `attribute_author` |
-| توسيع المدوّنة | `corpus_find_book` · `corpus_add_book` (من OpenITI) · `corpus_add_shamela_book` (من الشاملة المثبّتة) |
+| توسيع المدوّنة | `corpus_find_book` · `corpus_add_book` (من OpenITI) · `corpus_add_shamela_book` (من الشاملة المثبّتة: كتابًا برقمه، أو فنًّا كاملًا بـ`category`، أو الفنون اللغوية السبعة بـ«الكل»، على دفعات حتى يصير «الباقي» صفرًا) |
 | قياس دقة الأدوات | `benchmark` |
 
 ## مراتب الأحكام: انقل كل حكم بمرتبته

@@ -2354,17 +2354,21 @@ def corpus_remove_book(book: str) -> dict:
 
 
 @mcp.tool()
-def corpus_add_shamela_book(book_id: int | None = None, genre: str = "نحو", replace_openiti: bool = False) -> dict:
+def corpus_add_shamela_book(book_id: int | None = None, genre: str = "نحو", replace_openiti: bool = False,
+                            category: str | None = None, limit: int = 40) -> dict:
     """إضافة كتاب من «المكتبة الشاملة» المثبّتة على جهاز الباحث (الإصدار الرابع) إلى المدوّنة التراثية، بنصّه المشكول
     وجزئه وصفحته كما يعرضها برنامج الشاملة. يُقرأ المتن وحده دون الحاشية. يعمل بلا إنترنت، ويقرأ ملفات الشاملة ولا يعدّلها.
     book_id: رقم الكتاب في الشاملة (يظهر في بطاقة الكتاب، مثل 6972 لمغني اللبيب).
     replace_openiti: إن كان true استُبدل بكل كتاب في المدوّنة أُخذ من الشاملة عبر OpenITI نسختُه من الشاملة المثبّتة (أدقّ ترقيمًا ومشكولة)، دون تكرار.
+    category: لاستيراد فنٍّ كاملًا من الشاملة: «النحو والصرف»، «كتب اللغة»، «البلاغة»، «العروض والقوافي»، «الشعر ودواوينه»،
+    «الغريب والمعاجم»، «الأدب»، أو «الكل» للفنون السبعة. يُستورد على دفعات (limit كتابًا في كل استدعاء، والافتراضي 40)
+    بلا تكرار، فأعد الاستدعاء حتى يصير «الباقي» صفرًا. الفنون السبعة كاملةً نحو 860 كتابًا و155 مليون كلمة (نحو 3.3 غ.ب).
     يتطلب برنامج الشاملة 4 وحزمة JPype1؛ ويُحدَّد مجلد الشاملة تلقائيًّا أو بمتغير البيئة SHAMELA_ROOT."""
     import sqlite3, sys
     if not os.path.exists(CORPUS_DB):
         return {"تنبيه": "المدوّنة لم تُبنَ بعد؛ شغّل سكربت التثبيت مرة أخرى."}
-    if book_id is None and not replace_openiti:
-        return {"تنبيه": "مرّر book_id (رقم الكتاب في الشاملة) أو replace_openiti=true."}
+    if book_id is None and not replace_openiti and not category:
+        return {"تنبيه": "مرّر book_id (رقم الكتاب في الشاملة) أو category (فنًّا يُستورد كاملًا) أو replace_openiti=true."}
     here = os.path.dirname(os.path.abspath(__file__))
     if here not in sys.path:
         sys.path.insert(0, here)
@@ -2384,6 +2388,15 @@ def corpus_add_shamela_book(book_id: int | None = None, genre: str = "نحو", r
             out["الاستبدال"] = ISH.replace_openiti(sh, con, CORPUS_DB)
         if book_id is not None:
             out["الإضافة"] = ISH.import_book(sh, con, int(book_id), genre)
+        if category:
+            c = _norm(category).strip()
+            cats = (list(ISH.LANG_CATEGORIES) if c in ("الكل", "كل", "الكل اللغوي")
+                    else [k for k, n in ISH.CATEGORY_NAMES.items() if c and (c in _norm(n) or _norm(n) in c)])
+            if not cats:
+                out["تنبيه"] = "فنٌّ غير معروف؛ الفنون: " + "، ".join(ISH.CATEGORY_NAMES.values()) + "، أو «الكل»."
+            else:
+                out["الفنون"] = [ISH.CATEGORY_NAMES[k] for k in cats]
+                out["الاستيراد"] = ISH.import_categories(sh, con, root, CORPUS_DB, cats, limit=max(1, min(int(limit), 300)))
     finally:
         con.close()
     return out

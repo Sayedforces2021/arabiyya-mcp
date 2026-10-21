@@ -106,5 +106,29 @@ class TestReplace(unittest.TestCase):
         self.assertIn("تنبيه", I.import_book(FakeShamela(), self.con, 7362, "نحو"))
 
 
+class TestCategories(TestReplace):
+    """استيراد فنٍّ كاملًا: لا يُعاد كتاب له نسخة OpenITI في المدوّنة، ويُستأنف بلا تكرار."""
+
+    def test_resolve_died(self):
+        self.assertEqual(I.resolve_died(577, None, None), (577, "البطاقة"))
+        self.assertEqual(I.resolve_died(None, 911, 911), (911, "فهرس المؤلفين"))
+        self.assertEqual(I.resolve_died(None, 99999, 1440), (1440, "تاريخ الكتاب"))
+        self.assertEqual(I.resolve_died(None, None, 99999), (I.MODERN_DIED, "معاصر أو مجهول"))
+
+    def test_skips_openiti_copy_and_resumes(self):
+        cb = I.category_books
+        try:
+            I.category_books = lambda root, cats: [(7362, 31, 577, 577)]
+            r = I.import_categories(FakeShamela(), self.con, "x", ":memory:", [31])
+            self.assertEqual((r["أُضيف"], r["كان موجودًا"]), (0, 1))     # الإنصاف موجود بنسخة OpenITI
+            I.openiti_shamela_ids = lambda db: {}
+            r = I.import_categories(FakeShamela(), self.con, "x", ":memory:", [31])
+            self.assertEqual(r["أُضيف"], 1)
+            r = I.import_categories(FakeShamela(), self.con, "x", ":memory:", [31])
+            self.assertEqual((r["أُضيف"], r["الباقي"]), (0, 0))          # الثانية لا تكرّر
+        finally:
+            I.category_books = cb
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)
