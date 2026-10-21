@@ -3135,6 +3135,10 @@ def _sign(w, f, case_or_mood: str) -> str:
                                                                      "الضمة المقدرة على آخره للتعذر" if t.endswith(("ا", "ى")) else "الضمة الظاهرة على آخره")
         if case_or_mood == "Sub":
             return "حذف النون لأنه من الأفعال الخمسة" if five else ("الفتحة المقدرة للتعذر" if t.endswith(("ا", "ى")) else "الفتحة الظاهرة على آخره")
+        if case_or_mood == "Jus" and getattr(w, "jus_weak", False):
+            return "حذف حرف العلة من آخره، والحركة قبله دليل عليه"
+        if case_or_mood == "Jus" and getattr(w, "iltiqa", False) and not five:
+            return "السكون، وحُرّك بالكسر لالتقاء الساكنين"
         if case_or_mood == "Jus":
             return "حذف النون لأنه من الأفعال الخمسة" if five else ("حذف حرف العلة من آخره" if t.endswith(("و", "ي", "ا", "ى")) else "السكون الظاهر على آخره")
         return ""
@@ -3164,7 +3168,14 @@ def _verb_desc(w, f) -> str:
     if asp == "Perf":
         return f"فعل ماضٍ{naqis}{pas} مبني"
     if mood == "Imp" or asp is None and w.xpos and w.xpos.startswith("VC"):
-        return f"فعل أمر{pas} مبني"
+        t = _strip_tashkeel(w.text or "")
+        if t.endswith("وا"):
+            return f"فعل أمر{pas} مبني على حذف النون، والواو ضمير متصل في محل رفع فاعل، والألف فارقة"
+        if t.endswith("ا") and len(t) >= 3:
+            return f"فعل أمر{pas} مبني على حذف النون، والألف ضمير متصل في محل رفع فاعل"
+        if t.endswith("ني") and len(t) >= 4:
+            return f"فعل أمر{pas} مبني على السكون، والنون للوقاية، والياء ضمير متصل في محل نصب مفعول به"
+        return f"فعل أمر{pas} مبني على السكون" if not t.endswith(("ي", "و")) else f"فعل أمر{pas} مبني"
     m = mood or "Ind"
     return f"فعل مضارع{naqis}{pas} {_MOOD_AR.get(m, 'مرفوع')} وعلامة {'رفعه' if m == 'Ind' else 'نصبه' if m == 'Sub' else 'جزمه'} {_sign(w, f, m)}"
 
@@ -3468,6 +3479,23 @@ def _irab_haraka_rules(doc, sentence: str):
                 spans.append((pos, pos + n) if exact else (None, tok.end_char if w is tok.words[-1] else None))
                 pos += n
             words = list(tok.words)
+            # «ذو سعة»: «ذو» بمعنى صاحب من الأسماء الخمسة، لا اسم إشارة؛ يُعرف بأن بعدها اسمًا مضافًا إليه (لا «الذي» كما في «من ذا الذي»)
+            t0 = _strip_tashkeel(tok.text)
+            jar = t0[:1] if len(t0) == 3 and t0[:1] in "بلك" and t0[1:] == "ذي" else ""
+            dhu = t0[len(jar):] if t0[len(jar):] in ("ذو", "ذا", "ذي") else ""
+            if dhu and k + 1 < len(toks):
+                nxt = toks[k + 1].words[0]
+                if nxt.upos in ("NOUN", "PROPN", "ADJ", "X") and not _bare_ar(nxt.text).startswith("الذ"):
+                    w0 = words[-1]
+                    w0.upos, w0.lemma, w0.xpos = "NOUN", "ذو", "N------S1R"
+                    w0.feats = ""
+                    _set_feat(w0, "Case", {"ذو": "Nom", "ذا": "Acc", "ذي": "Gen"}[dhu])
+                    _set_feat(w0, "Definite", "Cons")
+                    if jar:
+                        for x in words[:-1]:
+                            x.irab_override = ""          # الجار يُذكر في وصف الكلمة نفسها
+                        w0.role_override = f"اسم مجرور بـ«{jar}»"
+                        w0.pre = f"{ {'ب': 'الباء', 'ل': 'اللام', 'ك': 'الكاف'}[jar]} حرف جر، و«ذي» "
             # «لأقرأ»: يجعلها المحلل جارًّا ومجرورًا، والمحلل الصرفي لا يعرف لها إلا الفعل؛ فهي لام ومضارع («لأحمد» لها وجه اسمي فلا تُمسّ)
             if len(words) == 2 and _strip_tashkeel(words[0].text) == "ل" and words[1].upos in ("NOUN", "X") \
                     and _strip_tashkeel(words[1].text)[:1] in "أيتن":
@@ -3497,6 +3525,12 @@ def _irab_haraka_rules(doc, sentence: str):
                             w.upos = "VERB"
                         _set_feat(w, "Mood", mood)
                         w.mood_rule = "haraka"
+                        if v == "i":   # الكسر في المجزوم: لالتقاء الساكنين قبل «ال»، وإلا فهو المعتل الآخر حُذف حرف علته («نَبْكِ»)
+                            nx = _strip_tashkeel(toks[k + 1].text) if k + 1 < len(toks) else ""
+                            if nx.startswith("ا"):
+                                w.iltiqa = True
+                            else:
+                                w.jus_weak = True
                 elif w.upos in ("NOUN", "ADJ", "PROPN") and v in ("u", "a", "i") and not t.endswith(("ون", "ين", "ان", "ات")) \
                         and not (not split and t.endswith(_PRON_END)):
                     e = spans[j][1]
@@ -3580,10 +3614,641 @@ def _irab_haraka_rules(doc, sentence: str):
     return doc
 
 
+_RELATIVE = {"الذي", "التي", "الذين", "اللذان", "اللتان", "اللذين", "اللتين", "اللاتي", "اللواتي", "اللائي"}
+_SEP_PRON = {"هو": "الفتح", "هي": "الفتح", "هم": "السكون", "هما": "السكون", "هن": "الفتح", "أنت": "الفتح",
+             "أنتم": "السكون", "أنا": "السكون", "نحن": "الضم"}
+_ZANN = {"ظن", "حسب", "خال", "زعم", "وجد", "جعل", "عد", "رأى"}
+_TENS = {"عشرين", "عشرون", "ثلاثين", "ثلاثون", "أربعين", "أربعون", "خمسين", "خمسون", "ستين", "ستون",
+         "سبعين", "سبعون", "ثمانين", "ثمانون", "تسعين", "تسعون"}
+_MEASURE = {"مثقال", "ملء", "رطل", "ذراع", "شبر", "قنطار", "صاع", "قيراط"}
+
+
+def _irab_syntax_rules(doc, sentence: str):
+    """قواعد من النحو تُصحَّح بها أبواب يخطئ فيها المحلل الإحصائي في الجمل التراثية القصيرة؛ كلها قواعد مقررة لا ظن فيها:
+    الفعل المشكول على أوزانه (فَعَلَ، فُعِلَ، اِفْعَلْ، أَفْعِلْ) في صدر الكلام؛ والاسم المرفوع قبل فعله مبتدأ لا فاعل؛
+    و«لا» النافية للجنس، و«نعم وبئس»، و«لولا»، و«ما» النافية والتعجبية، والنداء، والمستثنى، وضمير الفصل، و«إنما» الكافة،
+    و«مَن» الاستفهامية والشرطية، و«إنْ» الشرطية والاسم بعدها، و«إذا» الشرطية، والتمييز بعد العدد والمقادير وأفعل التفضيل،
+    والبدل بعد المضاف إلى ضمير، ومفعولا «ظن» وأخواتها، والمفعول لأجله، و«من» الزائدة بعد النفي، والضمير المتصل بالفعل وبـ«إنّ»."""
+    bases = _bases(sentence)
+    voweled = any(m for _, m in bases)
+
+    def lts(tok):
+        return bases[tok.start_char:tok.end_char] if voweled else []
+
+    def mk(lt):
+        return next((c for c in lt[1] if c in "َُِْ"), "") if lt else ""
+
+    def tanwin(tok):
+        L = lts(tok)
+        return bool(L) and (any(c in L[-1][1] for c in "ًٌٍ") or (L[-1][0] == "ا" and len(L) > 1 and "ً" in L[-2][1]))
+
+    def vowel(tok):
+        if not voweled:
+            return None
+        ws = tok.words
+        if len(ws) > 1 and ws[-1].upos == "PRON" and ws[-2].upos != "VERB":
+            return _vowel_at(bases, tok.end_char - len(_strip_tashkeel(ws[-1].text)))
+        suf = getattr(ws[-1], "pron_suffix", "")
+        tb = _strip_tashkeel(tok.text)
+        if not suf and len(tb) > 4 and tb.endswith(("ون", "ين", "ان")):
+            nun = _vowel_at(bases, tok.end_char)
+            if tb.endswith("ون") and nun == "a":
+                return "u"                      # جمع مذكر مرفوع
+            if (tb.endswith("ين") and nun == "a") or (tb.endswith(("ين", "ان")) and nun == "i"):
+                return None                     # الياء والألف تُعرب بالحرف لا بالحركة
+        return _vowel_at(bases, tok.end_char - len(suf))
+
+    def bare(tok):
+        return _strip_tashkeel(tok.text)
+
+    def nominal(w):
+        return w.upos in ("NOUN", "PROPN", "ADJ", "X", "NUM")
+
+    def main_word(tok):
+        ws = [w for w in tok.words if w.upos not in ("CCONJ", "ADP", "PART", "PUNCT")] or tok.words
+        return ws[0]
+
+    for s_ in doc.sentences:
+        toks = [t for t in s_.tokens if not all(w.upos == "PUNCT" for w in t.words)]
+        by_id = {w.id: w for w in s_.words}
+        question = "؟" in s_.text or "?" in s_.text
+        cond = False
+        tok_of = {w.id: t for t in toks for w in t.words}
+        for tk in toks:     # المنوّن اسم: يُحوَّل قبل الحلقة حتى تراه القواعد التي تسبقه («إلا عليٌّ»)
+            ww = tk.words[-1]
+            if len(tk.words) == 1 and tanwin(tk) and ww.upos in ("VERB", "AUX", "ADP", "PART", "SCONJ", "CCONJ", "DET"):
+                ww.upos, ww.feats, ww.xpos = "NOUN", "", "N------S1I"
+                _set_feat(ww, "Case", {"u": "Nom", "a": "Acc", "i": "Gen"}.get(vowel(tk) or "", "Acc"))
+                _set_feat(ww, "Definite", "Ind")
+                if ww.deprel in ("case", "cc", "mark", "advmod", "cop"):
+                    ww.deprel = "dep"
+        for k, tok in enumerate(toks):
+            t = bare(tok)
+            words = list(tok.words)
+            L = lts(tok)
+            prefix = t[:1] if len(t) >= 3 and t[:1] in "وف" and len(words) > 1 and _strip_tashkeel(words[0].text) in ("و", "ف") else ""
+            start = k == 0 or (k == 1 and bare(toks[0]) in ("و", "ف"))
+            nxt = toks[k + 1] if k + 1 < len(toks) else None
+            prv = toks[k - 1] if k else None
+            pt = bare(prv) if prv else ""
+            core_l = L[len(prefix):] if L else []
+            core = t[len(prefix):]
+            w = words[-1]
+            if tanwin(tok) and w.upos in ("VERB", "AUX", "ADP", "PART", "SCONJ", "CCONJ", "DET") and len(words) == 1:
+                w.upos, w.feats, w.xpos = "NOUN", "", "N------S1I"
+                if w.deprel in ("case", "cc", "mark", "advmod", "cop"):
+                    w.deprel = "dep"
+                _set_feat(w, "Case", {"u": "Nom", "a": "Acc", "i": "Gen"}.get(vowel(tok) or "", "Acc"))
+                _set_feat(w, "Definite", "Ind")
+            if prefix and len(core) == 2 and k == 0 and L and mk(L[0]) == "َ" and mk(L[1]) == "َ" and len(L) == 3 and mk(L[2]) == "َ":
+                words[0].irab_override = ""                 # «وَقَفَ» فعل ثلاثي، لا واو عطف قبل «قف»
+                w.text, w.upos, w.feats = t, "VERB", ""
+                _set_feat(w, "Aspect", "Perf")
+                prefix, core, core_l = "", t, L
+            if len(words) == 1 and nominal(w) and len(t) >= 3 and t.endswith("ي") and not t.startswith("ال") and L \
+                    and mk(L[-2]) == "ِ" and mk(L[-1]) in ("", "ْ") and not any(c in L[-1][1] for c in "ًٌٍّ"):
+                w.sign_override = "المقدّرة على ما قبل ياء المتكلم، منع من ظهورها اشتغال المحل بحركة المناسبة"
+                w.post_note = "، وهو مضاف، والياء ضمير متصل مبني على السكون في محل جر مضاف إليه"
+                if w.upos == "X":
+                    w.upos = "NOUN"
+            if len(words) == 1 and nominal(w) and L and len(t) >= 4 and not t.startswith("ال") and not tanwin(tok) and not getattr(w, "pron_suffix", ""):
+                for sf, needs in (("هما", ""), ("كما", ""), ("هم", ""), ("كم", ""), ("ها", ""), ("ه", "ُِ"), ("ك", "َِ")):
+                    if t.endswith(sf) and len(t) - len(sf) >= 2:
+                        before = L[len(t) - len(sf) - 1]
+                        last_ok = not needs or mk(L[-1]) in needs
+                        if mk(before) in "َُِ" and last_ok and not (sf in ("ه", "ك") and "ّ" in before[1]):
+                            c = {"ُ": "Nom", "َ": "Acc", "ِ": "Gen"}[mk(before)]
+                            w.pron_suffix = sf
+                            w.feats = ""
+                            _set_feat(w, "Case", c)
+                            _set_feat(w, "Definite", "Cons")
+                            if c == "Acc" and (w.deprel or "").startswith(("nsubj", "conj", "nmod")):
+                                w.deprel = "obj"
+                            w.post_note = f"، و«{sf}» ضمير متصل مبني في محل جر مضاف إليه" + ("، والميم علامة الجمع" if sf in ("كم", "هم") else "")
+                        break
+            if len(words) == 1 and w.upos == "PRON" and t not in _SEP_PRON and len(t) >= 4:
+                suf = next((x for x in ("هما", "كما", "هم", "هن", "كم", "كن", "ها", "نا", "ه", "ك") if t.endswith(x)), "")
+                if suf:
+                    w.upos, w.feats, w.xpos, w.pron_suffix = "NOUN", "", "N------S1R", suf
+                    c = {"u": "Nom", "a": "Acc", "i": "Gen"}.get(_vowel_at(bases, tok.end_char - len(suf)) or "") if voweled else None
+                    c = c or {"obj": "Acc", "nsubj": "Nom"}.get((w.deprel or "").split(":")[0], "Gen")
+                    _set_feat(w, "Case", c)
+                    _set_feat(w, "Definite", "Cons")
+                    w.post_note = f"، و«{suf}» ضمير متصل مبني في محل جر مضاف إليه" + ("، والميم علامة الجمع" if suf in ("كم", "هم") else "")
+
+            # ── الفعل المشكول على وزنه في صدر الكلام أو بعد الواو والفاء، وقد عدّه المحلل اسمًا ──
+            vw_ = next((x for x in words if x.upos not in ("CCONJ", "ADP", "PART", "PRON", "PUNCT")), w)
+            psuf = _strip_tashkeel(words[-1].text) if len(words) > 1 and words[-1].upos == "PRON" and vw_ is not words[-1] else ""
+            if core_l and len(core_l) >= 3 and vw_.upos in ("NOUN", "X", "ADJ", "PROPN", "VERB") and not tanwin(tok) \
+                    and not core.startswith("ال") and core not in ("نعم", "بئس"):
+                w = vw_
+                m = [mk(x) for x in core_l]
+                stem_end = mk(core_l[len(core_l) - len(psuf) - 1]) if len(core_l) > len(psuf) else ""
+                sfx = core[3:] if len(core) > 3 else ""
+                perf = m[0] in "َُ" and m[1] in "َِ" and (m[2] == "َ" or (m[2] == "ْ" and sfx[:1] in ("ت", "ن"))) \
+                    and (len(core) == 3 or sfx in ("ت", "تم", "نا", "وا", "ا", "ه", "ها", "هم", "ك", "كم", "ته", "تها", "تهم", "تك", "تكم"))
+                passive = perf and m[0] == "ُ" and m[1] == "ِ"
+                subj_sfx = core.endswith(("ت", "تم", "تما", "تن", "نا")) and core_l and mk(core_l[-1]) != "ْ"
+                imper_end = stem_end == "ْ" or core[:len(core) - len(psuf)].endswith(("وا", "ا", "ي")) or \
+                    (stem_end == "ِ" and not psuf and nxt is not None and bare(nxt).startswith("ال"))
+                imper = not subj_sfx and imper_end and not core.startswith("ال") and (
+                    (core_l[0][0] == "ا" and not mk(core_l[0]) and mk(core_l[1]) == "ْ" and len(core) >= 4) or
+                    (core_l[0][0] == "أ" and m[0] == "َ" and m[1] == "ْ" and len(m) > 2 and m[2] == "ِ" and len(core) >= 4) or
+                    (core_l[0][0] == "أ" and m[0] == "َ" and m[1] == "ِ" and len(m) > 2 and m[2] == "ْ"))   # أَقِمْ، أَجِرْ
+                after_mubtada = k == 1 and prv is not None and nominal(main_word(prv)) and vowel(prv) == "u" and bare(prv).startswith("ال")
+                if (perf and (start or prefix) and nxt is not None and nominal(main_word(nxt))) or passive or imper or (perf and after_mubtada):
+                    if perf and after_mubtada and not getattr(main_word(prv), "role_override", None):
+                        mb = main_word(prv)
+                        mb.role_override = "مبتدأ"
+                        _set_feat(mb, "Case", "Nom")
+                        mb.deprel, mb.head = "nsubj", w.id
+                        w.post = getattr(w, "post", "") + "، وفاعله ضمير مستتر جوازًا تقديره هو، والجملة الفعلية في محل رفع خبر"
+                    if w.upos != "VERB" or (imper and _feats(w).get("Mood") != "Imp") or (passive and _feats(w).get("Voice") != "Pass"):
+                        w.upos = "VERB"
+                        w.feats = ""
+                        if imper:
+                            _set_feat(w, "Mood", "Imp")
+                        else:
+                            _set_feat(w, "Aspect", "Perf")
+                            if passive:
+                                _set_feat(w, "Voice", "Pass")
+                        # ما جعله المحلل مضافًا إليه لهذه الكلمة هو فاعلها أو مفعولها
+                        for x in s_.words:
+                            if x.head == w.id and (x.deprel or "").startswith(("nmod", "obl", "amod", "root", "dep", "nsubj", "obj")) and nominal(x) \
+                                    and not any(c.deprel == "case" for c in s_.words if c.head == x.id):
+                                xt = tok_of.get(x.id)
+                                v_ = vowel(xt) if xt is not None else None
+                                c = {"u": "Nom", "a": "Acc", "i": "Gen"}.get(v_ or "", _feats(x).get("Case"))
+                                if c:
+                                    _set_feat(x, "Case", c)
+                                x.deprel = "nsubj:pass" if passive else "obj" if c == "Acc" else "nsubj"
+                    if passive:      # فاعل المبني للمجهول نائبُ فاعل: «كُتِبَ الدرسُ»
+                        for x in s_.words:
+                            if x.head == w.id and (x.deprel or "") == "nsubj":
+                                x.deprel = "nsubj:pass"
+                    if (start or prefix) and nxt is not None:
+                        nm = main_word(nxt)
+                        if nominal(nm) and not getattr(nm, "role_override", None) and not any(c.deprel == "case" for c in s_.words if c.head == nm.id) \
+                                and not any(x.upos == "ADP" for x in nxt.words):
+                            c = {"u": "Nom", "a": "Acc"}.get(vowel(nxt) or "")
+                            if c:
+                                _set_feat(nm, "Case", c)
+                                nm.head = w.id
+                                nm.deprel = "nsubj:pass" if passive else "obj" if c == "Acc" else "nsubj"
+                                w.head, w.deprel = 0, "root"
+                    if perf and sfx[:1] == "ت" and len(core_l) > 3 and w is words[-1]:
+                        hk = {"ُ": "الضم", "َ": "الفتح", "ِ": "الكسر"}.get(mk(core_l[3]), "الضم")
+                        w.post = getattr(w, "post", "") + f"، والتاء ضمير متصل مبني على {hk} في محل رفع فاعل"
+
+            if len(words) == 2 and words[0].upos == "VERB" and words[1].upos == "PRON" and len(_strip_tashkeel(words[0].text)) <= 2 \
+                    and t[:1] in "أيتن":
+                words[1].irab_override = ""
+                words[0].text = t
+            if pt in ("لا", "لم") and len(words) == 1 and t[:1] in "أيتن" and L and mk(L[0]) in "َُ" and vowel(tok) == "a" \
+                    and not tanwin(tok) and not (nxt is not None and bare(nxt).startswith("ال")):
+                vw2 = words[0]
+                vw2.upos, vw2.feats = "VERB", ""
+                _set_feat(vw2, "Aspect", "Imp"); _set_feat(vw2, "Mood", "Jus")
+                vw2.jus_weak, vw2.mood_rule = True, "haraka"
+            if pt == "لا" and len(words) >= 1 and words[0].upos == "VERB" and _feats(words[0]).get("Mood") == "Jus":
+                words[0].mood_note_jus = "بـ«لا» الناهية"
+
+            # ── «نعم» و«بئس» ──
+            if core in ("نعم", "بئس") and nxt is not None and bare(nxt).startswith("ال"):
+                w.upos, w.feats = "VERB", ""
+                w.irab_override = f"فعل ماضٍ جامد لإنشاء {'المدح' if core == 'نعم' else 'الذم'} مبني على الفتح"
+                fa = main_word(nxt)
+                fa.role_override, fa.deprel = "فاعل", "nsubj"
+                _set_feat(fa, "Case", "Nom")
+                if k + 2 < len(toks) and nominal(main_word(toks[k + 2])):
+                    mk_w = main_word(toks[k + 2])
+                    mk_w.role_override = f"المخصوص ب{'المدح' if core == 'نعم' else 'الذم'} مبتدأ مؤخر"
+                    _set_feat(mk_w, "Case", "Nom")
+                    mk_w.post_note = "، والجملة قبله في محل رفع خبر مقدم (أو هو خبر لمبتدأ محذوف)"
+
+            # ── «لولا» ──
+            if core in ("لولا", "لوما"):
+                for x in words:
+                    x.irab_override = ""
+                words[0].irab_override = "حرف امتناع لوجود مبني على السكون لا محل له من الإعراب"
+                if nxt is not None and nominal(main_word(nxt)):
+                    n = main_word(nxt)
+                    n.role_override = "مبتدأ"
+                    _set_feat(n, "Case", "Nom")
+                    n.post_note = "، وخبره محذوف وجوبًا تقديره موجود"
+                for j in range(k + 2, len(toks)):
+                    tj = toks[j]
+                    if bare(tj).startswith("ل") and len(tj.words) >= 1:
+                        lw = tj.words[0]
+                        rest = [x for x in tj.words if x is not lw] or [lw]
+                        # «لأكرمتك»: اللام الواقعة في الجواب، وبعدها ماضٍ
+                        if _strip_tashkeel(lw.text) == "ل" and rest:
+                            v = rest[0]
+                            v.upos, v.feats = "VERB", ""
+                            _set_feat(v, "Aspect", "Perf")
+                            lw.irab_override = "اللام واقعة في جواب «لولا» حرف مبني على الفتح لا محل له من الإعراب"
+                            for x in rest[1:]:
+                                if x.upos == "PRON":
+                                    x.irab_override = "ضمير متصل مبني في محل نصب مفعول به"
+                            v.post = getattr(v, "post", "") + "، والجملة جواب شرط غير جازم لا محل لها من الإعراب"
+                        break
+
+            # ── «ما» في صدر الكلام: تعجبية قبل «أفعلَ» واسم منصوب، ونافية قبل الفعل ──
+            if t == "ما" and start and nxt is not None:
+                nt = bare(nxt)
+                nL = lts(nxt)
+                after = toks[k + 2] if k + 2 < len(toks) else None
+                taajjub = len(nt) == 4 and nt[0] == "أ" and after is not None and nominal(main_word(after)) and \
+                    (not nL or mk(nL[-1]) == "َ") and (vowel(after) in (None, "a")) and not question
+                if taajjub:
+                    w.irab_override = "«ما» التعجبية نكرة تامة بمعنى شيء مبنية على السكون في محل رفع مبتدأ"
+                    v = main_word(nxt)
+                    v.upos, v.feats = "VERB", ""
+                    v.irab_override = "فعل ماضٍ جامد لإنشاء التعجب مبني على الفتح، وفاعله ضمير مستتر وجوبًا يعود على «ما»، والجملة في محل رفع خبر"
+                    o = main_word(after)
+                    o.role_override, o.deprel = "مفعول به", "obj"
+                    _set_feat(o, "Case", "Acc")
+                elif main_word(nxt).upos == "VERB" or (nL and len(nL) >= 3 and mk(nL[0]) in "َُ" and nt[:1] in "يتنأ"):
+                    if not question:
+                        w.irab_override = "حرف نفي مبني على السكون لا محل له من الإعراب"
+
+            # ── «لا» النافية للجنس: «لا رجلَ في الدار»، «لا ريبَ فيه» ──
+            if t == "لا" and nxt is not None:
+                n = main_word(nxt)
+                nt = bare(nxt)
+                nv = vowel(nxt)
+                if nominal(n) and not nt.startswith("ال") and n.upos != "VERB" and \
+                        ((nv == "a" and not tanwin(nxt)) or (nv is None and _feats(n).get("Case") == "Acc" and _feats(n).get("Definite") != "Cons")):
+                    w.irab_override = "«لا» النافية للجنس تعمل عمل «إنّ» مبنية على السكون لا محل لها من الإعراب"
+                    n.irab_override = "اسم «لا» النافية للجنس مبني على الفتح في محل نصب"
+                    n.upos = "NOUN"
+                    if k + 2 < len(toks) and nominal(main_word(toks[k + 2])) and vowel(toks[k + 2]) == "u":
+                        kb = main_word(toks[k + 2])
+                        kb.role_override = "خبر «لا»"
+                        _set_feat(kb, "Case", "Nom")
+
+            # ── النداء: «يا زيدُ»، «يا أيها الناسُ» ──
+            if t == "يا" and nxt is not None:
+                n = main_word(nxt)
+                nt = bare(nxt)
+                if nt in ("أيها", "أيتها"):
+                    n.irab_override = "منادى نكرة مقصودة مبني على الضم في محل نصب، و«ها» حرف تنبيه"
+                    for x in nxt.words[1:]:
+                        x.irab_override = ""
+                    if k + 2 < len(toks):
+                        sv = main_word(toks[k + 2])
+                        sv.role_override = "نعت لـ«أيّ»"
+                        _set_feat(sv, "Case", "Nom")
+                elif nominal(n):
+                    if _feats(n).get("Definite") == "Cons" or (k + 2 < len(toks) and nominal(main_word(toks[k + 2])) and vowel(nxt) == "a"):
+                        n.role_override = "منادى مضاف"
+                        _set_feat(n, "Case", "Acc")
+                    elif not nt.startswith("ال"):
+                        n.irab_override = "منادى مفرد علم مبني على الضم في محل نصب" if n.upos == "PROPN" or vowel(nxt) == "u" or nt in ("زيد", "عمرو") \
+                            else "منادى نكرة مقصودة مبني على الضم في محل نصب"
+
+            # ── ما بعد «إلا»: المنصوب مستثنى، والمرفوع بدل ──
+            if t == "إلا" and nxt is not None and nominal(main_word(nxt)):
+                n = main_word(nxt)
+                v = vowel(nxt)
+                if v == "a" or (v is None and _feats(n).get("Case") == "Acc"):
+                    n.role_override = "مستثنى بـ«إلا»"
+                    _set_feat(n, "Case", "Acc")
+                elif v == "u":
+                    n.role_override = "بدل مرفوع من المستثنى منه" if not any(bare(x) == "لا" for x in toks[:k]) else \
+                        "بدل من الضمير المستتر في الخبر المحذوف"
+                    n.role_override = n.role_override.replace(" مرفوع", "")
+                    _set_feat(n, "Case", "Nom")
+
+            # ── ضمير الفصل: «زيدٌ هو القائمُ» ──
+            if t in _SEP_PRON and prv is not None and nxt is not None and bare(nxt).startswith("ال") \
+                    and nominal(main_word(prv)) and bare(prv) not in _SEP_PRON and (vowel(prv) in (None, "u")) and k == 1:
+                w.irab_override = f"ضمير فصل مبني على {_SEP_PRON[t]} لا محل له من الإعراب"
+                a, b = main_word(prv), main_word(nxt)
+                a.role_override, b.role_override = "مبتدأ", "خبر"
+                _set_feat(a, "Case", "Nom"); _set_feat(b, "Case", "Nom")
+
+            # ── «إنما» وأخواتها الكافة ──
+            if t in ("إنما", "أنما", "كأنما", "لكنما"):
+                for x in words:
+                    x.irab_override = ""
+                    x.text = t        # حتى لا تُعدّ «إنّ» ناسخة لما بعدها
+                words[0].irab_override = "كافة ومكفوفة، تفيد الحصر، لا محل لها من الإعراب" if t != "كأنما" else "كافة ومكفوفة تفيد التشبيه لا محل لها من الإعراب"
+
+            # ── «مَن» في صدر الكلام: استفهامية قبل «ذا» أو مع علامة الاستفهام، وشرطية قبل الفعل ──
+            if core == "من" and (start or prefix) and nxt is not None and not (L and mk(core_l[0]) == "ِ"):
+                n_main = main_word(nxt)
+                nt = bare(nxt)
+                tgt = words[-1]
+                lead = "الفاء حرف مبني على الفتح، و«مَن» " if prefix == "ف" else "الواو حرف مبني على الفتح، و«مَن» " if prefix == "و" else ""
+                if nt == "ذا" or question:
+                    tgt.irab_override = lead + "اسم استفهام مبني على السكون في محل رفع مبتدأ"
+                    if nt == "ذا":
+                        n_main.upos = "DET"
+                        n_main.role_override = "خبر"
+                        _set_feat(n_main, "Case", "Nom")
+                        if k + 2 < len(toks) and bare(toks[k + 2]) in _RELATIVE:
+                            r = main_word(toks[k + 2])
+                            r.role_override = "نعت لـ«ذا» (أو بدل منه)"
+                            _set_feat(r, "Case", "Nom")
+                elif n_main.upos == "VERB" or (lts(nxt) and nt[:1] in "يتنأا"):
+                    tgt.irab_override = lead + "اسم شرط جازم مبني على السكون في محل رفع مبتدأ"
+                    cond = True
+                    for x in s_.words:     # «مَن» ليست فاعلًا لفعل الشرط
+                        if x.head == tgt.id and x.deprel == "nsubj":
+                            x.deprel = "dep"
+
+            # ── «إنْ» الشرطية والاسم المرفوع بعدها: فاعل لفعل محذوف يفسّره المذكور ──
+            if core == "إن" and L and mk(core_l[-1]) == "ْ" and nxt is not None:
+                tgt = words[-1]
+                lead = "الواو استئنافية، و«إنْ» " if prefix == "و" else ""
+                for x in words[:-1]:
+                    x.irab_override = ""
+                tgt.irab_override = lead + "حرف شرط جازم مبني على السكون لا محل له من الإعراب"
+                cond = True
+                n = main_word(nxt)
+                if nominal(n) and vowel(nxt) == "u":
+                    n.role_override = "فاعل لفعل محذوف يفسّره المذكور"
+                    _set_feat(n, "Case", "Nom")
+                    for x in s_.words:
+                        if x.upos == "VERB" and x.id > n.id:
+                            x.post = getattr(x, "post", "") + "، والجملة مفسِّرة لا محل لها من الإعراب"
+                            break
+            if cond and prefix == "ف" and words and _strip_tashkeel(words[0].text) == "ف" and k > 1:
+                words[0].irab_override = "الفاء رابطة لجواب الشرط حرف مبني على الفتح لا محل له من الإعراب"
+
+            # ── «إذا» الشرطية في صدر الكلام ──
+            if core == "إذا" and (start or prefix == "و") and prefix != "ف":
+                for x in words[:-1]:
+                    x.irab_override = ""
+                lead = "الواو استئنافية، و«إذا» " if prefix == "و" else ""
+                words[-1].irab_override = lead + "ظرف لما يستقبل من الزمان متضمن معنى الشرط مبني على السكون في محل نصب"
+                cond = True
+
+            if len(words) == 2 and _strip_tashkeel(words[0].text) in ("ب", "ل", "ك") and words[0].upos == "ADP" and nominal(words[1]) \
+                    and not getattr(words[1], "role_override", None) and not getattr(words[1], "irab_override", None):
+                words[1].role_override = f"اسم مجرور بـ«{_strip_tashkeel(words[0].text)}»"
+                _set_feat(words[1], "Case", "Gen")
+
+            if len(words) == 1 and nominal(w) and t.startswith(("لل", "بال", "كال")) and len(t) > 4:
+                jar = t[0]
+                rest = ("ال" + t[2:]) if t.startswith("لل") else t[1:]
+                w.pre = f"{ {'ل': 'اللام', 'ب': 'الباء', 'ك': 'الكاف'}[jar]} حرف جر، و«{rest}» "
+                w.role_override = f"اسم مجرور بـ«{jar}»"
+                _set_feat(w, "Case", "Gen")
+
+            # ── «لمثل» ونحوها: الاسم بعد الجار عدّه المحلل حرفًا ──
+            if len(words) == 2 and _strip_tashkeel(words[0].text) in ("ل", "ب", "ك") and words[1].upos == "ADP" \
+                    and _strip_tashkeel(words[1].text) in ("مثل", "غير", "سوى", "نحو", "قبل", "بعد"):
+                x = words[1]
+                x.upos, x.deprel, x.feats = "NOUN", "obl", ""
+                _set_feat(x, "Case", "Gen")
+                x.role_override = f"اسم مجرور بـ«{_strip_tashkeel(words[0].text)}»"
+                if nxt is not None:
+                    _set_feat(x, "Definite", "Cons")
+                    dm = main_word(nxt)
+                    dm.role_override = "مضاف إليه"
+                    _set_feat(dm, "Case", "Gen")
+
+            # ── الضمير المتصل بـ«إنّ» وأخواتها اسمُها، والمتصل بالفعل مفعوله ──
+            if len(words) >= 2 and words[-1].upos == "PRON":
+                hw = words[-2]
+                ht = _strip_tashkeel(hw.text)
+                if ht in _NASIKH_INNA:
+                    words[-1].irab_override = f"ضمير متصل مبني في محل نصب اسم «{_NASIKH_INNA[ht]}»"
+                elif hw.upos == "VERB" and (words[-1].deprel or "") not in ("nsubj",) and not getattr(words[-1], "irab_override", None):
+                    words[-1].irab_override = "ضمير متصل مبني في محل نصب مفعول به"
+
+            # ── الاسم المرفوع قبل فعله مبتدأ، والجملة الفعلية خبره: «الطالبُ كتبَ الدرسَ» ──
+            n = main_word(tok)
+            if nominal(n) and (n.deprel or "").startswith("nsubj") and not getattr(n, "role_override", None):
+                h = by_id.get(n.head)
+                if h is not None and h.upos == "VERB" and h.id > n.id and not pt and vowel(tok) in (None, "u") \
+                        and not any(_strip_tashkeel(x.text) in _NASIKH_INNA for x in s_.words if x.id < n.id):
+                    n.role_override = "مبتدأ"
+                    _set_feat(n, "Case", "Nom")
+                    h.post = getattr(h, "post", "") + "، والجملة الفعلية في محل رفع خبر"
+
+            # ── الاسم المنصوب في صدر الكلام وبعده فعل اشتغل بضميره: «زيدًا ضربتُه»، «والسماءَ رفعها» ──
+            if nominal(n) and (start or prefix) and vowel(tok) == "a" and nxt is not None and len(nxt.words) >= 1:
+                nb = bare(nxt)
+                if nb.endswith(("ه", "ها", "هم")) and len(nb) >= 4:
+                    n.role_override = "مفعول به لفعل محذوف وجوبًا يفسّره المذكور"
+                    _set_feat(n, "Case", "Acc")
+                    vw = nxt.words[0]
+                    if vw.upos != "VERB":
+                        vw.upos, vw.feats = "VERB", ""
+                        _set_feat(vw, "Aspect", "Perf")
+                    for x in nxt.words[1:]:
+                        if x.upos == "PRON":
+                            x.irab_override = "ضمير متصل مبني في محل نصب مفعول به"
+                    vw.post = getattr(vw, "post", "") + "، والجملة مفسِّرة لا محل لها من الإعراب"
+                    if bare(nxt).startswith(bare(nxt)[:-1]) and _strip_tashkeel(vw.text).endswith("ت"):
+                        if "التاء" not in getattr(vw, "post", ""):
+                            vw.post = "، والتاء ضمير متصل في محل رفع فاعل" + vw.post
+
+            if L and len(t) == 4 and t[0] == "أ" and mk(L[0]) == "َ" and mk(L[1]) == "ْ" and mk(L[2]) == "َ" and prv is not None \
+                    and nominal(main_word(prv)) and vowel(prv) == "u" and nxt is not None and tanwin(nxt) and vowel(nxt) == "a":
+                w.upos, w.feats = "ADJ", ""
+                _set_feat(w, "Case", "Nom")
+                w.role_override = "خبر"
+                pm_ = main_word(prv)
+                if not getattr(pm_, "role_override", None):
+                    pm_.role_override = "مبتدأ"
+                    _set_feat(pm_, "Case", "Nom")
+                n = w
+
+            # ── التمييز: بعد العدد، والمقادير، وأفعل التفضيل ──
+            if nominal(n) and not bare(tok).startswith("ال") and (vowel(tok) in (None, "a")) and prv is not None:
+                pm = main_word(prv)
+                before = toks[k - 2] if k >= 2 else None
+                if pt in _TENS or (pt in ("أحد", "إحدى", "ثلاثة", "أربعة") and False) or \
+                        (before is not None and bare(before) in _MEASURE and nominal(pm)) or \
+                        (len(pt) in (3, 4) and pt[0] == "أ" and pt not in ("أحد", "أخي", "أمس", "أبي", "أمي", "أنت", "أنا", "أنه", "أنك") and nominal(pm) and not tanwin(prv)):
+                    if vowel(tok) == "a" or tanwin(tok) or _feats(n).get("Case") == "Acc":
+                        n.role_override = "تمييز"
+                        _set_feat(n, "Case", "Acc")
+
+            # ── البدل بعد المضاف إلى ضمير: «سافر أخي محمدٌ» ──
+            prv_pron = prv is not None and ((prv.words[-1].upos == "PRON" and nominal(prv.words[0]) and len(prv.words) == 2) or
+                                            getattr(prv.words[-1], "sign_override", "").startswith("المقدّرة على ما قبل ياء المتكلم"))
+            if nominal(n) and prv_pron and not t.startswith("ال") and (n.deprel or "").startswith("nmod") \
+                    and not getattr(n, "role_override", None):
+                n.role_override = "بدل (أو عطف بيان)"
+                c = {"u": "Nom", "a": "Acc", "i": "Gen"}.get(vowel(tok) or "", _feats(prv.words[0]).get("Case"))
+                if c:
+                    _set_feat(n, "Case", c)
+
+            # ── المعطوف المرفوع بعد الواو وقد جعله المحلل مضافًا إليه ──
+            if len(words) == 2 and _strip_tashkeel(words[0].text) == "و" and nominal(words[1]) and vowel(tok) == "u" \
+                    and (words[1].deprel or "").startswith("nmod"):
+                words[1].role_override = "معطوف"
+                _set_feat(words[1], "Case", "Nom")
+            elif len(words) == 1 and t[:1] == "و" and len(t) >= 3 and nominal(w) and vowel(tok) == "u" and (w.deprel or "").startswith("nmod") \
+                    and L and mk(L[0]) == "َ":
+                w.pre = f"الواو حرف عطف مبني على الفتح، و«{t[1:]}» "
+                w.role_override = "معطوف"
+                _set_feat(w, "Case", "Nom")
+
+            # ── مفعولا «ظن» وأخواتها ──
+            if n.upos == "VERB" or w.upos == "VERB":
+                vt = _strip_tashkeel((w if w.upos == "VERB" else n).text)
+                vroot = vt[:-1] if vt.endswith("ت") else vt
+                vroot = vroot[:2] if len(vroot) == 3 and vroot[1] == vroot[2] else vroot   # ظننت → ظنن → ظن
+                if vroot in _ZANN and k + 2 < len(toks):
+                    o1, o2 = main_word(toks[k + 1]), main_word(toks[k + 2])
+                    if nominal(o1) and nominal(o2) and vowel(toks[k + 2]) in ("a", None):
+                        o1.role_override, o2.role_override = "مفعول به أول", "مفعول به ثانٍ"
+                        _set_feat(o1, "Case", "Acc"); _set_feat(o2, "Case", "Acc")
+
+            # ── المفعول لأجله: مصدر نكرة منصوب بعد الفاعل وبعده لام: «وقف الطلابُ احترامًا للمعلم» ──
+            if nominal(n) and not t.startswith("ال") and tanwin(tok) and vowel(tok) == "a" and nxt is not None \
+                    and bare(nxt).startswith("ل") and prv is not None and (main_word(prv).deprel or "").startswith("nsubj"):
+                n.role_override = "مفعول لأجله"
+                _set_feat(n, "Case", "Acc")
+
+            if prefix and len(words) == 2 and words[1].upos in ("NOUN", "ADJ", "X") and core[:1] in "أيتن" and len(core) >= 3 \
+                    and core_l and mk(core_l[0]) in "َُ" and not tanwin(tok) and not core.endswith(("ة", "ات")) and vowel(tok) in ("a", "u", "o") \
+                    and prv is not None and any(x.upos == "VERB" for x in prv.words):
+                vw3 = words[1]
+                vw3.upos, vw3.feats = "VERB", ""
+                _set_feat(vw3, "Aspect", "Imp")
+                _set_feat(vw3, "Mood", {"a": "Sub", "u": "Ind", "o": "Jus"}[vowel(tok)])
+                vw3.mood_rule = "haraka"
+                pv = next(x for x in prv.words if x.upos == "VERB")
+                if vowel(tok) == "a" and (_feats(pv).get("Mood") in ("Imp", "Jus") or pt.startswith("ا")):
+                    if prefix == "ف":
+                        words[0].irab_override = "الفاء فاء السببية حرف مبني على الفتح لا محل له من الإعراب"
+                        vw3.mood_note = "بأن مضمرة وجوبًا بعد فاء السببية"
+                    else:
+                        words[0].irab_override = "الواو واو المعية حرف مبني على الفتح لا محل له من الإعراب"
+                        vw3.mood_note = "بأن مضمرة وجوبًا بعد واو المعية"
+
+            if len(words) == 1 and w.upos in ("X", "NOUN", "ADJ") and len(t) >= 4 and t[0] in "فو" and t[1] in "أيتن" and L \
+                    and mk(L[0]) == "َ" and mk(L[1]) in "َُ" and vowel(tok) == "a" and not tanwin(tok) and not t.endswith(("ة", "ات")) \
+                    and prv is not None and any(x.upos == "VERB" for x in prv.words):
+                pv = next(x for x in prv.words if x.upos == "VERB")
+                if _feats(pv).get("Mood") in ("Imp", "Jus") or pt.startswith("ا"):
+                    w.upos, w.feats = "VERB", ""
+                    _set_feat(w, "Aspect", "Imp"); _set_feat(w, "Mood", "Sub")
+                    w.mood_rule = "haraka"
+                    if t[0] == "ف":
+                        w.pre = f"الفاء فاء السببية حرف مبني على الفتح لا محل له من الإعراب، و«{t[1:]}» "
+                        w.mood_note = "بأن مضمرة وجوبًا بعد فاء السببية"
+                    else:
+                        w.pre = f"الواو واو المعية حرف مبني على الفتح لا محل له من الإعراب، و«{t[1:]}» "
+                        w.mood_note = "بأن مضمرة وجوبًا بعد واو المعية"
+
+            # ── المضارع المشكول الذي لم يعرفه المحلل («أَظُنُّ» بعد «كنتُ»)، والجملة خبر «كان» ──
+            if len(words) == 1 and w.upos in ("X", "NOUN", "ADJ") and not getattr(w, "role_override", None) and L and len(L) >= 3 and t[0] in "أيتن" and mk(L[0]) in "َُ" \
+                    and not t.startswith("ال") and vowel(tok) in ("u", "a", "o") and not tanwin(tok) and (w.deprel or "").startswith(("advcl", "ccomp", "xcomp", "dep", "root")):
+                w.upos, w.feats = "VERB", ""
+                _set_feat(w, "Aspect", "Imp")
+                _set_feat(w, "Mood", {"u": "Ind", "a": "Sub", "o": "Jus"}[vowel(tok)])
+                if pt in ("كان", "كنت", "كانت", "كنا", "كانوا", "كنتم", "يكون", "أكون", "تكون", "نكون", "صار", "أصبح", "ظل", "بات", "أمسى", "أضحى", "ليس", "لست"):
+                    w.post = getattr(w, "post", "") + "، وفاعله ضمير مستتر، والجملة الفعلية في محل نصب خبر «كان»"
+
+            if nominal(n) and vowel(tok) == "a" and (n.deprel or "") == "nsubj" and not getattr(n, "role_override", None) \
+                    and not any(bare(x) in _NASIKH_INNA for x in toks[:k]):
+                n.deprel = "obj"
+                _set_feat(n, "Case", "Acc")
+
+            # ── المرفوع المشكول لا يكون مفعولًا: بعد «إنّ/أنّ» واسمها خبرها، وإلا ففاعل ──
+            if nominal(n) and vowel(tok) == "u" and (n.deprel or "") == "obj" and not getattr(n, "role_override", None):
+                inna = next((bare(x) for x in toks[:k] if bare(x) in _NASIKH_INNA), None)
+                n.role_override = f"خبر «{_NASIKH_INNA[inna]}»" if inna else "فاعل"
+                _set_feat(n, "Case", "Nom")
+
+            # ── «إذا» الفجائية، والضمير المنفصل المنصوب بعدها في المسألة الزنبورية ──
+            if core == "إذا" and prefix == "ف":
+                words[-1].irab_override = "«إذا» الفجائية حرف مفاجأة مبني على السكون لا محل له من الإعراب (وقيل ظرف)"
+            if t in ("إياها", "إياه", "إياهم") and k >= 2 and bare(toks[k - 2]).endswith("إذا"):
+                w.irab_override = "ضمير منفصل مبني في محل نصب، أجازه الكسائي؛ والوجه عند سيبويه «فإذا هو هي» بالرفع خبرًا"
+
+            # ── «مِن» الزائدة بعد النفي: «ما ترى في خلق الرحمن من تفاوت» ──
+            if t == "من" and nxt is not None and toks and bare(toks[0]) in ("ما", "لا", "هل") and not bare(nxt).startswith("ال") \
+                    and not any((x.deprel or "") == "obj" for x in s_.words):
+                n2 = main_word(nxt)
+                if nominal(n2):
+                    words[0].irab_override = "حرف جر زائد مبني على السكون لا محل له من الإعراب"
+                    n2.irab_override = "مفعول به منصوب محلًا، مجرور لفظًا بـ«من» الزائدة"
+        for x in s_.words:
+            h = by_id.get(x.head)
+            if x.upos == "VERB" and h is not None and str(getattr(h, "irab_override", "") or "").startswith(("حرف", "كافة", ""))                     and getattr(h, "irab_override", None) is not None and (x.deprel or "").startswith("acl"):
+                x.deprel = "root"
+        if len(toks) > 1 and voweled:
+            w0, t1 = toks[0].words[-1], toks[1]
+            t0 = bare(toks[0])
+            v1 = next((x for x in t1.words if x.upos == "VERB"), None)
+            b1, L1 = bare(t1), lts(t1)
+            if v1 is None and len(t1.words) == 1 and L1 and b1[:1] in "أيتن" and 3 <= len(b1) <= 5 and mk(L1[0]) in "َُ" \
+                    and not any(x.upos == "VERB" for x in toks[0].words) and not b1.endswith(("كم", "هم", "ها", "نا", "هما")) \
+                    and vowel(t1) in ("i", "o") and not tanwin(t1) and not b1.startswith("ال"):
+                v1 = t1.words[0]
+                v1.upos, v1.feats = "VERB", ""
+                _set_feat(v1, "Aspect", "Imp"); _set_feat(v1, "Mood", "Jus")
+                v1.mood_rule = "haraka"
+                nx = bare(toks[2]) if len(toks) > 2 else ""
+                if vowel(t1) == "i" and not nx.startswith("ا"):
+                    v1.jus_weak = True
+            after_sabab = any("السببية" in str(getattr(x, "irab_override", "")) or "المعية" in str(getattr(x, "irab_override", "")) for x in t1.words)
+            if v1 is not None and len(t1.words) == 1 and b1[:1] in "أيتن" and vowel(t1) in ("i", "o") and L1 and mk(L1[0]) in "َُ":
+                v1.feats = ""
+                _set_feat(v1, "Aspect", "Imp"); _set_feat(v1, "Mood", "Jus")
+                v1.mood_rule = "haraka"
+                nx = bare(toks[2]) if len(toks) > 2 else ""
+                if vowel(t1) == "i" and not nx.startswith("ا"):
+                    v1.jus_weak = True
+            jawab = v1 is not None and _feats(v1).get("Mood") == "Jus" and getattr(v1, "mood_rule", "") == "haraka" and len(t1.words) == 1
+            if (jawab or after_sabab) and not t0.startswith("ال") and t0 not in ("لا", "لم", "لن", "إن", "من", "ما")                     and (_feats(w0).get("Mood") != "Imp" or w0.upos != "VERB") and len(toks[0].words) == 1:
+                w0.upos, w0.feats = "VERB", ""
+                _set_feat(w0, "Mood", "Imp")
+                w0.irab_override = None
+                w0.post_note, w0.sign_override = "", None
+                if jawab:
+                    v1.post = getattr(v1, "post", "") + "، وهو مجزوم في جواب الطلب"
+        if cond:
+            imps = [x for x in s_.words if x.upos == "VERB"]
+            if len(imps) >= 2:
+                jw = imps[1]
+                tj = tok_of.get(jw.id)
+                t0_ = tok_of.get(imps[0].id)
+                i0, i1 = (toks.index(t0_) if t0_ in toks else 0), (toks.index(tj) if tj in toks else 0)
+                fa_between = any(bare(t2)[:1] == "ف" for t2 in toks[i0 + 1:i1 + 1])   # «فإنما يهتدي»: بعد الفاء الرابطة مرفوع
+                if _feats(jw).get("Aspect") == "Imp" and tj is not None and bare(tj)[:1] not in "فو" and not fa_between:
+                    _set_feat(jw, "Mood", "Jus")
+                    jt = _strip_tashkeel(jw.text)
+                    if len(jt) == 2 or (len(jt) == 3 and jt.endswith(("ه", "ك"))):
+                        jw.jus_weak = True      # «يَرَهُ»: من «رأى» حُذفت ألفه
+                    jw.post = getattr(jw, "post", "") + "، وهو جواب الشرط"
+        # الاسم المرفوع المعرّف بعد فعلٍ لا فاعل له، وقد جعله المحلل مبتدأ: فاعل مؤخر («إنما يخشى اللهَ من عباده العلماءُ»)
+        for k, tok in enumerate(toks):
+            n = main_word(tok)
+            if nominal(n) and vowel(tok) == "u" and bare(tok).startswith("ال") and not getattr(n, "role_override", None)                     and (n.deprel or "").startswith(("nsubj", "root", "dep", "nmod")):
+                verbs = [x for x in s_.words if x.upos == "VERB" and x.id < n.id]
+                if verbs:
+                    v = verbs[-1]
+                    if not any((x.deprel or "").startswith("nsubj") and x.head == v.id and x is not n for x in s_.words)                             and not any(bare(t2) in _NASIKH_INNA or bare(t2) in ("كان", "ليس") for t2 in toks[:k]):
+                        pas = _feats(v).get("Voice") == "Pass" or (n.deprel or "") == "nsubj:pass"
+                        n.role_override = "نائب فاعل" if pas else "فاعل"
+                        n.deprel, n.head = ("nsubj:pass" if pas else "nsubj"), v.id
+                        _set_feat(n, "Case", "Nom")
+    return doc
+
+
 def _irab_word(w, sent, by_id, kids) -> str:
     ov = getattr(w, "irab_override", None)
-    if ov:
+    if ov is not None:
         return ov
+    r = _irab_word_core(w, sent, by_id, kids)
+    if w.upos != "VERB" and r and getattr(w, "pre", ""):
+        r = w.pre + r
+    if r and getattr(w, "post_note", ""):
+        r += w.post_note
+    return r
+
+
+def _irab_word_core(w, sent, by_id, kids) -> str:
     f = _feats(w)
     t = _strip_tashkeel(w.text)
     rel = w.deprel or ""
@@ -3604,6 +4269,8 @@ def _irab_word(w, sent, by_id, kids) -> str:
         d = _verb_desc(w, f)
         if getattr(w, "mood_note", None):
             d = d.replace("منصوب وعلامة", f"منصوب {w.mood_note} وعلامة", 1)
+        if getattr(w, "mood_note_jus", None):
+            d = d.replace("مجزوم وعلامة", f"مجزوم {w.mood_note_jus} وعلامة", 1)
         d = getattr(w, "pre", "") + d + getattr(w, "post", "")
         role, _ = _role(w, sent, by_id, kids)
         if role and "جملة" in role:
@@ -3619,7 +4286,7 @@ def _irab_word(w, sent, by_id, kids) -> str:
         if case == "Gen":
             return "اسم مجرور وعلامة جره الكسرة الظاهرة" + ("، وهو مضاف" if kids.get(w.id) else "")
     mabni = w.upos in ("PRON", "DET") or (w.xpos or "").startswith(("S", "D")) or _bare_ar(w.lemma) in ("الذي", "التي", "الذين", "هذا", "هذه", "ذلك", "تلك", "هؤلاء", "من", "ما")
-    kind = {"PRON": "ضمير", "DET": "اسم إشارة"}.get(w.upos, "")
+    kind = "اسم موصول" if t in _RELATIVE else {"PRON": "ضمير", "DET": "اسم إشارة"}.get(w.upos, "")
     if mabni and f.get("Number") != "Dual":
         if role:
             return f"{kind + ' ' if kind else ''}مبني {_CASE_MAHALL.get(case, '')} {role}".replace("  ", " ").strip()
@@ -3627,7 +4294,7 @@ def _irab_word(w, sent, by_id, kids) -> str:
     if not role:
         role = {"Nom": "اسم مرفوع", "Acc": "اسم منصوب", "Gen": "اسم مجرور"}.get(case, "")
     if case in _CASE_AR:
-        sign = _sign(w, f, case)
+        sign = getattr(w, "sign_override", None) or _sign(w, f, case)
         verb = {"Nom": "رفعه", "Acc": "نصبه", "Gen": "جره"}[case]
         out = f"{role} وعلامة {verb} {sign}" if role.startswith("اسم مجرور") else f"{role} {_CASE_AR[case]} وعلامة {verb} {sign}"
         if f.get("Definite") == "Cons":
@@ -3664,7 +4331,7 @@ def irab(sentence: str, detail: bool = True) -> dict:
         nlp, pkg = _stanza()
     except Exception as e:
         return {"تنبيه": str(e)}
-    doc = _irab_haraka_rules(_irab_rules(nlp(_strip_tashkeel(sentence))), sentence)
+    doc = _irab_syntax_rules(_irab_haraka_rules(_irab_rules(nlp(_strip_tashkeel(sentence))), sentence), sentence)
     out_sents = []
     for s_ in doc.sentences:
         by_id = {w.id: w for w in s_.words}
@@ -3684,6 +4351,8 @@ def irab(sentence: str, detail: bool = True) -> dict:
                     part["العامل في الشجرة"] = head.text if head else "—"
                     part["العلاقة (UD)"] = w.deprel
                 parts.append(part)
+            if not parts and not all(w.upos == "PUNCT" for w in tok.words):
+                parts.append({"الجزء": tok.text, "الإعراب": "لم يتبيّن للمحلل إعرابها؛ فراجعها"})   # لا تسقط كلمة من الإعراب
             if parts:
                 rows.append({"الكلمة": tok.text, "الأجزاء": parts} if len(parts) > 1 else {"الكلمة": tok.text, **parts[0]})
         # الضبط المقترح للأواخر

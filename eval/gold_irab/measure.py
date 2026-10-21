@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT))
 
 MARKS = re.compile(r"[ً-ْٰـ]")
 def bare(s): return MARKS.sub("", s or "").replace("ٱ", "ا")
-def norm(s): return re.sub("[أإآ]", "ا", bare(s)).replace("ى", "ي").replace("ة", "ه")
+def norm(s): return re.sub("[أإآ]", "ا", bare(s).replace("«", "").replace("»", "")).replace("ى", "ي").replace("ة", "ه")
 
 # ── الأبواب: الأطول أولًا حتى لا يُقرأ «نائب فاعل» «فاعلًا» ──
 ROLES = [("نائب فاعل", "نائب فاعل"), ("مفعول به", "مفعول به"), ("مفعول مطلق", "مفعول مطلق"), ("مفعول لأجله", "مفعول لأجله"),
@@ -148,7 +148,14 @@ def pick(word, sc, thr):
     on = [(s, l) for s, l in sc if s >= thr] or sc[:1]
     roles = [(s, MASAQ_MAP.get(l, l)) for s, l in on if l not in MASAQ_PART and MASAQ_MAP.get(l, l)]
     parts = [MASAQ_PART[l] for s, l in on if l in MASAQ_PART][:2]
+    labs = {l for _, l in on}
     w = norm(word)
+    # ماساق تسمّي واو المعية وفاء السببية «حرف غير عامل»، والعاطفة «حرف عطف»
+    if "غير عامل" in parts and "حرف عطف" not in labs:
+        if w[:1] == "و" and ("مفعول معه" in labs or "فعل مضارع" in labs):
+            parts = ["معية" if x == "غير عامل" else x for x in parts]
+        elif w[:1] == "ف" and "فعل مضارع" in labs:
+            parts = ["سببية" if x == "غير عامل" else x for x in parts]
     w = w[1:] if len(w) > 3 and w[0] in "وف" else w
     if w in PURE and parts:
         role = "حرف"
@@ -175,14 +182,16 @@ def parser_predict(gold, out):
     tok = AutoTokenizer.from_pretrained(T.MODEL_NAME)
     model = T.Tagger(AutoModel.from_pretrained(T.MODEL_NAME), len(labels))
     st = torch.load(out / "model.pt", map_location="cpu")
-    model.load_state_dict(st["model"]); thr = st["thr"]
+    model.load_state_dict(st["model"], strict=False); thr = st["thr"]   # النماذج القديمة بلا خاصية الحركة
+    vowels = "all" if st.get("vowels") else "none"                       # النموذج الجديد يقرأ حركة الآخر من الشكل
     dev = "cuda" if torch.cuda.is_available() else "cpu"
     model.to(dev).eval()
     res = {}
     for g in gold:
         words = g["text"].split()
         plain = [bare(w) for w in words]
-        enc, _y, m = T.encode([{"plain": plain, "diac": words, "labels": [[] for _ in words], "src": "M"}], tok, lab2i, "plain")
+        enc, _y, m = T.encode([{"plain": plain, "diac": words, "labels": [[] for _ in words], "src": "M",
+                                 "vow": [T.final_vowel(w) for w in words]}], tok, lab2i, "plain", vowels=vowels)
         enc = {k: v.to(dev) for k, v in enc.items()}
         with torch.no_grad():
             p = torch.sigmoid(model(**enc).float()).cpu()[0][m[0]]
@@ -287,7 +296,7 @@ def main():
     systems = {}
     if a.only != "old":
         p, thr = parser_predict(gold, Path(a.out))
-        systems["المحلّل المدرَّب"] = p
+        systems["المحلّل المدرَّب" + (f" ({Path(a.out).name})" if Path(a.out).name != "irab_parser" else "")] = p
     if a.only != "parser":
         systems["أداة irab القديمة"] = old_predict(gold)
     report = {name: score(gold, pr) for name, pr in systems.items()}
@@ -303,7 +312,7 @@ def main():
          "| المقياس | " + " | ".join(report) + " |", "|---|" + "---|" * len(report)]
     for k in ("باب", "حرف", "حكم"):
         L.append(f"| {k} | " + " | ".join(f"{r['acc'][k][0]}/{r['acc'][k][1]} ({r['acc'][k][2]})" if r["acc"][k][1] else "—" for r in report.values()) + " |")
-    for gname in ("بسيط", "تراثي", "قرآن (في التدريب)", "قرآن (خارج التدريب)"):
+    for gname in ("بسيط", "تراثي", "قرآن (في التدريب)", "قرآن (خارج التدريب)", "جديد"):
         L.append(f"| الباب: {gname} | " + " | ".join(f"{r['genre'][gname][0]}/{r['genre'][gname][1]} ({r['genre'][gname][2]})" if gname in r["genre"] else "—" for r in report.values()) + " |")
     watch = [g for g in gold if g["parser_watch"]]
     L += ["", "## الجمل المراقَبة (الأخطاء المعروفة)", ""]
