@@ -3123,6 +3123,9 @@ def _bare_ar(s: str) -> str:
     return _norm(_strip_tashkeel(s or ""))
 
 
+_FIVE_PRON = re.compile(r"^(أب|أخ|حم|ذ)([واي])(ه|ها|هما|هم|هن|ك|كما|كم|كن|نا)$")   # «أخوك»، «أبيهما»: من الأسماء الخمسة مضافًا إلى ضمير
+
+
 def _sign(w, f, case_or_mood: str) -> str:
     """علامة الإعراب الأصلية أو الفرعية بحسب نوع الكلمة."""
     t = _strip_tashkeel(w.text or "")
@@ -3144,12 +3147,19 @@ def _sign(w, f, case_or_mood: str) -> str:
         return ""
     if num == "Dual":
         return "الألف لأنه مثنى" if case_or_mood == "Nom" else "الياء لأنه مثنى"
+    if num == "Plur" and gen is None and w.upos in ("NOUN", "ADJ") and t.removeprefix("ال") in (_bare_ar(w.lemma) + "ون", _bare_ar(w.lemma) + "ين"):
+        gen = "Masc"                                   # «المعلمين» من «معلم»: سالم لا مكسَّر («المساكين» من «مسكين»)
     if num == "Plur" and gen == "Masc" and t.endswith(("ون", "ين", "و", "ي")) and w.upos in ("NOUN", "ADJ", "PROPN"):
         return "الواو لأنه جمع مذكر سالم" if case_or_mood == "Nom" else "الياء لأنه جمع مذكر سالم"
     if num == "Plur" and gen == "Fem" and t.endswith("ات") and case_or_mood == "Acc":
         return "الكسرة نيابة عن الفتحة لأنه جمع مؤنث سالم"
     if _bare_ar(w.lemma) in ("اب", "اخ", "حم", "فو", "ذو") and t.endswith(("و", "ا", "ي")) and f.get("Definite") == "Cons":
         return {"Nom": "الواو", "Acc": "الألف", "Gen": "الياء"}[case_or_mood] + " لأنه من الأسماء الخمسة"
+    m5 = _FIVE_PRON.match(t)
+    if m5:
+        return {"و": "الواو", "ا": "الألف", "ي": "الياء"}[m5.group(2)] + " لأنه من الأسماء الخمسة"
+    if t.endswith("ا") and case_or_mood == "Acc" and not t.startswith("ال") and f.get("Definite") != "Cons":
+        return "الفتحة الظاهرة على آخره"            # ألف تنوين النصب («زيدًا»، «باردًا»)، لا ألف مقصورة
     if t.endswith(("ى", "ا")) and len(t) > 2 and not t.endswith("اء"):
         return {"Nom": "الضمة", "Acc": "الفتحة", "Gen": "الكسرة"}[case_or_mood] + " المقدرة على الألف للتعذر"
     if t.endswith("ي") and w.upos in ("NOUN", "ADJ") and f.get("Definite") in ("Def", "Cons") and case_or_mood != "Acc" and len(t) > 3:
@@ -3715,8 +3725,8 @@ def _irab_syntax_rules(doc, sentence: str):
                 for sf, needs in (("هما", ""), ("كما", ""), ("هم", ""), ("كم", ""), ("ها", ""), ("ه", "ُِ"), ("ك", "َِ")):
                     if t.endswith(sf) and len(t) - len(sf) >= 2:
                         before = L[len(t) - len(sf) - 1]
-                        last_ok = not needs or mk(L[-1]) in needs
-                        if mk(before) in "َُِ" and last_ok and not (sf in ("ه", "ك") and "ّ" in before[1]):
+                        last_ok = not needs or (mk(L[-1]) or "-") in needs
+                        if (mk(before) or "-") in "َُِ" and last_ok and not (sf in ("ه", "ك") and "ّ" in before[1]):
                             c = {"ُ": "Nom", "َ": "Acc", "ِ": "Gen"}[mk(before)]
                             w.pron_suffix = sf
                             w.feats = ""
@@ -3806,7 +3816,7 @@ def _irab_syntax_rules(doc, sentence: str):
                     and t[:1] in "أيتن":
                 words[1].irab_override = ""
                 words[0].text = t
-            if pt in ("لا", "لم") and len(words) == 1 and t[:1] in "أيتن" and L and mk(L[0]) in "َُ" and vowel(tok) == "a" \
+            if pt in ("لا", "لم") and len(words) == 1 and t[:1] in "أيتن" and L and (mk(L[0]) or "-") in "َُ" and vowel(tok) == "a" \
                     and not tanwin(tok) and not (nxt is not None and bare(nxt).startswith("ال")):
                 vw2 = words[0]
                 vw2.upos, vw2.feats = "VERB", ""
@@ -3827,7 +3837,7 @@ def _irab_syntax_rules(doc, sentence: str):
 
             # ── الأمر بهمزة الوصل وقد عدّه المحلل مضارعًا للمتكلم («اغفر»): المضارع للمتكلم همزته قطع «أ» ──
             if w.upos == "VERB" and _feats(w).get("Aspect") == "Imp" and core[:1] == "ا" and not core.startswith("ال") \
-                    and len(core) >= 3 and not (L and mk(core_l[0]) in "َُ"):
+                    and len(core) >= 3 and not (L and (mk(core_l[0]) or "-") in "َُ"):
                 w.feats = ""
                 _set_feat(w, "Mood", "Imp")
 
@@ -3897,7 +3907,7 @@ def _irab_syntax_rules(doc, sentence: str):
                     o = main_word(after)
                     o.role_override, o.deprel = "مفعول به", "obj"
                     _set_feat(o, "Case", "Acc")
-                elif main_word(nxt).upos == "VERB" or (nL and len(nL) >= 3 and mk(nL[0]) in "َُ" and nt[:1] in "يتنأ"):
+                elif main_word(nxt).upos == "VERB" or (nL and len(nL) >= 3 and (mk(nL[0]) or "-") in "َُ" and nt[:1] in "يتنأ"):
                     if not question:
                         w.irab_override = "حرف نفي مبني على السكون لا محل له من الإعراب"
 
@@ -4154,7 +4164,7 @@ def _irab_syntax_rules(doc, sentence: str):
                 _set_feat(n, "Case", "Acc")
 
             if prefix and len(words) == 2 and words[1].upos in ("NOUN", "ADJ", "X") and core[:1] in "أيتن" and len(core) >= 3 \
-                    and core_l and mk(core_l[0]) in "َُ" and not tanwin(tok) and not core.endswith(("ة", "ات")) and vowel(tok) in ("a", "u", "o") \
+                    and core_l and (mk(core_l[0]) or "-") in "َُ" and not tanwin(tok) and not core.endswith(("ة", "ات")) and vowel(tok) in ("a", "u", "o") \
                     and prv is not None and any(x.upos == "VERB" for x in prv.words):
                 vw3 = words[1]
                 vw3.upos, vw3.feats = "VERB", ""
@@ -4171,7 +4181,7 @@ def _irab_syntax_rules(doc, sentence: str):
                         vw3.mood_note = "بأن مضمرة وجوبًا بعد واو المعية"
 
             if len(words) == 1 and w.upos in ("X", "NOUN", "ADJ") and len(t) >= 4 and t[0] in "فو" and t[1] in "أيتن" and L \
-                    and mk(L[0]) == "َ" and mk(L[1]) in "َُ" and vowel(tok) == "a" and not tanwin(tok) and not t.endswith(("ة", "ات")) \
+                    and mk(L[0]) == "َ" and (mk(L[1]) or "-") in "َُ" and vowel(tok) == "a" and not tanwin(tok) and not t.endswith(("ة", "ات")) \
                     and prv is not None and any(x.upos == "VERB" for x in prv.words):
                 pv = next(x for x in prv.words if x.upos == "VERB")
                 if _feats(pv).get("Mood") in ("Imp", "Jus") or pt.startswith("ا"):
@@ -4186,7 +4196,7 @@ def _irab_syntax_rules(doc, sentence: str):
                         w.mood_note = "بأن مضمرة وجوبًا بعد واو المعية"
 
             # ── المضارع المشكول الذي لم يعرفه المحلل («أَظُنُّ» بعد «كنتُ»)، والجملة خبر «كان» ──
-            if len(words) == 1 and w.upos in ("X", "NOUN", "ADJ") and not getattr(w, "role_override", None) and L and len(L) >= 3 and t[0] in "أيتن" and mk(L[0]) in "َُ" \
+            if len(words) == 1 and w.upos in ("X", "NOUN", "ADJ") and not getattr(w, "role_override", None) and L and len(L) >= 3 and t[0] in "أيتن" and (mk(L[0]) or "-") in "َُ" \
                     and not t.startswith("ال") and vowel(tok) in ("u", "a", "o") and not tanwin(tok) and (w.deprel or "").startswith(("advcl", "ccomp", "xcomp", "dep", "root")):
                 w.upos, w.feats = "VERB", ""
                 _set_feat(w, "Aspect", "Imp")
@@ -4227,7 +4237,7 @@ def _irab_syntax_rules(doc, sentence: str):
             t0 = bare(toks[0])
             v1 = next((x for x in t1.words if x.upos == "VERB"), None)
             b1, L1 = bare(t1), lts(t1)
-            if v1 is None and len(t1.words) == 1 and L1 and b1[:1] in "أيتن" and 3 <= len(b1) <= 5 and mk(L1[0]) in "َُ" \
+            if v1 is None and len(t1.words) == 1 and L1 and b1[:1] in "أيتن" and 3 <= len(b1) <= 5 and (mk(L1[0]) or "-") in "َُ" \
                     and not any(x.upos == "VERB" for x in toks[0].words) and not b1.endswith(("كم", "هم", "ها", "نا", "هما")) \
                     and vowel(t1) in ("i", "o") and not tanwin(t1) and not b1.startswith("ال"):
                 v1 = t1.words[0]
@@ -4238,7 +4248,7 @@ def _irab_syntax_rules(doc, sentence: str):
                 if vowel(t1) == "i" and not nx.startswith("ا"):
                     v1.jus_weak = True
             after_sabab = any("السببية" in str(getattr(x, "irab_override", "")) or "المعية" in str(getattr(x, "irab_override", "")) for x in t1.words)
-            if v1 is not None and len(t1.words) == 1 and b1[:1] in "أيتن" and vowel(t1) in ("i", "o") and L1 and mk(L1[0]) in "َُ":
+            if v1 is not None and len(t1.words) == 1 and b1[:1] in "أيتن" and vowel(t1) in ("i", "o") and L1 and (mk(L1[0]) or "-") in "َُ":
                 v1.feats = ""
                 _set_feat(v1, "Aspect", "Imp"); _set_feat(v1, "Mood", "Jus")
                 v1.mood_rule = "haraka"
@@ -4287,6 +4297,9 @@ def _irab_word(w, sent, by_id, kids) -> str:
     if ov is not None:
         return ov
     r = _irab_word_core(w, sent, by_id, kids)
+    m5 = _FIVE_PRON.match(_strip_tashkeel(w.text))
+    if m5 and r and "الأسماء الخمسة" in r and "مضاف إليه" not in r:
+        r = r.replace("، وهو مضاف", "") + f"، وهو مضاف، و«{m5.group(3)}» ضمير متصل مبني في محل جر مضاف إليه"
     if w.upos != "VERB" and r and getattr(w, "pre", ""):
         r = w.pre + r
     if r and getattr(w, "post_note", ""):
@@ -4369,20 +4382,40 @@ def _end_mark(w, case_or_mood) -> str:
     return m[1] if ind else m[0]
 
 
+_RULE_ATTRS = ("irab_override", "role_override", "mood_note", "mood_note_jus", "jus_weak", "mood_rule", "zarf")
+
+
+def _irab_snapshot(w):
+    return w.head          # تغيير العامل قاعدةٌ في البنية؛ أما تغيير العلاقة وحدها («منصوب فهو مفعول به») فظنّ
+
+
+def _irab_certainty(w, before, standalone: bool) -> str:
+    """«بقاعدة» إن حسمت قاعدةٌ بابَ الكلمة، أو كانت حرف جر، أو حرف عطف مستقلًّا؛ وإلا فـ«ترجيح آلي».
+    حركة المستخدم وحدها تحسم الحكم لا الباب («نفسًا» منصوبة، أمفعول هي أم تمييز؟)، فلا تكفي."""
+    if w.upos == "ADP" or w.deprel == "case" or (standalone and (w.upos == "CCONJ" or w.deprel == "cc")):
+        return "بقاعدة"                      # الواو المتصلة قد يقتطعها المحلل من الكلمة («ورثة»)، فلا تُحسم
+    if any(getattr(w, a, None) for a in _RULE_ATTRS) or (before is not None and before != _irab_snapshot(w)):
+        return "بقاعدة"
+    return "ترجيح آلي"
+
+
 @mcp.tool()
 def irab(sentence: str, detail: bool = True) -> dict:
     """إعراب الجملة كلمةً كلمة: الباب النحوي (فاعل، نائب فاعل، مبتدأ، خبر، اسم كان وخبرها، اسم إنّ وخبرها، مفعول به، مفعول مطلق، ظرف، حال، تمييز، نعت، معطوف، بدل، مضاف إليه، اسم مجرور...)
     والحكم (مرفوع، منصوب، مجرور، مجزوم، مبني) وعلامة الإعراب الأصلية أو الفرعية (الألف للمثنى، والواو والياء لجمع المذكر، والكسرة نيابة عن الفتحة لجمع المؤنث، وثبوت النون وحذفها للأفعال الخمسة، والمقدّرة للتعذر والثقل...)،
     مع الضبط المقترح لأواخر الكلمات بحسب مواقعها.
     يعتمد على المحلل النحوي Stanza (نموذج AraELECTRA المدرَّب على شجرة PADT في Universal Dependencies)، ثم تُنقل علاقاته إلى أبواب النحو العربي بقواعد.
+    كل جزء موسوم بـ«اليقين»: «بقاعدة» (حسمت قاعدةٌ بابَه) أو «ترجيح آلي» (باب المحلل وحده، فيُراجَع بالمعنى).
     sentence: جملة أو جمل قليلة. detail: يعرض علاقة كل كلمة بعاملها في الشجرة."""
     try:
         nlp, pkg = _stanza()
     except Exception as e:
         return {"تنبيه": str(e)}
-    doc = _irab_syntax_rules(_irab_haraka_rules(_irab_rules(nlp(_strip_tashkeel(sentence))), sentence), sentence)
+    doc = nlp(_strip_tashkeel(sentence))
+    before = {(i, w.id): _irab_snapshot(w) for i, s_ in enumerate(doc.sentences) for w in s_.words}
+    doc = _irab_syntax_rules(_irab_haraka_rules(_irab_rules(doc), sentence), sentence)
     out_sents = []
-    for s_ in doc.sentences:
+    for si, s_ in enumerate(doc.sentences):
         by_id = {w.id: w for w in s_.words}
         kids = {}
         for w in s_.words:
@@ -4394,14 +4427,14 @@ def irab(sentence: str, detail: bool = True) -> dict:
                 i = _irab_word(w, s_, by_id, kids)
                 if not i:
                     continue
-                part = {"الجزء": w.text, "الإعراب": i}
+                part = {"الجزء": w.text, "الإعراب": i, "اليقين": _irab_certainty(w, before.get((si, w.id)), len(tok.words) == 1)}
                 if detail:
                     head = by_id.get(w.head)
                     part["العامل في الشجرة"] = head.text if head else "—"
                     part["العلاقة (UD)"] = w.deprel
                 parts.append(part)
             if not parts and not all(w.upos == "PUNCT" for w in tok.words):
-                parts.append({"الجزء": tok.text, "الإعراب": "لم يتبيّن للمحلل إعرابها؛ فراجعها"})   # لا تسقط كلمة من الإعراب
+                parts.append({"الجزء": tok.text, "الإعراب": "لم يتبيّن للمحلل إعرابها؛ فراجعها", "اليقين": "ترجيح آلي"})   # لا تسقط كلمة من الإعراب
             if parts:
                 rows.append({"الكلمة": tok.text, "الأجزاء": parts} if len(parts) > 1 else {"الكلمة": tok.text, **parts[0]})
         # الضبط المقترح للأواخر
@@ -4414,8 +4447,12 @@ def irab(sentence: str, detail: bool = True) -> dict:
                 cm = f.get("Case") or case if w.upos != "VERB" else (f.get("Mood") or "Ind")
                 seg.append(w.text + (_end_mark(w, cm) if w.upos in ("NOUN", "ADJ", "PROPN", "VERB") and f.get("Aspect") != "Perf" else ""))
             voc.append("".join(seg) if len(tok.words) > 1 else seg[0])
-        out_sents.append({"الجملة": s_.text, "الإعراب": rows, "ضبط الأواخر المقترح": " ".join(voc)})
+        review = [row["الكلمة"] for row in rows if any(p["اليقين"] != "بقاعدة" for p in row.get("الأجزاء", [row]))]
+        out_sents.append({"الجملة": s_.text, "الإعراب": rows, "ضبط الأواخر المقترح": " ".join(voc),
+                          "يُراجَع بالمعنى": review})
     return {"الجمل": out_sents, "النموذج": f"Stanza ({pkg})",
+            "اليقين": "«بقاعدة»: حسمت بابَه قاعدة نحوية صريحة، أو هو حرف جر أو عطف مستقل. وحركة المستخدم تحسم الحكم لا الباب. "
+                      "«ترجيح آلي»: باب اختاره المحلل الإحصائي وحده، فيُراجَع بالمعنى قبل اعتماده؛ وهذه الكلمات مجموعة في «يُراجَع بالمعنى».",
             "تنبيه": "الإعراب آليّ: المحلل مدرَّب على نصوص صحفية معاصرة، فتقلّ دقته في الشعر والتقديم والتأخير؛ وما احتمل وجهين (كالحال والتمييز، والمفعول لأجله، والظرف) يُذكر بوجهيه. "
                       "فراجع الإعراب على قواعد النحو قبل اعتماده، ولا سيما في النصوص التراثية."}
 

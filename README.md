@@ -9,7 +9,7 @@
 <p align="center">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-C9A35C?style=flat-square&labelColor=121A24"></a>
   <img alt="Python 3.11" src="https://img.shields.io/badge/python-3.11-C9A35C?style=flat-square&labelColor=121A24">
-  <img alt="MCP tools" src="https://img.shields.io/badge/MCP-38_tools-C9A35C?style=flat-square&labelColor=121A24">
+  <img alt="MCP tools" src="https://img.shields.io/badge/MCP-39_tools-C9A35C?style=flat-square&labelColor=121A24">
   <a href="tests/test_ilal.py"><img alt="i'lal tests" src="https://img.shields.io/badge/i%CA%BFl%C4%81l_tests-43%2F43-C9A35C?style=flat-square&labelColor=121A24"></a>
   <a href="CITATION.cff"><img alt="Cite" src="https://img.shields.io/badge/cite-CITATION.cff-C9A35C?style=flat-square&labelColor=121A24"></a>
 </p>
@@ -26,7 +26,7 @@
 
 النماذج اللغوية الكبيرة (Large Language Models) فصيحة العبارة في العربية، لكنها تجيب في مسائل علومها من محفوظها الإحصائي، فلا يتميّز في جوابها المنقولُ من المستنتَج ولا الصحيحُ من الموهوم. ويظهر ذلك في أخصّ مواضع الصنعة: وزنِ المعتلّ وبيانِ ما جرى فيه من إعلال، وتعيينِ البحر حين يختلّ الضبط، ونسبةِ الشاهد إلى قائله، ونقلِ نصّ المعجم بلفظه.
 
-ويقوم هذا المشروع على **الفصل بين الصياغة والحكم**: يتولّى النموذج اللغوي فهمَ السؤال وصياغةَ الجواب، ويصدر الحكم نفسه عن أداةٍ معلومة المنهج. فالخادم يعرض على النموذج سبعًا وثلاثين أداةً في عشرة فروع من الدرس اللغوي، هي:
+ويقوم هذا المشروع على **الفصل بين الصياغة والحكم**: يتولّى النموذج اللغوي فهمَ السؤال وصياغةَ الجواب، ويصدر الحكم نفسه عن أداةٍ معلومة المنهج. فالخادم يعرض على النموذج تسعًا وثلاثين أداةً في عشرة فروع من الدرس اللغوي، هي:
 
 - الصرف والتصريف، والميزان الصرفي بخطوات الإعلال والإبدال والإدغام.
 - النحو والإعراب.
@@ -40,6 +40,12 @@
 - لسانيات المدوّنة والأسلوبية الإحصائية ونسبة النصوص.
 
 وكل نتيجة تُعزى إلى مصدرها بالجزء والصفحة، أو إلى الأداة التي أنتجتها، ويصحب كل أداة بيانُ منهجها وحدودها. ويعمل الخادم على جهاز الباحث: تُنزَّل البيانات مرة واحدة، ثم تعمل الأدوات بلا اتصال بالشبكة، إلا أداتين تنصّان على ذلك.
+
+### الأداة بالدليل، والنموذج بالحكم
+
+يُثبَّت المشروع في Claude Code إضافةً (Plugin) واحدة، فيها الأدوات ومعها **مهارات** تعلّم النموذج كيف يعمل بها. فالأداة تأتي بما يُتحقَّق منه: نصٍّ من كتاب بجزئه وصفحته، أو حكمٍ من قاعدة. والنموذج يحكم فيما يتعلّق بالمعنى، ولا يُخفي ما خالف فيه الأداة. ومثاله الإعراب: تَسِم أداة `irab` كل كلمة بما حسمته قاعدة («بقاعدة») وما رجّحه المحلّل الإحصائي وحده («ترجيح آلي»). ثم يراجع النموذج الثانية بالمعنى، على مهارة `irab`، فيُقرّها أو يصحّحها، ويذكر في آخر جوابه ما صحّحه وسببه.
+
+ولا تُغني المهارة عن الأداة، لأن النموذج إذا أجاب من حفظه قد ينسب قولًا لم يُقَل، أو يذكر صفحةً لا وجود لها.
 
 ## ما الأداة وما ليست
 
@@ -222,6 +228,14 @@ flowchart LR
 - المقصور والمنقوص، والمعتل الآخر في الجزم.
 
 ثم يُقترح ضبط أواخر الكلمات بحسب مواقعها، وبهذا تُصحَّح علامات الإعراب في التشكيل الآلي.
+
+وتُصحَّح أبواب المحلل بقواعد من كتب النحو، وتقرأ القواعد شكل المستخدم إن كتبه: لام الأمر، وواو المعية، وفاء السببية، و«لا» النافية للجنس، و«نعم» و«بئس»، والتعجب، والنداء، والاستثناء، وغيرها. ثم توسَم كل كلمة بـ«اليقين»:
+- **«بقاعدة»**: إن حسمت قاعدةٌ بابَها.
+- **«ترجيح آلي»**: إن كان بابها من المحلل وحده. وهذه الكلمات تُجمع في «يُراجَع بالمعنى»، ليراجعها النموذج على مهارة `irab`.
+
+وحركة المستخدم تحسم الحكم (الرفع والنصب والجر) لا الباب، فـ«نفسًا» منصوبة، ولا يُعرف بالحركة أمفعول به هي أم تمييز.
+
+**`wujuh_irab`: وجوه الإعراب.** تستخرج من إعراب الجملة مواضع الخلاف، ثم تعيد أقوال النحاة فيها من نص كتبهم في المدوّنة المحلية: مسائل «الإنصاف» كلها (118 مسألة) بأقوالها وقائليها، و«التبيين» للعكبري، ومواضع المسألة في «همع الهوامع» و«ارتشاف الضرب»، بالجزء والصفحة. ولا ترجّح بين الأقوال.
 
 ### ٢. الضبط والعروض والقافية
 
@@ -458,7 +472,7 @@ flowchart LR
 
 **أُنجز:**
 
-- [x] ثمانٍ وثلاثون أداة في عشرة فروع، بمناهجها وحدودها.
+- [x] تسعٌ وثلاثون أداة في عشرة فروع، بمناهجها وحدودها.
 - [x] محرّك قواعدي للإعلال والإبدال والإدغام يتحقق من نتيجته بنفسه، مع 43 حالة معيارية.
 - [x] التقطيع بالضبط الموجَّه بالعروض، وعلم القافية بعيوبه.
 - [x] التخريج الآلي للشاهد الشعري، ونسبة النصوص بمقاييس Delta.
@@ -528,7 +542,7 @@ flowchart LR
 
 **الإضافة لتطبيق Claude (اختيارية):** بعد التثبيت، نزّل [`arabiyya.mcpb`](https://github.com/ikagi07/arabiyya-mcp/raw/main/arabiyya.mcpb) وانقره نقرتين، ثم اضغط «تثبيت». فتظهر الأداة في إضافات Claude باسمها وأيقونتها، وتُدار وتُحذف من الإعدادات. والإضافة غلاف خفيف يشغّل الأداة المثبّتة على الجهاز (مصدره في `extension/`)، فإن ثُبّتت أزال ملف التثبيت السطر اليدوي من إعدادات Claude تفاديًا للتكرار.
 
-**في Claude Code (Plugin):** تُثبَّت الأداة ومعها مهارات تعلّم Claude استعمالها (`arabiyya`، و`wujuh-irab` لوجوه الإعراب بمصادرها، و`setup` للتجهيز):
+**في Claude Code (Plugin):** تُثبَّت الأداة ومعها مهارات تعلّم Claude استعمالها (`arabiyya`، و`irab` لإعراب يراجع فيه Claude ما رجّحته الآلة ويصحّحه، و`wujuh-irab` لوجوه الإعراب بمصادرها، و`setup` للتجهيز):
 
 ```
 /plugin marketplace add ikagi07/arabiyya-mcp
@@ -667,6 +681,8 @@ flowchart LR
 
 **arabiyya** is a Model Context Protocol (MCP) server that exposes 39 tools for Arabic linguistic research to LLM clients such as Claude Desktop. Its premise is a separation of *phrasing* from *judgement*: the language model reads the question and words the answer, while each judgement comes from a tool with a stated method. Outputs are cited to a source (volume and page) or to the tool that produced them. The server runs locally and, after a one-time data download, works offline.
 
+**Tools for evidence, the model for judgement.** In Claude Code the project installs as one plugin: the tools plus *skills* that tell the model how to use them. Tools supply what can be checked (a source text with volume and page, or a rule-based verdict); the model judges what depends on meaning and states openly where it overrode a tool. For *iʿrāb*, `irab` tags every word as rule-decided or parser-guessed; the `irab` skill has Claude review the guessed ones by meaning, keep or correct them, and list each correction with its reason.
+
 **What it is not.** It is not a language model and does not fine-tune one. Its outputs are not infallible, and a client model may still misreport them; the raw output of every call is visible in the client. Published accuracy figures hold for the stated samples only.
 
 **Three tiers of evidence.** Every tool is classed by where its judgement comes from:
@@ -680,7 +696,8 @@ flowchart LR
 - Qiyāsī derivatives, and root permutations (*taqālīb*).
 
 **Syntax**
-- *Iʿrāb* via the Stanza dependency parser (AraELECTRA, PADT). UD relations and features are mapped to traditional grammatical functions and case/mood markers.
+- *Iʿrāb* via the Stanza dependency parser (AraELECTRA, PADT). UD relations and features are mapped to traditional grammatical functions and case/mood markers by rules, and each word is tagged as rule-decided or parser-guessed so the client model can review the latter.
+- `wujuh_irab`: grammarians' disputes on a position in the sentence, with their views read from the text of *al-Inṣāf* and *al-Tabyīn*, and pointers to *Hamʿ al-hawāmiʿ* and *Irtishāf al-ḍarab*.
 
 **Diacritization, prosody and rhyme**
 - Diacritization with CATT (DER 1.1% on Tashkeela prose and 15.2% on verse), with CAMeL as a fallback. An optional character-level BiLSTM for poetry trains locally and is used only if it beats CATT on held-out verse.
@@ -699,7 +716,7 @@ flowchart LR
 **Stylometry**
 - Keyness, standardized TTR and Jaccard overlap, and authorship attribution with Burrows's Delta and Cosine Delta.
 
-**Install.** Windows and macOS installers set up the Python environment and data (see the Arabic section). In Claude Code it also installs as a plugin, with skills for tool use, *wujūh al-iʿrāb* (grammarians' views on a contested position, cited by volume and page) and first-run setup:
+**Install.** Windows and macOS installers set up the Python environment and data (see the Arabic section). In Claude Code it also installs as a plugin, with skills for tool use, full *iʿrāb* (Claude reviews and corrects what the parser guessed), *wujūh al-iʿrāb* (grammarians' views on a contested position, cited by volume and page) and first-run setup:
 
 ```
 /plugin marketplace add ikagi07/arabiyya-mcp
