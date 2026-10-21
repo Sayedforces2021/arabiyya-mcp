@@ -237,6 +237,8 @@ flowchart LR
 
 **`wujuh_irab`: وجوه الإعراب.** تستخرج من إعراب الجملة مواضع الخلاف، ثم تعيد أقوال النحاة فيها من نص كتبهم في المدوّنة المحلية: مسائل «الإنصاف» كلها (118 مسألة) بأقوالها وقائليها، و«التبيين» للعكبري، ومواضع المسألة في «همع الهوامع» و«ارتشاف الضرب»، بالجزء والصفحة. ولا ترجّح بين الأقوال.
 
+وإن كانت الجملة آية أعادت `wujuh_irab` ما في **كتب إعراب القرآن ومعانيه** عنها. وهي تسعة عشر كتابًا استُوردت إلى المدوّنة من الشاملة: «معاني القرآن» للفراء، و«معاني القرآن وإعرابه» للزجاج، و«إعراب القرآن» و«معاني القرآن» للنحاس، و«مشكل إعراب القرآن» لمكي، و«التبيان» للعكبري، و«الفريد» للمنتجب الهمذاني، و«البحر المحيط» لأبي حيان، و«الدر المصون» للسمين الحلبي، وغيرها، ومن المحدثين درويش وصافي والدعاس والخراط. يربط كلَّ آية بموضعها في كل كتاب فهرسٌ بُني من فهارس الكتب نفسها (`build_ayah_index.py` ← `data/khilaf/ayah_index.jsonl`، بنيةً بلا نصوص). وفي عيّنة عشوائية من 444 موضعًا كانت الصفحة المعيَّنة تذكر الآية في 430 منها، وما بقي كلامٌ على كلمة واحدة من الآية. وما فُهرس بالسور وحدها (مكي، والمنتجب، والمحيمد) يُعيَّن موضع الآية فيه بالبحث عن ألفاظها في صفحات السورة، ويُنبَّه على ذلك.
+
 ### ٢. الضبط والعروض والقافية
 
 | الأداة | المنهج |
@@ -697,7 +699,7 @@ flowchart LR
 
 **Syntax**
 - *Iʿrāb* via the Stanza dependency parser (AraELECTRA, PADT). UD relations and features are mapped to traditional grammatical functions and case/mood markers by rules, and each word is tagged as rule-decided or parser-guessed so the client model can review the latter.
-- `wujuh_irab`: grammarians' disputes on a position in the sentence, with their views read from the text of *al-Inṣāf* and *al-Tabyīn*, and pointers to *Hamʿ al-hawāmiʿ* and *Irtishāf al-ḍarab*.
+- `wujuh_irab`: grammarians' disputes on a position in the sentence, with their views read from the text of *al-Inṣāf* and *al-Tabyīn*, and pointers to *Hamʿ al-hawāmiʿ* and *Irtishāf al-ḍarab*. For a Qur'anic verse it also returns the relevant passage, by volume and page, from 19 works of Qur'anic *iʿrāb* (al-Farrāʾ, al-Zajjāj, al-Naḥḥās, Makkī, al-ʿUkbarī, Abū Ḥayyān, al-Samīn al-Ḥalabī and others), through a verse index built from each book's own table of contents (430 of 444 sampled locations verified).
 
 **Diacritization, prosody and rhyme**
 - Diacritization with CATT (DER 1.1% on Tashkeela prose and 15.2% on verse), with CAMeL as a fallback. An optional character-level BiLSTM for poetry trains locally and is used only if it beats CATT on held-out verse.

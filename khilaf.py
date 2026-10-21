@@ -239,3 +239,148 @@ def load_registry():
         return []
     with open(REGISTRY, encoding="utf-8") as f:
         return [json.loads(l) for l in f if l.strip()]
+
+
+# ───────────── كتب إعراب القرآن: موضع الآية في كل كتاب ─────────────
+
+AYAH_INDEX = os.path.join(HERE, "data", "khilaf", "ayah_index.jsonl")
+_LOOSE = re.compile("[اأإآٱءئؤىيوة]")
+_TOK = re.compile("[ء-يٱً-ْٰ]+")
+
+
+def load_ayah_index():
+    """{المعرّف: [مداخل الآيات والسور]} من data/khilaf/ayah_index.jsonl."""
+    out = {}
+    if os.path.exists(AYAH_INDEX):
+        with open(AYAH_INDEX, encoding="utf-8") as f:
+            for l in f:
+                if l.strip():
+                    e = json.loads(l)
+                    out.setdefault(e["uri"], []).append(e)
+    return out
+
+
+def _loose(w):
+    """صورة للمطابقة لا تتأثر بالرسم العثماني ولا بالهمزات وحروف المد: «الصلوة» = «الصلاة»."""
+    import build_corpus_index as bci
+    return _LOOSE.sub("", bci.norm(_bare(w)))
+
+
+def _tokens(text):
+    return [(m.start(), _loose(m.group())) for m in _TOK.finditer(text)]
+
+
+_IRAB_TERMS = {_LOOSE.sub("", x) for x in ("رفع", "نصب", "جر", "خبر", "مبتدا", "فاعل", "مفعول", "وجه", "وجهان", "اوجه", "بدل",
+                                          "صفه", "نعت", "حال", "عطف", "موضع", "محل", "يجوز", "قرا", "قراءه", "منصوب", "مرفوع",
+                                          "مجرور", "تقديره", "قولان", "اعراب", "تمييز", "ظرف", "متعلق")}
+
+
+def _find(toks, ayah, word):
+    """موضع الكلام على الكلمة (مع سوابقها: و ف ب ل ك): يُقدَّم ذكرٌ تليه ألفاظ الإعراب، ويؤخَّر ذكرها داخل نص الآية المسوق؛
+    وبلا كلمة: أول كلمتين متتاليتين من الآية."""
+    if word:
+        w = _loose(word)
+        best, bi = None, None
+        for i, (_, t) in enumerate(toks):
+            if not w or not (t == w or (len(t) == len(w) + 1 and t[1:] == w and t[0] in "وفبلك")):
+                continue
+            after = [x for _, x in toks[i + 1:i + 16]]
+            sc = sum(1 for x in after if x in _IRAB_TERMS or x[1:] in _IRAB_TERMS)
+            if w in ayah:                      # ذكرها في سياق الآية المسوقة كاملة: ليس موضع الكلام عليها
+                j = ayah.index(w)
+                if ayah[j + 1:j + 3] and [x for _, x in toks[i + 1:i + 3]] == ayah[j + 1:j + 3]:
+                    sc -= 3
+            if best is None or sc > best:
+                best, bi = sc, i
+        return (best, bi) if bi is not None else None
+    pairs = {(a, b) for a, b in zip(ayah, ayah[1:]) if len(a + b) >= 4}
+    for i in range(len(toks) - 1):
+        if (toks[i][1], toks[i + 1][1]) in pairs:
+            return (0, i)
+    return None
+
+
+def _aya_entry(entries, sura, aya):
+    """مدخل الآية في فهرس الكتاب، أو None. والرقم في الفهرس يشمل ما بعده إلى الرقم التالي («١» ثم «٣»)."""
+    cand = [e for e in entries if e["kind"] == "aya" and e["sura"] == sura and e["from"] <= aya <= e["to"]]
+    if not cand:
+        ss = sorted((e for e in entries if e["kind"] == "aya" and e["sura"] == sura), key=lambda x: x["from"])
+        prev = [e for e in ss if e["from"] <= aya]
+        nxt = [e for e in ss if e["from"] > aya]
+        if prev:
+            cand = [dict(prev[-1], ord_end=max(prev[-1]["ord_end"], nxt[0]["ord"] if nxt else prev[-1]["ord_end"]))]
+    return min(cand, key=lambda x: (x["to"] - x["from"], x["ord_end"] - x["ord"])) if cand else None
+
+
+def _pick(rows, ayah, word, level):
+    """(الفقرة، مواضع الكلمات، رقم الكلمة) لأحسن موضع في الفقرات، أو None."""
+    if level == "السورة":                      # أكثر الصفحات اشتمالًا على ألفاظ الآية
+        pairs = {(x, y) for x, y in zip(ayah, ayah[1:]) if len(x + y) >= 4}
+        scored = []
+        for r in rows:
+            tk = [t for _, t in _tokens(r[3])]
+            scored.append((sum(1 for x, y in zip(tk, tk[1:]) if (x, y) in pairs), r))
+        scored = [x for x in scored if x[0] >= max(1, min(2, len(pairs)))]
+        rows = [r for _, r in sorted(scored, key=lambda x: -x[0])[:3]]
+    pick = None
+    for r in rows:
+        toks = _tokens(r[3])
+        f = _find(toks, ayah, word)
+        if f and (pick is None or f[0] > pick[0]):
+            pick = (f[0], r, toks, f[1])
+            if not word:
+                break
+    if pick is None and not word and level == "الآية" and rows:
+        pick = (0, rows[0], _tokens(rows[0][3]), 0)
+    return pick[1:] if pick else None
+
+
+def ayah_passages(con, sura, aya, ayah_words, word=None, size=700):
+    """ما في كتب إعراب القرآن ومعانيه عن الآية (أو عن كلمة منها)، بالكتاب والجزء والصفحة، مرتبًا بوفاة المؤلف.
+    ayah_words: ألفاظ الآية. الكتب المفهرسة بالآيات يُقرأ موضع الآية منها، والمفهرسة بالسور (أو التي لم يُذكر فيها
+    الموضع عند الآية) يُبحث في صفحات السورة عن ألفاظ الآية."""
+    idx = load_ayah_index()
+    ayah = [_loose(w) for w in ayah_words]
+    out = []
+    for uri, entries in idx.items():
+        b = con.execute("SELECT id, title, author, died FROM books WHERE uri = ?", (uri,)).fetchone()
+        if not b:
+            continue
+        first = con.execute("SELECT min(id) FROM paras WHERE book = ?", (b[0],)).fetchone()[0]
+        tries = []
+        e = _aya_entry(entries, sura, aya)
+        if e:
+            tries.append((e["ord"], min(e["ord_end"], e["ord"] + 30), "الآية"))
+        su = next((x for x in entries if x["kind"] == "sura" and x["sura"] == sura), None)
+        if su:
+            tries.append((su["ord"], min(su["ord_end"], su["ord"] + 600), "السورة"))
+        got = None
+        for o0, o1, level in tries:
+            rows = con.execute("SELECT id, vol, page, text FROM paras WHERE id BETWEEN ? AND ? ORDER BY id",
+                               (first + o0, first + o1)).fetchall()
+            got = _pick(rows, ayah, word, level)
+            if got:
+                break
+        if not got:
+            continue
+        r, toks, i = got
+        start = max(0, r[3].rfind(" ", 0, max(0, toks[i][0] - 80)) + 1) if toks else 0
+        piece = r[3][start:start + size]
+        end = max(piece.rfind("."), piece.rfind("،"))
+        piece = piece[:end + 1] if end > size * 0.6 else piece
+        who = [x for x in SCHOOLS if x in _bare(piece)]
+        out.append({"uri": uri, "title": b[1], "author": b[2], "died": b[3], "vol": r[1], "page": r[2], "level": level,
+                    "text": piece.strip(), "who": list(dict.fromkeys(who))})
+    out.sort(key=lambda x: x["died"] or 9999)
+    return out
+
+
+# أسماء أصحاب كتب إعراب القرآن كما يُعرفون (البطاقات تذكر الكنية أو الاسم الطويل)
+IRAB_AUTHORS = {
+    "0207Shamela.23634": "الفراء", "0311Shamela.922": "الزجاج", "0338Shamela.23587": "النحاس", "0338Shamela.940": "النحاس",
+    "0437Shamela.5538": "مكي بن أبي طالب", "0535Shamela.36506": "إسماعيل الأصبهاني", "0543Shamela.23585": "الباقولي",
+    "0616Shamela.22928": "أبو البقاء العكبري", "0643Shamela.147312": "المنتجب الهمذاني", "0742Shamela.95571": "السفاقسي",
+    "0745Shamela.23591": "أبو حيان الأندلسي", "0756Shamela.9057": "السمين الحلبي", "0761Shamela.7501": "ابن هشام",
+    "0926Shamela.12753": "زكريا الأنصاري (منسوب)", "1403Shamela.2163": "محيي الدين درويش", "1405Shamela.22916": "محمود صافي",
+    "1450Shamela.23584": "الدعاس وحميدان والقاسم", "1450Shamela.9617": "أحمد الخراط", "1439Shamela.2505": "ياسين جاسم المحيمد",
+}

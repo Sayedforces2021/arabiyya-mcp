@@ -4565,14 +4565,65 @@ def _khilaf_topic(reg, topic, limit=5):
     return [e for sc, e in scored if sc >= scored[0][0] * 0.6][:limit] if scored else []
 
 
+@lru_cache(maxsize=1)
+def _quran_loose():
+    """([(السورة، الآية، الصورة المرخّاة)]، {ثلاث كلمات متتالية: [مواضعها]}): للمطابقة بلا أثر للرسم العثماني."""
+    import khilaf as K
+    qw = [(s_, a_, K._loose(t)) for s_, a_, t in _quran_words()]
+    idx = {}
+    for i in range(len(qw) - 2):
+        idx.setdefault((qw[i][2], qw[i + 1][2], qw[i + 2][2]), []).append(i)
+    return qw, idx
+
+
+def _quran_aya_of(sentence: str, all_: bool = False):
+    """(السورة، الآية) إن كانت الجملة آيةً أو جزءًا متصلًا منها (أكثر كلماتها)، وإلا None.
+    all_: كل الآيات التي تطابقها بالقدر نفسه (كصدر البقرة 62 والمائدة 69)."""
+    import khilaf as K
+    toks = [K._loose(t) for t in _ntoks(sentence)]
+    if len(toks) < 3:
+        return None
+    qw, idx = _quran_loose()
+    best, where = 0, []
+    for i in range(len(toks) - 2):
+        for j in idx.get(tuple(toks[i:i + 3]), [])[:50]:
+            k = 3
+            while i + k < len(toks) and j + k < len(qw) and toks[i + k] == qw[j + k][2]:
+                k += 1
+            if k > best:
+                best, where = k, [j]
+            elif k == best:
+                where.append(j)
+    if not where or best < max(3, 0.6 * len(toks)):
+        return None
+    ayat = list(dict.fromkeys((qw[j][0], qw[j][1]) for j in where))
+    return ayat if all_ else ayat[0]
+
+
+def _irab_quran_books(K, con, sura: int, aya: int, word: str | None) -> list:
+    words = [t for (s_, a_, t) in _quran_words() if s_ == sura and a_ == aya]
+    out = []
+    for x in K.ayah_passages(con, sura, aya, words, word):
+        loc = (f"ج{x['vol']} " if x["vol"] else "") + (f"ص{x['page']}" if x["page"] else "")
+        author = K.IRAB_AUTHORS.get(x["uri"]) or re.split(r"[،,(\[]", x["author"] or "")[0].strip()
+        out.append({"الكتاب": x["title"], "المؤلف": author, **({"الوفاة": f"{x['died']}هـ"} if x["died"] and x["died"] < 1450 else {}),
+                    "الرتبة": "حديث" if (x["died"] or 9999) >= 1300 else "متقدم", "الموضع": loc or "بلا رقم صفحة",
+                    **({"تنبيه": "الموضع بالبحث عن ألفاظ الآية في صفحات السورة، لا من فهرس الكتاب"} if x["level"] == "السورة" else {}),
+                    "المقتطف": x["text"], **({"يذكر": x["who"]} if x["who"] else {})})
+    return out
+
+
 @mcp.tool()
-def wujuh_irab(sentence: str = "", word: str | None = None, topic: str | None = None, other_books: bool = True) -> dict:
+def wujuh_irab(sentence: str = "", word: str | None = None, topic: str | None = None, other_books: bool = True,
+               aya: str | None = None) -> dict:
     """وجوه الإعراب وخلاف النحاة، منسوبةً إلى قائليها بالكتاب والجزء والصفحة، بلا ترجيح.
     مع sentence: تُعرب الجملة (أداة irab)، ثم تُطابَق تراكيبها بسجلّ الوجوه. ومع topic: يُبحث في السجلّ عن مسألة مسمّاة
     («المفعول معه»، «الاسم بعد مذ ومنذ»، «حاشا»).
     السجلّ: مسائل «الإنصاف» كلها (118) تُقرأ أقوالها من نص المسألة في المدوّنة التراثية المحلية، ومعها مقتطف موضعها في «همع الهوامع»
     و«ارتشاف الضرب» حيث عُرف، وما يقابلها في «التبيين» للعكبري
     ومسائل انفرد بها، ووجوه قُرئت نصوصها في كتب الإعراب والشروح، ومواضع المسألة في كتب النحو الأخرى في المدوّنة.
+    وإن كانت الجملة آيةً (أو مُرّر aya مثل «20:63») أُضيف ما في كتب إعراب القرآن ومعانيه عنها: الفراء والزجاج والنحاس ومكي
+    والعكبري والمنتجب الهمذاني وأبي حيان والسمين الحلبي وغيرهم، ومن المحدثين درويش وصافي والدعاس والخراط، بالجزء والصفحة.
     word: كلمة بعينها من الجملة (اختياري). other_books: أضف مواضع المسألة في الكتب الأخرى.
     ما لم يجده السجلّ لا يعني أن لا خلاف فيه."""
     import khilaf as K
@@ -4580,6 +4631,19 @@ def wujuh_irab(sentence: str = "", word: str | None = None, topic: str | None = 
     if not reg:
         return {"تنبيه": "سجلّ الوجوه غير موجود (data/khilaf/wujuh.jsonl)."}
     con = K.connect()
+    alts = [] if aya or not sentence else (_quran_aya_of(sentence, all_=True) or [])
+    q = tuple(int(x) for x in re.findall(r"\d+", aya)[:2]) if aya else (alts[0] if alts else None)
+    qbooks = {}
+    if q and len(q) == 2 and con is not None:
+        qb = _irab_quran_books(K, con, q[0], q[1], word)
+        qbooks = {"الآية": f"سورة {q[0]}، الآية {q[1]}",
+                  **({"ويحتمل أن تكون": [f"سورة {s_}، الآية {a_}" for s_, a_ in alts[1:6]],
+                      "عن الاحتمال": "ألفاظ الجملة في أكثر من آية؛ فإن قصدتَ غير الأولى فأعد الاستدعاء بـ aya."} if len(alts) > 1 else {}),
+                  "في كتب إعراب القرآن": qb or "لم أجد الموضع في كتب إعراب القرآن المفهرسة.",
+                  "عن كتب إعراب القرآن": "مقتطف من موضع الآية (أو الكلمة) في كل كتاب، مرتبًا بوفاة المؤلف، كما في نصه بلا ترجيح؛ "
+                                         "فاقرأ المقتطف قبل نسبة وجهٍ إلى صاحبه، واطلب الصفحة كاملة بـ corpus_concordance إن احتجت."}
+    if q and not sentence and not topic:
+        return qbooks
     if topic and not sentence:
         hits = _khilaf_topic(reg, topic)
         if not hits:
@@ -4603,8 +4667,8 @@ def wujuh_irab(sentence: str = "", word: str | None = None, topic: str | None = 
     voweled = any(c in HARAKAT for c in sentence)
     tip = None if voweled else "الجملة غير مشكولة: بعض المواضع لا يُعرف إلا بالحركة (كالمفعول معه، والمضارع بعد الواو والفاء، ولام الأمر)، فاشكلها ليُحسم."
     if not found:
-        return {"الجملة": sentence, "الإعراب": irab(sentence, detail=False).get("الجمل"),
-                "النتيجة": "لم أجد في سجلّ الوجوه خلافًا موثّقًا في مواضع هذه الجملة.",
+        return {"الجملة": sentence, "الإعراب": irab(sentence, detail=False).get("الجمل"), **qbooks,
+                "النتيجة": "لم أجد في سجلّ الوجوه خلافًا موثّقًا في مواضع هذه الجملة." + (" وانظر ما في كتب إعراب القرآن." if qbooks else ""),
                 "تنبيه": "السجلّ يغطي مسائل بعينها من الإنصاف والتبيين وكتب الإعراب، فغياب الخلاف فيه لا يعني أن لا خلاف في الموضع.",
                 **({"الشكل": tip} if tip else {})}
     out, seen = [], set()
@@ -4614,7 +4678,7 @@ def wujuh_irab(sentence: str = "", word: str | None = None, topic: str | None = 
         seen.add((w, e["id"]))
         item = {"الكلمة": w} | ({"الإعراب الذي بُني عليه": d} if d else {}) | _khilaf_item(K, con, e, other_books)
         out.append(item)
-    return {"الجملة": sentence, "المواضع": out, **({"الشكل": tip} if tip else {}),
+    return {"الجملة": sentence, "المواضع": out, **qbooks, **({"الشكل": tip} if tip else {}),
             "تنبيه": "الأقوال منسوبة إلى قائليها بلا ترجيح من الأداة. والموضع يُعيَّن من الإعراب الآلي، فإن أخطأ الإعراب أخطأ التعيين: "
                       "راجع «الإعراب الذي بُني عليه»."}
 
