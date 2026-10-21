@@ -3379,6 +3379,17 @@ def _irab_haraka_rules(doc, sentence: str):
                 spans.append((pos, pos + n) if exact else (None, tok.end_char if w is tok.words[-1] else None))
                 pos += n
             words = list(tok.words)
+            # «لأقرأ»: يجعلها المحلل جارًّا ومجرورًا، والمحلل الصرفي لا يعرف لها إلا الفعل؛ فهي لام ومضارع («لأحمد» لها وجه اسمي فلا تُمسّ)
+            if len(words) == 2 and _strip_tashkeel(words[0].text) == "ل" and words[1].upos in ("NOUN", "X") \
+                    and _strip_tashkeel(words[1].text)[:1] in "أيتن":
+                try:
+                    an = _analyzer().analyze(_strip_tashkeel(tok.text))
+                    if an and all(a.get("pos") == "verb" for a in an):
+                        words[1].upos = "VERB"
+                        words[1].feats = ""
+                        _set_feat(words[1], "Aspect", "Imp")
+                except Exception:
+                    pass
             for j, w in enumerate(words):
                 f = _feats(w)
                 t = _strip_tashkeel(w.text)
@@ -3399,7 +3410,13 @@ def _irab_haraka_rules(doc, sentence: str):
                         w.mood_rule = "haraka"
                 elif w.upos in ("NOUN", "ADJ", "PROPN") and v in ("u", "a", "i") and not t.endswith(("ون", "ين", "ان", "ات")) \
                         and not (not split and t.endswith(_PRON_END)):
-                    _set_feat(w, "Case", {"u": "Nom", "a": "Acc", "i": "Gen"}[v])
+                    e = spans[j][1]
+                    tanwin = any(m in bases[e - 1][1] for m in "ًٌٍ") or (bases[e - 1][0] == "ا" and e >= 2 and "ً" in bases[e - 2][1])
+                    if v == "a" and f.get("Case") == "Gen" and not tanwin and not t.startswith("ال") and f.get("Definite") != "Cons":
+                        _set_feat(w, "Diptote", "Yes")  # «لِأَحْمَدَ»: مجرور بالفتحة نيابة عن الكسرة لأنه ممنوع من الصرف
+                        _set_feat(w, "Definite", "Ind")
+                    else:
+                        _set_feat(w, "Case", {"u": "Nom", "a": "Acc", "i": "Gen"}[v])
             # ── كلمة لم يقسّمها المحلل: (و/ف) + ل + مضارع (+ ضمير): «لينفق»، «فليعمل»، «ليبلوكم» ──
             if len(words) == 1 and words[0].upos in ("X", "VERB") and _feats(words[0]).get("Aspect") != "Perf":
                 w0 = words[0]
