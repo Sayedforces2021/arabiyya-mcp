@@ -970,7 +970,10 @@ def search_poetry(query: str = "", meter: str | None = None, era: str | None = N
     loose = False
     if q and not rows and exact_phrase and len(words) > 1:
         # لا مطابقة حرفية (لاختلاف الرسم مثل «أن ما» و«أنما»، أو رواية أخرى): يُعاد البحث بالكلمات مجتمعةً في البيت
-        args[0] = " AND ".join(f'"{w}"' for w in words if len(w) > 2) or args[0]
+        def _alts(w):   # الواو والفاء المتصلتان: «إنما» تطابق «وإنما»، و«وإنما» تطابق «إنما»
+            vs = {w, "و" + w, "ف" + w} | ({w[1:]} if w[0] in "وف" and len(w) > 3 else set())
+            return "(" + " OR ".join(f'"{x}"' for x in sorted(vs)) + ")"
+        args[0] = " AND ".join(_alts(w) for w in words if len(w) > 2) or args[0]
         rows = con.execute(sql, args + [3000]).fetchall()
         loose = bool(rows)
     con.close()
@@ -3523,14 +3526,15 @@ def _word_diff(a: list, b: list) -> list:
     return out
 
 
-def _takhrij_key(q: list, sc: float, v) -> tuple:
+def _takhrij_key(q: list, sc: float, v, copies: dict | None = None) -> tuple:
     """ترتيب مرشحات النسبة عند تساوي التطابق: ما ليس تضمينًا ولا معارضة (بعنوانه أو بأقواسه) أولًا، ثم ما وقع فيه
     الشطر المبحوث عنه صدرًا لا عجزًا (فمن جعل صدر غيره عجزًا لبيته فقد ضمّنه)، ثم الأقدم عصرًا.
     v = (الصدر، العجز، الرقم، الشاعر، القصيدة، البحر، العصر، ...)."""
     pos = 0
     if len(q) <= len(_ntoks((v[0] or "") + " " + (v[1] or ""))) * 0.7 and _sim(q, _ntoks(v[1])) > _sim(q, _ntoks(v[0])):
         pos = 1
-    return (-round(sc, 2), _is_quotation(v[0], v[4]), pos, _era_rank(v[6], v[3]))
+    # ثم عند تساوي العصر: من نسبته إليه نسخٌ أكثر في المدوّنة (كالمتنبي وأبي العتاهية في «ما كل ما يتمنى المرء يدركه»)
+    return (-round(sc, 2), _is_quotation(v[0], v[4]), pos, _era_rank(v[6], v[3]), -(copies or {}).get(_poet_key(v[3]), 0))
 
 
 @mcp.tool()
@@ -3557,7 +3561,11 @@ def takhrij_shahid(verse: str, limit: int = 8, citations: bool = True) -> dict:
             t = _ntoks(v[0] + " " + v[1])
             sc = max(_sim(q, t), _sim(q, _ntoks(v[0])) if len(q) <= len(t) * 0.7 else 0, _sim(q, _ntoks(v[1])) if len(q) <= len(t) * 0.7 else 0)
             cands.append((sc, v, t))
-        cands.sort(key=lambda x: _takhrij_key(q, x[0], x[1]))
+        copies = {}
+        for sc0, v0, _t in cands:
+            if sc0 >= 0.85 and not _is_quotation(v0[0], v0[4]) and _takhrij_key(q, sc0, v0)[2] == 0:
+                copies[_poet_key(v0[3])] = copies.get(_poet_key(v0[3]), 0) + 1
+        cands.sort(key=lambda x: _takhrij_key(q, x[0], x[1], copies))
         allc = [c for c in cands if c[0] >= 0.55]
         cands = allc[:max(1, min(int(limit), 30))]
         con.close()
