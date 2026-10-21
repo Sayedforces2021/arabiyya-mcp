@@ -267,6 +267,8 @@ class TestPoetryRanking(unittest.TestCase):
         self.assertEqual(self.S._era_rank("قبل الإسلام"), 0)
         self.assertEqual(self.S._era_rank("المغرب والأندلس"), 5)
         self.assertEqual(self.S._era_rank("المخضرمين"), 1)
+        self.assertEqual(self.S._era_rank(None, "مسكين الدرامي", {}), 3)    # من _KNOWN_ERAS: لا عصر له في «أشعار»
+        self.assertEqual(self.S._era_rank(None, "لبيد بن ربيعه", {}), 1)
 
 
 if __name__ == "__main__":
