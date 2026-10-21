@@ -1319,7 +1319,7 @@ def maajim(root: str, books: list[str] | None = None, max_chars_per_entry: int =
             if len(text) > max_chars_per_entry and len(body) >= max_chars_per_entry:
                 body += " …[مقطوع]"
             entries.append({
-                "المعجم": f"{name} (ت {died}هـ)",
+                "المعجم": f"{name} ({_died_label(died)})",
                 "الموضع": f"ج{vol} ص{page}" if vol else None,
                 "العنوان": title,
                 "المطابقة": match,
@@ -1563,7 +1563,7 @@ def corpus_concordance(word: str, genre: str | None = None, century_from: int | 
                     "قبل": " ".join(toks[max(0, i - window):i]),
                     "الكلمة": " ".join(toks[i:j]),
                     "بعد": " ".join(toks[j:j + window]),
-                    "المصدر": f"{title} (ت {died}هـ)" + _cite(vol, page),
+                    "المصدر": f"{title} ({_died_label(died)})" + _cite(vol, page),
                     "الفن": g,
                 })
                 break
@@ -1571,6 +1571,17 @@ def corpus_concordance(word: str, genre: str | None = None, century_from: int | 
             break
     return {"الكلمة": word, "الصيغ المبحوث عنها": sorted(vs), "السياقات": out,
             "ملاحظة": "مرتبة بوفاة المؤلف؛ سياق واحد من كل فقرة. الجزء والصفحة كما في مصدر النص (الشاملة أو OpenITI)."}
+
+
+def _died_label(died) -> str:
+    """«ت 577هـ»، و«ت 61 ق.هـ» لمن مات قبل الهجرة، و«معاصر أو مجهول الوفاة» لما جُعل 1450 عند الاستيراد لخلوّ بطاقته من سنة وفاة."""
+    if died is None:
+        return "الوفاة غير معروفة"
+    if died >= 1450:
+        return "معاصر أو مجهول الوفاة"
+    if died <= 0:
+        return f"ت {abs(died)} ق.هـ" if died < 0 else "ت قبل الهجرة"
+    return f"ت {died}هـ"
 
 
 def _cite(vol, page) -> str:
@@ -1597,7 +1608,7 @@ def corpus_usage(word: str, genre: str | None = None, clitics: bool = True) -> d
         c = (died - 1) // 100 + 1
         by_c[c] = by_c.get(c, 0) + n
         by_g[g] = by_g.get(g, 0) + n
-        by_b[f"{title} (ت {died}هـ)"] = by_b.get(f"{title} (ت {died}هـ)", 0) + n
+        by_b[f"{title} ({_died_label(died)})"] = by_b.get(f"{title} ({_died_label(died)})", 0) + n
     con.close()
     return {
         "الكلمة": word,
@@ -2082,7 +2093,7 @@ def _load_corpus_book(book: str, max_words: int):
         if n >= max_words:
             break
     con.close()
-    return "\n".join(parts), {"الكتاب": f"{b[1]} لـ{_short_author(b[2])} (ت {b[3]}هـ)", "الكلمات المأخوذة": min(n, b[4] or n),
+    return "\n".join(parts), {"الكتاب": f"{b[1]} لـ{_short_author(b[2])} ({_died_label(b[3])})", "الكلمات المأخوذة": min(n, b[4] or n),
                               "حجم الكتاب": b[4]}
 
 
@@ -3558,13 +3569,13 @@ def _attr_key(toks: list) -> str:
         return ""
     toks = [_ATTR_CASE.get(toks[0], toks[0])] + list(toks[1:])
     k = " ".join(toks[:2]) if toks[0] in _ATTR_TWO and len(toks) > 1 else toks[0]
-    return _ATTR_ALIAS.get(k, k)
+    return _ATTR_ALIAS.get(k, k).replace("ء", "ا")       # «السموءل» = «السموأل»
 
 
-def _attribution_in_books(ref: list, hits: dict) -> list:
+def _attribution_in_books(ref: list, hits: dict, names: dict | None = None) -> list:
     """من نسب البيت إلى قائله في كتب المدوّنة: «قال فلان» أو «قول فلان» أو «أنشد لفلان» قبل البيت مباشرة.
     hits = {رقم الفقرة: (الوفاة، العنوان، المؤلف، الفن، الجزء، الصفحة، النص)}. يُحصى كل كتاب مرة واحدة،
-    ولا يُحصى «قال الشاعر» و«قال الآخر» (بلا تسمية)."""
+    ولا يُحصى «قال الشاعر» و«قال الآخر» (بلا تسمية). names: {مفتاح النسبة: اسم الشاعر كما في «أشعار»} لعرض الاسم تامًّا."""
     if len(ref) < 2:
         return []
     pat = re.compile(r"\W+".join(re.escape(t) for t in ref[:2]))
@@ -3591,14 +3602,14 @@ def _attribution_in_books(ref: list, hits: dict) -> list:
         if not name or name[0] in _ATTR_ANON or len(name[0]) < 3:
             continue
         k = _attr_key(name)
-        a = agg.setdefault(k, {"names": {}, "books": {}})
+        a = agg.setdefault(k, {"key": k, "names": {}, "books": {}})
         a["names"][" ".join(name[:3])] = a["names"].get(" ".join(name[:3]), 0) + 1
-        a["books"].setdefault(title, (died or 9999, f"«{title}» (ت {died}هـ){_cite(vol, page)}"))
+        a["books"].setdefault(title, (died or 9999, f"«{title}» ({_died_label(died)}){_cite(vol, page)}"))
     out = []
     for k, a in agg.items():
         first = min(a["books"].values())
-        out.append({"الشاعر": max(a["names"].items(), key=lambda x: (x[1], -len(x[0])))[0], "عدد الكتب": len(a["books"]),
-                    "أقدمها": first[1]})
+        out.append({"الشاعر": (names or {}).get(k) or max(a["names"].items(), key=lambda x: (x[1], -len(x[0])))[0],
+                    "عدد الكتب": len(a["books"]), "أقدمها": first[1]})
     out.sort(key=lambda x: (-x["عدد الكتب"], x["أقدمها"]))
     strong = [a for a in out if a["عدد الكتب"] >= 2]
     return strong[:6] if strong else out[:3]      # ما ورد في كتاب واحد لا يُعرض إلا إذا لم يُوجد غيره
@@ -3715,7 +3726,10 @@ def takhrij_shahid(verse: str, limit: int = 8, citations: bool = True) -> dict:
                 if covered >= 0.6:
                     hits[pid] = (died, title, author, genre, vol, page, text)
         con.close()
-        books_attr = _attribution_in_books(ref, hits)
+        known = {}
+        for _sc, _v, _t in (allc if "allc" in locals() else []):
+            known.setdefault(_attr_key(_ntoks(_v[3] or "")), " ".join((_v[3] or "").split()))
+        books_attr = _attribution_in_books(ref, hits, known)
         if books_attr:
             out["قائله في كتب المدوّنة"] = books_attr
             top = books_attr[0]
@@ -3727,7 +3741,7 @@ def takhrij_shahid(verse: str, limit: int = 8, citations: bool = True) -> dict:
                                        "فالأرجح أن ما في «أشعار» تضمينٌ أو نسخة بغير نسبتها، ونسبةُ الكتب أولى بالاعتماد.")
         cites = []
         for pid, (died, title, author, genre, vol, page, text) in sorted(hits.items(), key=lambda x: x[1][0]):
-            item = {"الكتاب": f"{title} (ت {died}هـ)", "الفن": genre, "الموضع": _cite(vol, page).lstrip("، ")}
+            item = {"الكتاب": f"{title} ({_died_label(died)})", "الفن": genre, "الموضع": _cite(vol, page).lstrip("، ")}
             import re
             m = re.search(r"(?:والشاهد|الشاهد|وشاهده|استشهد|والاستشهاد)[^.]{0,220}", _strip_tashkeel(text))
             if m:
@@ -3785,7 +3799,7 @@ def usage_compare(expressions: list[str], genre: str | None = None, examples: in
             by_c[c] = by_c.get(c, 0) + k
             if len(ex) < examples:
                 i = next((m.start() for p in pats for m in [p.search(nt)] if m), 0)
-                ex.append({"الشاهد": nt[max(0, i - 80):i + 100], "المصدر": f"{title} (ت {died}هـ)" + _cite(vol, page)})
+                ex.append({"الشاهد": nt[max(0, i - 80):i + 100], "المصدر": f"{title} ({_died_label(died)})" + _cite(vol, page)})
         res.append({"التعبير": e, "الورود": n, "لكل مليون كلمة": round(n * 1e6 / total, 2),
                     "بحسب الفن": by_g, "بحسب القرن": dict(sorted(by_c.items())), "شواهد": ex})
     con.close()

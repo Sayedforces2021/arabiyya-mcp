@@ -141,7 +141,7 @@ def import_book(sh, con, bid, genre, died=None, uri=None, replace_id=None):
     died = died or d
     if not died:
         return {"تنبيه": f"لم أستخرج سنة وفاة مؤلف «{title}» من بطاقته؛ أعد التشغيل مع --died.", "البطاقة": card[:300]}
-    uri = uri or f"{died:04d}Shamela.{bid}"
+    uri = uri or f"{max(died, 0):04d}Shamela.{bid}"
     src = _sources(con)
     if src.get(uri, (None,))[0] == "shamela" or (replace_id is None and con.execute("SELECT 1 FROM books WHERE uri=?", (uri,)).fetchone()):
         return {"تنبيه": f"«{title}» في المدوّنة من قبل ({uri})."}
@@ -190,7 +190,7 @@ def category_books(root, cats):
 def resolve_died(card_died, author_death, book_date):
     """سنة الوفاة ومصدرها: البطاقة، ثم فهرس مؤلفي الشاملة، ثم تاريخ الكتاب فيها، وإلا فمعاصر/مجهول."""
     for v, how in ((card_died, "البطاقة"), (author_death, "فهرس المؤلفين"), (book_date, "تاريخ الكتاب")):
-        if v and 0 < v < 1500:
+        if v and -300 < v < 1500:          # السالب: قبل الهجرة (الشعراء الجاهليون في فهرس مؤلفي الشاملة)
             return v, how
     return MODERN_DIED, "معاصر أو مجهول"
 

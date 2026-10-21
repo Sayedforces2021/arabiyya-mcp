@@ -114,6 +114,7 @@ class TestCategories(TestReplace):
         self.assertEqual(I.resolve_died(None, 911, 911), (911, "فهرس المؤلفين"))
         self.assertEqual(I.resolve_died(None, 99999, 1440), (1440, "تاريخ الكتاب"))
         self.assertEqual(I.resolve_died(None, None, 99999), (I.MODERN_DIED, "معاصر أو مجهول"))
+        self.assertEqual(I.resolve_died(None, -61, -61), (-61, "فهرس المؤلفين"))      # الأفوه الأودي، قبل الهجرة
 
     def test_skips_openiti_copy_and_resumes(self):
         cb = I.category_books
