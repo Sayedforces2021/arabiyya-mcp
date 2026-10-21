@@ -217,5 +217,33 @@ class TestAddRemove(unittest.TestCase):
         self.assertEqual(self.freq("زرنبق"), 1)
 
 
+class TestPoetryRanking(unittest.TestCase):
+    """«قفا نبك»: كان search_poetry يعيد الأبيات بترتيب التخزين، فيتقدّم من ضمّن الصدر في شعره على امرئ القيس،
+    فنُسب البيت إلى غير قائله."""
+
+    @classmethod
+    def setUpClass(cls):
+        import sarf_mcp
+        cls.S = sarf_mcp
+
+    def test_original_first(self):
+        q = self.S._norm("قفا نبك من ذكرى حبيب ومنزل")
+        rows = [  # بالترتيب الذي أعادته المدوّنة فعلًا
+            ("قفا نبك من ذكرى حبيبٍ ومنزلِ", "#", "أبو العباس الجراوي", None, "بحر الطويل", "خليلي دعوى برحت بخفاء", "قصيدة عامه"),
+            ("قفا نبك من ذكرى حبيب ومنزل", "وأضنى لذاك القول منهم وأدرد", "الأحنف العكبري", "العصر العباسي", "بحر الطويل", "سهرت وما مثلي ينام ويرقد", "قصيدة عامه"),
+            ("وَأَخلَقَ فيها عُمرَهُ فَكَأَنَّهُ", "قِفا نَبكِ مِن ذِكرى حَبيبٍ وَمَنزِلِ", "ابن عنين", None, "بحر الطويل", "ولما رأينا المغربي", "قصيدة عامه"),
+            ("قِفا نَبكِ مِن ذِكرى حَبيبٍ وَمَنزِلِ", "بِسِقطِ اللِوى بَينَ الدَخولِ فَحَومَلِ", "امرؤ القيس", "العصر الجاهلي", "بحر الطويل", "قفا نبك من ذكرى حبيب ومنزِل", "قصيدة المعلقات"),
+        ]
+        rows.sort(key=lambda r: self.S._poetry_rank(q, *r))
+        self.assertEqual(rows[0][2], "امرؤ القيس")
+        self.assertEqual(rows[-1][2], "ابن عنين")                  # ما جاء في العجز تضمين، يتأخر
+        self.assertEqual(self.S._poetry_where(q, rows[-1][0], rows[-1][1]), "العجز")
+
+    def test_quotation_is_not_attribution(self):
+        self.assertTrue(self.S._is_quotation("( قفا نبك من ذكرى حبيـبٍ و منـزلِ", "معارضة معلقة امرئ القيس"))
+        self.assertTrue(self.S._is_quotation("قفا نبك", "معارضة معلقة امرئ القيس"))
+        self.assertFalse(self.S._is_quotation("قِفا نَبكِ مِن ذِكرى حَبيبٍ وَمَنزِلِ", "قفا نبك من ذكرى حبيب ومنزِل"))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

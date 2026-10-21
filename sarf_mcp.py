@@ -964,16 +964,60 @@ def search_poetry(query: str = "", meter: str | None = None, era: str | None = N
         return {"تنبيه": "أعطِ كلمة للبحث أو مرشِّحًا واحدًا على الأقل."}
     sql = (f"SELECT v.sadr, v.ajuz, p.poet, p.era, p.meter, p.title, p.theme FROM verses v "
            f"JOIN poems p ON p.id = v.poem_id WHERE {' AND '.join(where)} LIMIT ?")
-    rows = con.execute(sql, args + [limit]).fetchall()
+    # تُجلب المرشحات كلها (إلى حدٍّ معقول) ثم تُرتَّب، لا أن يُقتطع أولها بترتيب التخزين: فالبيت الأصلي قد يكون الخامس
+    # بعد أبيات تضمّنته أو عارضته، والأخذ بالأول يُخطئ النسبة (مثل «قفا نبك» يُنسب إلى من ضمّنه).
+    rows = con.execute(sql, args + [3000 if q else limit]).fetchall()
     con.close()
-    return {
-        "عدد النتائج المعروضة": len(rows),
-        "الأبيات": [
-            {"البيت": f"{s} * {a}" if a else s, "الشاعر": po, "العصر": er, "البحر": me,
-             "القصيدة": ti, "الغرض": th}
-            for s, a, po, er, me, ti, th in rows
-        ],
-    }
+    total = len(rows)
+    if q:
+        rows.sort(key=lambda r: _poetry_rank(q, *r))
+    rows = rows[:limit]
+    out = []
+    for s, a, po, er, me, ti, th in rows:
+        item = {"البيت": f"{s} * {a}" if a else s, "الشاعر": po, "العصر": er, "البحر": me, "القصيدة": ti, "الغرض": th}
+        if q:
+            item["موضع المطابقة"] = _poetry_where(q, s, a)
+        out.append(item)
+    res = {"عدد النتائج المعروضة": len(out), "الأبيات": out}
+    if q:
+        res["عدد المطابقات"] = total if total < 3000 else "3000 أو أكثر"
+        res["الترتيب"] = ("ما بدأ صدرُه بالمبحوث عنه أولًا، ثم ما وقع في صدره، ثم في عجزه (وهو غالبًا تضمين أو معارضة)، "
+                          "والأقدم عصرًا قبل الأحدث، والبيت التام قبل الناقص. ولا يعني تقدّمُ بيتٍ أنه الأصل؛ "
+                          "فللنسبة استعمل takhrij_shahid بالبيت كاملًا.")
+    return res
+
+
+_ERAS = [("الجاهلي", 0), ("المخضرم", 1), ("الإسلامي", 2), ("صدر الإسلام", 2), ("الراشدي", 2), ("الأموي", 3),
+         ("العباسي", 4), ("الأندلسي", 5), ("الفاطمي", 6), ("الأيوبي", 6), ("المملوكي", 7), ("العثماني", 8), ("الحديث", 9)]
+
+
+_QUOTE_TITLES = ("معارضه", "تخميس", "مخمس", "تشطير", "مشطر", "تضمين")
+
+
+def _is_quotation(sadr: str, title: str | None) -> bool:
+    """بيتٌ واقعٌ في قصيدة معارضة أو تخميس أو تشطير، أو منقول بين أقواس: ورودٌ للبيت لا نسبةٌ له."""
+    t = _norm(title or "")
+    return any(k in t for k in _QUOTE_TITLES) or (sadr or "").lstrip().startswith(("(", "«", "﴿", '"'))
+
+
+def _poetry_where(q: str, sadr: str, ajuz: str) -> str:
+    sn, an = _norm(sadr or ""), _norm(ajuz or "")
+    if sn.startswith(q):
+        return "أول الصدر"
+    if q in sn:
+        return "الصدر"
+    if q in an:
+        return "العجز"
+    return "البيت"
+
+
+def _poetry_rank(q, sadr, ajuz, poet, era, meter, title, theme):
+    where = {"أول الصدر": 0, "الصدر": 1, "البيت": 2, "العجز": 3}[_poetry_where(q, sadr, ajuz)]
+    a = (ajuz or "").strip()
+    incomplete = 1 if (not a or a == "#") else 0
+    era_rank = next((r for k, r in _ERAS if era and k in era), 10)
+    title_match = 0 if title and _norm(title).startswith(q[:20]) else 1   # القصيدة التي مطلعها البيت نفسه
+    return (where, incomplete, title_match, era_rank)
 
 
 # ───────────── المدوّنة القرآنية (Quranic Arabic Corpus v0.4، برخصة GPL) ─────────────
@@ -3443,7 +3487,9 @@ def takhrij_shahid(verse: str, limit: int = 8, citations: bool = True) -> dict:
             t = _ntoks(v[0] + " " + v[1])
             sc = max(_sim(q, t), _sim(q, _ntoks(v[0])) if len(q) <= len(t) * 0.7 else 0, _sim(q, _ntoks(v[1])) if len(q) <= len(t) * 0.7 else 0)
             cands.append((sc, v, t))
-        cands.sort(key=lambda x: -x[0])
+        # عند تقارب التطابق: الأقدم عصرًا أولًا، وما كان تضمينًا أو معارضة (بعنوانه أو بوضعه بين أقواس) آخرًا
+        cands.sort(key=lambda x: (-round(x[0], 2), _is_quotation(x[1][0], x[1][4]),
+                                  next((r for k, r in _ERAS if x[1][6] and k in x[1][6]), 10)))
         cands = [c for c in cands if c[0] >= 0.55][:max(1, min(int(limit), 30))]
         con.close()
         if cands:
@@ -3458,14 +3504,17 @@ def takhrij_shahid(verse: str, limit: int = 8, citations: bool = True) -> dict:
                 if key in seen_t:
                     continue
                 seen_t.add(key)
-                if sc2 >= 0.85:
+                quoted = _is_quotation(v2[0], v2[4])
+                if sc2 >= 0.85 and not quoted:
                     pn = _norm(_strip_tashkeel(v2[3] or ""))
                     poets[pn] = poets.get(pn, 0) + 1
                     names.setdefault(pn, v2[3])
                 d = _word_diff(q, t2) if sc2 < 0.999 else []
                 if sc2 < 0.999 and d:
                     item = {"الشاعر": v2[3], "القصيدة": v2[4], "النص": f"{v2[0]} * {v2[1]}", "الفروق": d[:6], "التطابق": round(sc2, 2)}
-                    (rw if sc2 >= 0.85 else near).append(item)
+                    (rw if sc2 >= 0.85 and not quoted else near).append(item)
+                elif quoted and v2 is not v:
+                    near.append({"الشاعر": v2[3], "القصيدة": v2[4], "النص": f"{v2[0]} * {v2[1]}", "التطابق": round(sc2, 2)})
             if rw:
                 out["اختلاف الرواية"] = rw
             if near:
