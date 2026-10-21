@@ -32,10 +32,10 @@ def main():
     new = [g for g in gold if g["genre"] == "جديد"]
     gold = [g for g in gold if g["genre"] != "جديد"]
     G, outside, P = set(), [], set()
-    GN, PN = {(sid, e) for sid, es in NMAP.items() for e in es}, set()
+    GN, PN, EXTRA = {(sid, e) for sid, es in NMAP.items() for e in es}, set(), set()
     for g in new:
         for it in S.wujuh_irab(g["text"], other_books=False).get("المواضع", []):
-            PN.add((g["id"], it["المعرّف"]))
+            (EXTRA if it["المعرّف"].startswith("tabyin-") else PN).add((g["id"], it["المعرّف"]))
     for g in gold:
         for k in g["khilaf"]:
             if k["kind"] == "عامل":
@@ -48,11 +48,12 @@ def main():
                 outside.append((g["id"], k["word"], k["issue"], eid))
         r = S.wujuh_irab(g["text"], other_books=False)
         for it in r.get("المواضع", []):
-            P.add((g["id"], it["المعرّف"]))
+            (EXTRA if it["المعرّف"].startswith("tabyin-") else P).add((g["id"], it["المعرّف"]))
     tp = G & P
     rep = {"المواضع الموثّقة في السجلّ": len(G), "اكتُشف منها": len(tp), "الاستدعاء": round(len(tp) / max(1, len(G)), 3),
            "اقتراحات الأداة": len(P), "الدقة": round(len(tp) / max(1, len(P)), 3), "مواضع خارج السجلّ": len(outside),
            "فاته": sorted(G - P), "ادّعاء بلا أصل في الذهبي": sorted(P - G), "خارج السجلّ": outside,
+           "مسائل التبيين المضافة (بعد تعليم الذهبي، فلا تُحسب)": sorted(EXTRA),
            "جديد (لم يُضبط عليه)": {"المتوقع": len(GN), "اكتُشف": len(GN & PN), "الاستدعاء": round(len(GN & PN) / max(1, len(GN)), 3),
                                     "الاقتراحات": len(PN), "الدقة": round(len(GN & PN) / max(1, len(PN)), 3),
                                     "فاته": sorted(GN - PN), "ادّعاء": sorted(PN - GN)}}

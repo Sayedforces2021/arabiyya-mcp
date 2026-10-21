@@ -4466,26 +4466,90 @@ def _cite_book(title, author, died):
     return f"{name}" + (f" (ت {died}هـ)" if died and died < 1450 else "")
 
 
+def _khilaf_item(K, con, e, other_books=True):
+    """وصف مدخل السجلّ: مسألة الإنصاف بنص أقوالها (ومعها التبيين إن رُبطت به)، أو مسألة التبيين، أو وجه موثّق."""
+    item = {"المسألة": e["title"], "المعرّف": e["id"]}
+    s = e.get("source", {})
+    if e["kind"] == "مسألة":
+        item["المصدر"] = f"{s['book']}، المسألة {s['masala']}، ج{s['vol']} ص{s['page']}"
+        t = K.insaf_text(con, s["masala"], s["vol"], s["page"]) if con else None
+        if t:
+            item["الأقوال (نص الإنصاف)"] = [{"القائل": q, "القول": v} for q, v in K.views(t["text"])]
+        else:
+            item["القائلون"] = e.get("qailun", [])
+            item["تنبيه"] = "نص المسألة غير موجود في المدوّنة المحلية؛ فالأقوال تُقرأ في المصدر نفسه."
+        for tb in e.get("tabyin", []):
+            tt = K.tabyin_text(con, tb["masala"], tb["page"]) if con else None
+            item.setdefault("في التبيين للعكبري", []).append(
+                {"المصدر": f"التبيين عن مذاهب النحويين، المسألة {tb['masala']} «{tb['title']}»، ص{tb['page']}"} |
+                ({"الأقوال (نص التبيين)": [{"القائل": q, "القول": v} for q, v in K.views_tabyin(tt["text"])]} if tt else {}))
+        if other_books and e.get("also"):
+            item["مواضعها في كتب أخرى"] = [f"{_cite_book(a['book'], a['author'], a['died'])}" +
+                                          (f" ج{a['vol']}" if a.get("vol") else "") + f" ص{a['page']}" for a in e["also"]]
+    elif e["kind"] == "مسألة-تبيين":
+        item["المصدر"] = f"{s['book']} ({s['author']})، المسألة {s['masala']}، ص{s['page']}"
+        tt = K.tabyin_text(con, s["masala"], s["page"]) if con else None
+        if tt:
+            item["الأقوال (نص التبيين)"] = [{"القائل": q, "القول": v} for q, v in K.views_tabyin(tt["text"])]
+        else:
+            item["القائلون"] = e.get("qailun", [])
+    else:
+        item["الأقوال"] = [({"القائل": a["qail"]} if a.get("qail") else {}) | {"القول": a["qawl"]} for a in e["aqwal"]]
+        item["المصادر"] = [f"{x['book']}" + (f" ج{x['vol']}" if x.get("vol") else "") + f" ص{x['page']}" for x in e["sources"]]
+        item["تنبيه"] = "الأقوال هنا بصياغة مختصرة، ونصها في المصادر المذكورة."
+        if e.get("note"):
+            item["ملاحظة"] = e["note"]
+    return item
+
+
+def _khilaf_topic(reg, topic, limit=5):
+    """مداخل السجلّ الأقرب إلى موضوع مسمّى («الاسم بعد مذ ومنذ»): بتداخل ألفاظ العنوان والمواضع."""
+    def toks(x):
+        out = set()
+        for w in re.findall("[ء-ي]+", _norm(_strip_tashkeel(x or ""))):
+            w = w[2:] if w.startswith("ال") and len(w) > 4 else w
+            if w not in ("في", "من", "على", "ام", "او", "بعد", "مع", "عن", "الي", "هل", "ما", "القول"):
+                out.add(w)
+        return out
+    q = toks(topic)
+    scored = []
+    for e in reg:
+        t = toks(e["title"] + " " + " ".join(e.get("pos", [])) + " " + " ".join(e.get("keys", [])))
+        sc = len(q & t) / max(1, len(q))
+        if sc > 0:
+            scored.append((sc, e))
+    scored.sort(key=lambda x: -x[0])
+    return [e for sc, e in scored if sc >= scored[0][0] * 0.6][:limit] if scored else []
+
+
 @mcp.tool()
-def wujuh_irab(sentence: str, word: str | None = None, other_books: bool = True) -> dict:
-    """وجوه الإعراب وخلاف النحاة في مواضع الجملة، منسوبةً إلى قائليها بالكتاب والجزء والصفحة، بلا ترجيح.
-    تُعرب الجملة أولًا (أداة irab)، ثم تُطابَق تراكيبها بسجلّ الوجوه: مسائل «الإنصاف» (تُقرأ أقوالها من نص المسألة في المدوّنة
-    التراثية المحلية)، ووجوه قُرئت نصوصها في كتب الإعراب والشروح؛ ومعها مواضع المسألة في كتب النحو الأخرى في المدوّنة.
-    sentence: الجملة، ويُستحسن شكلها. word: كلمة بعينها (اختياري). other_books: أضف مواضع المسألة في الكتب الأخرى.
-    ما لم يجده السجلّ لا يعني أن لا خلاف فيه؛ فالسجلّ يغطي مسائل بعينها، ويُوسَّع."""
+def wujuh_irab(sentence: str = "", word: str | None = None, topic: str | None = None, other_books: bool = True) -> dict:
+    """وجوه الإعراب وخلاف النحاة، منسوبةً إلى قائليها بالكتاب والجزء والصفحة، بلا ترجيح.
+    مع sentence: تُعرب الجملة (أداة irab)، ثم تُطابَق تراكيبها بسجلّ الوجوه. ومع topic: يُبحث في السجلّ عن مسألة مسمّاة
+    («المفعول معه»، «الاسم بعد مذ ومنذ»، «حاشا»).
+    السجلّ: مسائل «الإنصاف» كلها (118) تُقرأ أقوالها من نص المسألة في المدوّنة التراثية المحلية، ومعها ما يقابلها في «التبيين» للعكبري
+    ومسائل انفرد بها، ووجوه قُرئت نصوصها في كتب الإعراب والشروح، ومواضع المسألة في كتب النحو الأخرى في المدوّنة.
+    word: كلمة بعينها من الجملة (اختياري). other_books: أضف مواضع المسألة في الكتب الأخرى.
+    ما لم يجده السجلّ لا يعني أن لا خلاف فيه."""
     import khilaf as K
     reg = K.load_registry()
     if not reg:
         return {"تنبيه": "سجلّ الوجوه غير موجود (data/khilaf/wujuh.jsonl)."}
     con = K.connect()
+    if topic and not sentence:
+        hits = _khilaf_topic(reg, topic)
+        if not hits:
+            return {"الموضوع": topic, "النتيجة": "لم أجد في سجلّ الوجوه مسألة بهذا الموضوع."}
+        return {"الموضوع": topic, "المسائل": [_khilaf_item(K, con, e, other_books) for e in hits],
+                "تنبيه": "الأقوال منسوبة إلى قائليها بلا ترجيح من الأداة."}
     pos = _khilaf_positions(sentence)
     nsent = _norm(_strip_tashkeel(sentence))
     want = _norm(_strip_tashkeel(word)) if word else None
+    neg = any(_strip_tashkeel(x) in ("ما", "لا", "لم", "لن", "ليس", "هل") for x in sentence.split())
     found = []
     for w, d, keys in pos:
         if want and want not in _norm(_strip_tashkeel(w)):
             continue
-        neg = any(_strip_tashkeel(x) in ("ما", "لا", "لم", "لن", "ليس", "هل") for x in sentence.split())
         for e in reg:
             if set(e.get("keys", [])) & set(keys) and (e.get("when") != "نفي" or neg):
                 found.append((w, d, e))
@@ -4497,34 +4561,14 @@ def wujuh_irab(sentence: str, word: str | None = None, other_books: bool = True)
     if not found:
         return {"الجملة": sentence, "الإعراب": irab(sentence, detail=False).get("الجمل"),
                 "النتيجة": "لم أجد في سجلّ الوجوه خلافًا موثّقًا في مواضع هذه الجملة.",
-                "تنبيه": "السجلّ يغطي مسائل بعينها من الإنصاف وكتب الإعراب، فغياب الخلاف فيه لا يعني أن لا خلاف في الموضع.",
+                "تنبيه": "السجلّ يغطي مسائل بعينها من الإنصاف والتبيين وكتب الإعراب، فغياب الخلاف فيه لا يعني أن لا خلاف في الموضع.",
                 **({"الشكل": tip} if tip else {})}
     out, seen = [], set()
     for w, d, e in found:
         if (w, e["id"]) in seen:
             continue
         seen.add((w, e["id"]))
-        item = {"الكلمة": w, "المسألة": e["title"], "المعرّف": e["id"]}
-        if d:
-            item["الإعراب الذي بُني عليه"] = d
-        if e["kind"] == "مسألة":
-            s = e["source"]
-            item["المصدر"] = f"{s['book']}، المسألة {s['masala']}، ج{s['vol']} ص{s['page']}"
-            t = K.insaf_text(con, s["masala"], s["vol"], s["page"]) if con else None
-            if t:
-                item["الأقوال (نص الإنصاف)"] = [{"القائل": q, "القول": v} for q, v in K.views(t["text"])]
-            else:
-                item["القائلون"] = e.get("qailun", [])
-                item["تنبيه"] = "نص المسألة غير موجود في المدوّنة المحلية؛ فالأقوال تُقرأ في المصدر نفسه."
-            if other_books and e.get("also"):
-                item["مواضعها في كتب أخرى"] = [f"{_cite_book(a['book'], a['author'], a['died'])}" +
-                                              (f" ج{a['vol']}" if a.get("vol") else "") + f" ص{a['page']}" for a in e["also"]]
-        else:
-            item["الأقوال"] = [({"القائل": a["qail"]} if a.get("qail") else {}) | {"القول": a["qawl"]} for a in e["aqwal"]]
-            item["المصادر"] = [f"{s['book']}" + (f" ج{s['vol']}" if s.get("vol") else "") + f" ص{s['page']}" for s in e["sources"]]
-            item["تنبيه"] = "الأقوال هنا بصياغة مختصرة، ونصها في المصادر المذكورة."
-            if e.get("note"):
-                item["ملاحظة"] = e["note"]
+        item = {"الكلمة": w} | ({"الإعراب الذي بُني عليه": d} if d else {}) | _khilaf_item(K, con, e, other_books)
         out.append(item)
     return {"الجملة": sentence, "المواضع": out, **({"الشكل": tip} if tip else {}),
             "تنبيه": "الأقوال منسوبة إلى قائليها بلا ترجيح من الأداة. والموضع يُعيَّن من الإعراب الآلي، فإن أخطأ الإعراب أخطأ التعيين: "

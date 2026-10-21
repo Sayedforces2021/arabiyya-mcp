@@ -118,6 +118,15 @@ WUJUH = [
 ]
 
 
+# التبيين للعكبري ← مسألة الإنصاف نفسها (ربط راجعناه مسألةً مسألة، لا بحدّ آلي)
+TABYIN_LINK = {84: 49, 83: 48, 77: 44, 63: 32, 20: 2, 4: 1, 52: 23, 62: 31, 45: 17, 81: 46, 76: 43, 49: 20, 47: 18, 32: 9,
+               53: 24, 75: 42, 40: 14, 29: 6, 85: 50, 82: 47, 55: 26, 33: 29, 27: 5, 28: 5, 6: 28, 79: 45, 78: 45, 54: 25,
+               74: 41, 42: 15, 31: 10, 71: 39, 70: 38, 15: 72, 56: 53, 66: 34, 67: 35, 43: 16, 30: 7, 35: 8, 37: 12, 69: 37,
+               34: 13, 68: 36, 51: 22, 23: 3, 22: 3, 21: 3, 26: 4}
+# مسائل في التبيين لا نظير لها في الإنصاف، ولها تركيب تعرفه الأداة
+TABYIN_KEYS = {41: ["ما التعجبية"], 80: ["المنادى المفرد العلم"], 57: ["اسم لا النافية للجنس"], 73: ["كم"]}
+
+
 def main():
     con = K.connect()
     if con is None:
@@ -125,15 +134,33 @@ def main():
     b = K.insaf_book(con)
     masail = {json.loads(l)["masala"]: json.loads(l) for l in open(os.path.join(HERE, "data", "khilaf", "insaf_masail.jsonl"), encoding="utf-8")}
     out = []
-    for n, (keys, terms) in sorted(MASAIL.items()):
+    tab = {t["masala"]: t for t in K.tabyin_masail(con)}
+    linked = {}
+    for tn, im in TABYIN_LINK.items():
+        if tn in tab:
+            linked.setdefault(im, []).append({"masala": tn, "page": tab[tn]["page"], "title": tab[tn]["title"]})
+    for n in sorted(masail):
         m = masail[n]
+        keys, terms = MASAIL.get(n, ([], []))
         t = K.insaf_text(con, n, m["vol"], m["page"])
         qs = [q for q, _ in K.views(t["text"])] if t else []
-        out.append({"id": f"insaf-{n}", "kind": "مسألة", "keys": keys, "title": m["title"], "pos": m["pos"],
-                    "source": {"book": m["book"], "author": m["author"], "masala": n, "vol": m["vol"], "page": m["page"]},
-                    "qailun": list(dict.fromkeys(qs)), "text_found": bool(t),
-                    "also": K.other_sources(con, terms, exclude_book=b[0] if b else None)})
-        print(f"م{n} {m['title']}: {len(qs)} أقوال، {len(out[-1]['also'])} مواضع أخرى", flush=True)
+        e = {"id": f"insaf-{n}", "kind": "مسألة", "keys": keys, "title": m["title"], "pos": m["pos"],
+             "source": {"book": m["book"], "author": m["author"], "masala": n, "vol": m["vol"], "page": m["page"]},
+             "qailun": list(dict.fromkeys(qs)), "text_found": bool(t),
+             "also": K.other_sources(con, terms, exclude_book=b[0] if b else None) if terms else []}
+        if n in linked:
+            e["tabyin"] = linked[n]
+        out.append(e)
+    print(f"الإنصاف: {len(out)} مسألة، بأقوال {sum(bool(e['qailun']) for e in out)}، مربوطة بالتبيين {len(linked)}", flush=True)
+    for tn, t in sorted(tab.items()):
+        if tn in TABYIN_LINK:
+            continue
+        tx = K.tabyin_text(con, tn, t["page"])
+        qs = [q for q, _ in K.views_tabyin(tx["text"])] if tx else []
+        out.append({"id": f"tabyin-{tn}", "kind": "مسألة-تبيين", "keys": TABYIN_KEYS.get(tn, []), "title": t["title"],
+                    "source": {"book": "التبيين عن مذاهب النحويين البصريين والكوفيين", "author": "أبو البقاء العكبري",
+                               "masala": tn, "page": t["page"]}, "qailun": qs})
+    print(f"التبيين وحده: {sum(e['kind'] == 'مسألة-تبيين' for e in out)} مسألة", flush=True)
     for w in WUJUH:
         out.append(dict(w, kind="وجه"))
     with open(K.REGISTRY, "w", encoding="utf-8") as f:

@@ -32,11 +32,17 @@ class TestRegistry(unittest.TestCase):
         reg = K.load_registry()
         self.assertTrue(reg)
         for e in reg:
-            if e["kind"] == "مسألة":
+            if e["kind"] in ("مسألة", "مسألة-تبيين"):
                 self.assertNotIn("aqwal", e)
-                self.assertTrue(e["qailun"], e["id"])
             else:
                 self.assertTrue(e["sources"], e["id"])
+        self.assertEqual(sum(e["kind"] == "مسألة" for e in reg), 118)                 # مسائل الإنصاف كلها
+        self.assertTrue(all(e["qailun"] for e in reg if e["kind"] == "مسألة"))        # ولكل منها قائلوها من نصها
+
+    def test_tabyin_views(self):
+        t = "٣١ - مسألة [الاسم الواقع بعد لولا] الاسمُ الواقعُ بعد لولا يرتفعُ بالابتداءِ وقالَ الكوفيون فيه قولين: أحدُهما يرتفع بنفس لولا."
+        v = K.views_tabyin(t)
+        self.assertEqual([q for q, _ in v], ["القول المقدَّم عند العكبري", "الكوفيون"])
 
 
 if __name__ == "__main__":

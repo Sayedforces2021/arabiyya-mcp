@@ -81,6 +81,65 @@ def views(text):
     return out
 
 
+# ── «التبيين عن مذاهب النحويين» للعكبري (ت 616): يقدّم قوله (وهو قول البصريين في الغالب، «عندنا»)، ثم «وقال الكوفيون…» ──
+TABYIN_URI = "0616Shamela.13786"
+_HARAKAT = re.compile("[ً-ْـ]")
+KNOWN_QAIL = ("الكوفيون", "البصريون", "الفراء", "الكسائي", "الأخفش", "سيبويه", "المبرد", "الزجاج", "ابن السراج", "ثعلب",
+              "هشام", "قوم", "آخرون", "بعضهم", "أبو علي", "الفارسي", "ابن كيسان", "يونس", "الخليل", "المازني", "الجرمي",
+              "بعض الكوفيين", "بعض البصريين", "أبو عمرو", "الرماني", "السيرافي", "ابن جني", "قطرب")
+
+
+def _bare(s):
+    return _HARAKAT.sub("", s or "")
+
+
+def tabyin_masail(con):
+    """[{masala، page، title}] من عناوين التبيين («٣٠ - مسألة [العنوان]»)."""
+    r = con.execute("SELECT id FROM books WHERE uri = ?", (TABYIN_URI,)).fetchone()
+    if not r:
+        return []
+    out, seen = [], set()
+    for pid, page, t in con.execute("SELECT id, page, text FROM paras WHERE book = ? ORDER BY id", (r[0],)):
+        for m in re.finditer(r"(?<![٠-٩])([٠-٩]{1,3})\s*-\s*مسألة:?\s*(?:\[([^\]]{2,90})\]|\(([^)]{2,90})\))", t):
+            n = int(m.group(1).translate(str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")))
+            if n not in seen:
+                seen.add(n)
+                out.append({"masala": n, "page": page, "title": re.sub(r"[()]", "", _bare(m.group(2) or m.group(3))).strip()})
+    return out
+
+
+def tabyin_text(con, masala, page):
+    r = con.execute("SELECT id FROM books WHERE uri = ?", (TABYIN_URI,)).fetchone()
+    if not r:
+        return None
+    rows = con.execute("SELECT page, text FROM paras WHERE book = ? AND page BETWEEN ? AND ? ORDER BY id", (r[0], page - 1, page + 2)).fetchall()
+    n = str(masala).translate(AR_DIGITS)
+    for i, (p, t) in enumerate(rows):
+        m = re.search(r"(?<![٠-٩])%s\s*-\s*مسألة" % n, t)
+        if m:
+            text = " ".join(x[1] for x in rows[i:i + 3])
+            text = text[text.find(n):]
+            s = re.search(r"والدّ?لالة على|والدّ?ليل على|واحتجّ|واحتج|وحجّة|وحجة", text)
+            return {"page": p, "text": (text[:s.start()] if s else text[:900]).strip()}
+    return None
+
+
+def views_tabyin(text):
+    """القول المقدَّم في المسألة، ثم «وقال X…» / «فقال X…» / «وذهب X إلى…» لقائلين معروفين."""
+    body = re.sub(r"^.*?مسألة:?\s*(?:\[[^\]]*\]|\([^)]*\))\s*", "", _bare(text or ""), count=1)
+    sents = [x.strip(" ،") for x in re.split(r"(?<=[.؟])\s+|[،,]?\s+(?=[وف](?:قال|قالت|ذهب)\s+(?:%s))" % "|".join(KNOWN_QAIL), body) if x.strip(" ،")]
+    out = []
+    if sents:
+        out.append(("القول المقدَّم عند العكبري" + (" («عندنا»: البصريون)" if "عندنا" in _bare(sents[0]) else ""), sents[0]))
+    names = "|".join(sorted(KNOWN_QAIL, key=len, reverse=True))
+    for s_ in sents[1:]:
+        b = _bare(s_)
+        m = re.match(r"^[وف]?(?:قال|قالت|ذهب)\s+((?:%s)(?:\s+و(?:%s))?)\s*:?\s*(?:إلى\s+)?(.+)$" % (names, names), b)
+        if m:
+            out.append((m.group(1), m.group(2).strip(" .")))
+    return out
+
+
 def other_sources(con, terms, exclude_book=None, limit=8):
     """كتب النحو الأخرى التي تذكر المسألة: فقرة فيها مصطلحها مع ذكر الكوفيين والبصريين. أول موضع من كل كتاب، والأقدم أولًا."""
     import build_corpus_index as bci
