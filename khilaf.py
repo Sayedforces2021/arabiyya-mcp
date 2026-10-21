@@ -140,6 +140,76 @@ def views_tabyin(text):
     return out
 
 
+# ── كتب الخلاف المبثوث في الأبواب (الهمع، الارتشاف): الموضع بالصفحة، والنص مقتطفًا وقت السؤال ──
+SPREAD_BOOKS = {"hama": ("0911Suyuti.HamcHawamic", "همع الهوامع في شرح جمع الجوامع", "السيوطي"),
+                "irtishaf": ("0745Shamela.16595", "ارتشاف الضرب من لسان العرب", "أبو حيان")}
+SCHOOLS = ("الكوفيون", "الكوفيين", "البصريون", "البصريين", "سيبويه", "الأخفش", "الفراء", "الكسائي", "المبرد", "الزجاج",
+           "الفارسي", "ابن مالك", "ابن السراج", "ابن عصفور", "الجمهور", "الأكثرون", "ثعلب", "هشام")
+
+
+def _book_id(con, uri):
+    r = con.execute("SELECT id FROM books WHERE uri = ?", (uri,)).fetchone()
+    return r[0] if r else None
+
+
+def find_passages(con, uri, terms, limit=3):
+    """الفقرات في الكتاب التي يجتمع فيها مصطلح المسألة وذكر المذاهب، مرتّبة بعدد ذكر المصطلح والقائلين."""
+    import build_corpus_index as bci
+    bid = _book_id(con, uri)
+    if bid is None:
+        return []
+    names = [bci.norm(x) for x in SCHOOLS]
+    cands = {}
+    for term in terms:
+        ph = " ".join(bci.norm(w) for w in term.split())
+        q = f'"{ph}" AND (الكوفيون OR الكوفيين OR البصريون OR البصريين OR سيبويه OR الأخفش OR الفراء OR الكسائي)'
+        try:
+            rows = con.execute("SELECT p.id, p.vol, p.page, p.text FROM paras p WHERE p.book = ? AND p.id IN "
+                               "(SELECT rowid FROM paras_fts WHERE paras_fts MATCH ?)", (bid, q)).fetchall()
+        except sqlite3.OperationalError:
+            continue
+        for pid, vol, page, text in rows:
+            n = bci.norm(text)
+            score = 3 * n.count(ph) + sum(n.count(x) for x in names) + (5 if n.find(ph) < 200 else 0)
+            if pid not in cands or cands[pid][0] < score:
+                cands[pid] = (score, vol, page, term)
+    best = sorted(cands.items(), key=lambda x: -x[1][0])[:limit]
+    return [{"vol": v, "page": p, "term": t, "score": sc} for pid, (sc, v, p, t) in best]
+
+
+def excerpt(con, uri, vol, page, term, size=700):
+    """مقتطف من صفحة الكتاب يبدأ قبيل أول ذكر للمصطلح، ومن ذُكر فيه من النحاة."""
+    import build_corpus_index as bci
+    bid = _book_id(con, uri)
+    if bid is None:
+        return None
+    rows = con.execute("SELECT text FROM paras WHERE book = ? AND vol IS ? AND page = ? ORDER BY id", (bid, vol, page)).fetchall()
+    text = " ".join(r[0] for r in rows)
+    if not text:
+        return None
+    n = bci.norm(text)
+    ph = " ".join(bci.norm(w) for w in term.split())
+    i = n.find(ph)
+    # موضع الحرف في النص الأصلي: بعدّ الحروف غير الحركات
+    if i < 0:
+        start = 0
+    else:
+        k = 0
+        start = 0
+        for j, c in enumerate(text):
+            if not _HARAKAT.match(c):
+                if k == i:
+                    start = j
+                    break
+                k += 1
+    start = max(0, text.rfind(" ", 0, max(0, start - 120)) + 1)
+    piece = text[start:start + size]
+    end = max(piece.rfind("."), piece.rfind("،"))
+    piece = piece[:end + 1] if end > size * 0.6 else piece
+    who = [x for x in SCHOOLS if bci.norm(x) in bci.norm(piece)]
+    return {"text": piece.strip(), "who": list(dict.fromkeys(who))}
+
+
 def other_sources(con, terms, exclude_book=None, limit=8):
     """كتب النحو الأخرى التي تذكر المسألة: فقرة فيها مصطلحها مع ذكر الكوفيين والبصريين. أول موضع من كل كتاب، والأقدم أولًا."""
     import build_corpus_index as bci

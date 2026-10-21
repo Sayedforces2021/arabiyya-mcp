@@ -39,6 +39,14 @@ class TestRegistry(unittest.TestCase):
         self.assertEqual(sum(e["kind"] == "مسألة" for e in reg), 118)                 # مسائل الإنصاف كلها
         self.assertTrue(all(e["qailun"] for e in reg if e["kind"] == "مسألة"))        # ولكل منها قائلوها من نصها
 
+    def test_spread_pointers(self):
+        """مواضع الهمع والارتشاف بنية فقط (الجزء والصفحة والمصطلح)، والنص يُقرأ من المدوّنة."""
+        sp = [x for e in K.load_registry() for x in e.get("spread", [])]
+        self.assertGreaterEqual(len(sp), 20)
+        for x in sp:
+            self.assertIn(x["book"], K.SPREAD_BOOKS)
+            self.assertEqual(set(x), {"book", "vol", "page", "term"})
+
     def test_tabyin_views(self):
         t = "٣١ - مسألة [الاسم الواقع بعد لولا] الاسمُ الواقعُ بعد لولا يرتفعُ بالابتداءِ وقالَ الكوفيون فيه قولين: أحدُهما يرتفع بنفس لولا."
         v = K.views_tabyin(t)
