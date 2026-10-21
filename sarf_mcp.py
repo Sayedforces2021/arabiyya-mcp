@@ -3328,7 +3328,156 @@ def _irab_rules(doc):
     return doc
 
 
+_VOWEL = {"ُ": "u", "ٌ": "u", "َ": "a", "ً": "a", "ِ": "i", "ٍ": "i", "ْ": "o"}
+_PRON_END = ("ه", "ها", "هم", "هما", "هن", "ك", "كم", "كما", "كن", "ني", "نا")
+
+
+def _bases(sentence: str) -> list:
+    """حروف الجملة بلا شكل، ومع كل حرف ما عليه من حركات؛ موافقة لـ _strip_tashkeel حرفًا حرفًا."""
+    out = []
+    for c in sentence:
+        if c in HARAKAT or c == "ـ":
+            if out:
+                out[-1][1] += c
+        else:
+            out.append([c, ""])
+    return out
+
+
+def _vowel_at(bases, end) -> str:
+    """حركة آخر الكلمة التي تنتهي عند الحرف end (غير شامل): u أو a أو i أو o، أو None إن لم تُشكل.
+    والألف بعد تنوين الفتح («خبزًا») لا حركة عليها، فيُنظر في الحرف قبلها."""
+    if end <= 0 or end > len(bases):
+        return None
+    marks = [m for m in bases[end - 1][1] if m in _VOWEL]
+    if marks:
+        return _VOWEL[marks[-1]]
+    if bases[end - 1][0] in "اى" and end >= 2 and "ً" in bases[end - 2][1]:
+        return "a"
+    return None
+
+
+def _irab_haraka_rules(doc, sentence: str):
+    """إذا شكل المستخدم الجملة فحركاته حكمٌ مقدَّم على تقدير المحلل، وبها يُفرَّق:
+    لام الأمر (بعدها مجزوم) من لام التعليل (بعدها منصوب بأن مضمرة جوازًا)؛
+    وواو المعية وفاء السببية (بعدهما مضارع منصوب بأن مضمرة وجوبًا) من حرف العطف؛
+    والمفعول معه من المعطوف (اسم منصوب بعد الواو وما قبلها غير منصوب، فلا يُعطف عليه)؛ و«لا» الناهية من النافية.
+    وبلا شكل: اللام في صدر الكلام قبل المضارع لام أمر، وفي أثنائه لام تعليل."""
+    bases = _bases(sentence)
+    voweled = any(m for _, m in bases)
+    for s_ in doc.sentences:
+        by_id = {w.id: w for w in s_.words}
+        prev_mood = None
+        toks = s_.tokens
+        for k, tok in enumerate(toks):
+            # حدود كل جزء من الكلمة في الجملة بلا شكل
+            spans, pos = [], tok.start_char
+            joined = "".join(_strip_tashkeel(w.text) for w in tok.words)
+            exact = joined == _strip_tashkeel(tok.text)
+            for w in tok.words:
+                n = len(_strip_tashkeel(w.text))
+                spans.append((pos, pos + n) if exact else (None, tok.end_char if w is tok.words[-1] else None))
+                pos += n
+            words = list(tok.words)
+            for j, w in enumerate(words):
+                f = _feats(w)
+                t = _strip_tashkeel(w.text)
+                v = _vowel_at(bases, spans[j][1]) if voweled and spans[j][1] is not None else None
+                split = len(words) > 1
+                if w.upos in ("VERB", "X") and v:
+                    # فعل مشكول: ضم أول المضارع («أُكرمَ») يمنع أن يكون ماضيًا
+                    first = bases[spans[j][0]] if spans[j][0] is not None else None
+                    if f.get("Aspect") == "Perf" and first and first[0] in "أيتن" and "ُ" in first[1]:
+                        w.upos = "VERB"; w.feats = ""; _set_feat(w, "Aspect", "Imp")
+                        f = _feats(w)
+                    if f.get("Aspect") == "Imp" and not t.endswith(("ون", "ين", "ان")) and \
+                            not (not split and t.endswith(_PRON_END) and len(t) > 4):
+                        mood = {"o": "Jus", "i": "Jus", "a": "Sub", "u": "Ind"}[v]
+                        if w.upos == "X":
+                            w.upos = "VERB"
+                        _set_feat(w, "Mood", mood)
+                        w.mood_rule = "haraka"
+                elif w.upos in ("NOUN", "ADJ", "PROPN") and v in ("u", "a", "i") and not t.endswith(("ون", "ين", "ان", "ات")) \
+                        and not (not split and t.endswith(_PRON_END)):
+                    _set_feat(w, "Case", {"u": "Nom", "a": "Acc", "i": "Gen"}[v])
+            # ── كلمة لم يقسّمها المحلل: (و/ف) + ل + مضارع (+ ضمير): «لينفق»، «فليعمل»، «ليبلوكم» ──
+            if len(words) == 1 and words[0].upos in ("X", "VERB") and _feats(words[0]).get("Aspect") != "Perf":
+                w0 = words[0]
+                t0 = _strip_tashkeel(w0.text)
+                pfx = t0[0] if len(t0) > 4 and t0[0] in "وف" and t0[1] == "ل" else ""
+                core = t0[len(pfx):]
+                if len(core) > 3 and core[0] == "ل" and core[1] in "يتنأ":
+                    end = spans[0][1]
+                    suf = next((x for x in ("هما", "كما", "هم", "هن", "كم", "كن", "ها", "نا", "ني") if core.endswith(x) and len(core) - len(x) >= 4), "")
+                    if not suf and core.endswith("ه") and len(core) >= 5 and voweled and end is not None and _vowel_at(bases, end) in ("u", "i"):
+                        suf = "ه"  # هاء الضمير مضمومة أو مكسورة، لا مفتوحة كلام الفعل في «لينتبهَ»
+                    w0.upos = "VERB"
+                    _set_feat(w0, "Aspect", "Imp")
+                    w0.lam_split = (pfx, suf)
+                    v = _vowel_at(bases, end - len(suf)) if voweled and end is not None else None
+                    if v:
+                        _set_feat(w0, "Mood", {"o": "Jus", "i": "Jus", "a": "Sub", "u": "Ind"}[v])
+                        w0.mood_rule = "haraka"
+                    if suf:
+                        w0.post = f"، و«{suf}» ضمير متصل مبني في محل نصب مفعول به" + ("، والميم علامة الجمع" if suf in ("كم", "هم") else "")
+            # ── اللام قبل المضارع ──
+            verb = next((w for w in words if w.upos == "VERB" and _feats(w).get("Aspect") == "Imp"), None)
+            if verb is not None:
+                vt = _strip_tashkeel(verb.text)
+                lam_w = next((w for w in words[:words.index(verb)] if _strip_tashkeel(w.text) == "ل"), None)
+                ls = getattr(verb, "lam_split", None)
+                lam_in = lam_w is None and ls is not None
+                head_bare = _strip_tashkeel(tok.text)
+                wf = (head_bare[:1] in "وف" and len(words) > 1 and _strip_tashkeel(words[0].text) in ("و", "ف")) or bool(ls and ls[0])
+                if lam_w is not None or lam_in:
+                    mood = _feats(verb).get("Mood") if getattr(verb, "mood_rule", "") == "haraka" else None
+                    if mood is None:
+                        mood = "Jus" if (k == 0 or wf) else "Sub"
+                    _set_feat(verb, "Mood", mood)
+                    if mood == "Jus":
+                        lam_ar = "اللام لام الأمر حرف جزم مبني على " + ("السكون" if wf else "الكسر") + " لا محل له من الإعراب"
+                    else:
+                        lam_ar = "اللام لام التعليل حرف جر مبني على الكسر، والمصدر المؤول من «أن» المضمرة والفعل في محل جر بها"
+                        verb.mood_note = "بأن مضمرة جوازًا بعد لام التعليل"
+                    if lam_w is not None:
+                        lam_w.irab_override = lam_ar
+                    else:
+                        pfx, suf = ls
+                        core = vt[len(pfx):]
+                        stem = core[1:len(core) - len(suf)] if suf else core[1:]
+                        lead = ("الواو حرف عطف مبني على الفتح، و" if pfx == "و" else "الفاء حرف مبني على الفتح، و") if pfx else ""
+                        verb.pre = f"{lead}{lam_ar}، و«{stem}» "
+                # ── الواو والفاء قبل مضارع منصوب بلا ناصب ظاهر: المعية والسببية ──
+                cj = words[0] if wf else None
+                prev_tok = _strip_tashkeel(toks[k - 1].text) if k else ""
+                if cj is not None and _feats(verb).get("Mood") == "Sub" and getattr(verb, "mood_rule", "") == "haraka" \
+                        and lam_w is None and not lam_in and prev_tok not in _NASB and prev_mood != "Sub":
+                    if _strip_tashkeel(cj.text) == "و":
+                        cj.irab_override = "الواو واو المعية حرف مبني على الفتح لا محل له من الإعراب"
+                        verb.mood_note = "بأن مضمرة وجوبًا بعد واو المعية"
+                    else:
+                        cj.irab_override = "الفاء فاء السببية حرف مبني على الفتح لا محل له من الإعراب"
+                        verb.mood_note = "بأن مضمرة وجوبًا بعد فاء السببية"
+                # ── «لا» الناهية ──
+                if k and prev_tok == "لا" and _feats(verb).get("Mood") == "Jus" and words.index(verb) == 0:
+                    for x in toks[k - 1].words:
+                        x.irab_override = "لا الناهية حرف نهي وجزم مبني على السكون لا محل له من الإعراب"
+                prev_mood = _feats(verb).get("Mood") or prev_mood
+            # ── واو المعية مع الاسم: «استوى الماءُ والخشبةَ» ──
+            if len(words) > 1 and _strip_tashkeel(words[0].text) == "و":
+                n = next((w for w in words[1:] if w.upos in ("NOUN", "PROPN") and (w.deprel or "").startswith("conj")), None)
+                head = by_id.get(n.head) if n is not None else None
+                if n is not None and head is not None and _feats(n).get("Case") == "Acc" and \
+                        (head.upos == "VERB" or _feats(head).get("Case") in ("Nom", "Gen")):
+                    n.role_override = "مفعول معه"
+                    words[0].irab_override = "الواو واو المعية حرف مبني على الفتح لا محل له من الإعراب"
+    return doc
+
+
 def _irab_word(w, sent, by_id, kids) -> str:
+    ov = getattr(w, "irab_override", None)
+    if ov:
+        return ov
     f = _feats(w)
     t = _strip_tashkeel(w.text)
     rel = w.deprel or ""
@@ -3347,12 +3496,17 @@ def _irab_word(w, sent, by_id, kids) -> str:
             + "، يرفع الاسم وينصب الخبر"
     if w.upos == "VERB":
         d = _verb_desc(w, f)
+        if getattr(w, "mood_note", None):
+            d = d.replace("منصوب وعلامة", f"منصوب {w.mood_note} وعلامة", 1)
+        d = getattr(w, "pre", "") + d + getattr(w, "post", "")
         role, _ = _role(w, sent, by_id, kids)
         if role and "جملة" in role:
             d += f"، والجملة {role.replace('جملة ', '')}"
         return d
     role, case = _role(w, sent, by_id, kids)
     case = f.get("Case") or case
+    if getattr(w, "role_override", None):
+        role = w.role_override
     if getattr(w, "zarf", None):
         if case == "Acc":
             return f"ظرف {w.zarf} منصوب وعلامة نصبه الفتحة الظاهرة" + ("، وهو مضاف" if kids.get(w.id) else "")
@@ -3404,7 +3558,7 @@ def irab(sentence: str, detail: bool = True) -> dict:
         nlp, pkg = _stanza()
     except Exception as e:
         return {"تنبيه": str(e)}
-    doc = _irab_rules(nlp(_strip_tashkeel(sentence)))
+    doc = _irab_haraka_rules(_irab_rules(nlp(_strip_tashkeel(sentence))), sentence)
     out_sents = []
     for s_ in doc.sentences:
         by_id = {w.id: w for w in s_.words}

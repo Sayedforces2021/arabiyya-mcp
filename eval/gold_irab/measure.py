@@ -228,6 +228,12 @@ def old_predict(gold):
     return res
 
 
+def wajh_roles(g, w):
+    """الأبواب التي يجيزها وجه موثّق في هذه الكلمة (حقل roles في قائمة الخلاف): ما وافقها لا يُعدّ خطأً."""
+    return {r for k in g.get("khilaf", []) if k.get("kind") == "وجه" and k.get("word") == w["w"] and k.get("source")
+            for r in k.get("roles", [])}
+
+
 def gov_ok(ga, p):
     """الحرف العامل: كل حرف عامل في الذهبي يجب أن تذكره الأداة، ولا تزيد حرفًا عاملًا ليس فيه (لام الأمر مكان لام التعليل، والعطف مكان المعية…)."""
     G = set(ga["parts"]) & GOV
@@ -252,12 +258,15 @@ def score(gold, preds):
             if not ga["role"] or re.search("اوجه متعدده|اجازه", norm(w["irab"])):
                 continue
             p = preds[g["id"]][k]
-            good_role = p["role"] == ga["role"] or p["role"] in ga["alts"]
+            wr = wajh_roles(g, w)
+            good_role = p["role"] == ga["role"] or p["role"] in ga["alts"] or p["role"] in wr
             tot["باب"] += 1; ok["باب"] += good_role
             by_genre[bucket(g)]["n"] += 1; by_genre[bucket(g)]["ok"] += good_role
             if not good_role:
                 conf[f"{ga['role']} ← {p['role']}"] += 1
             gp = gov_ok(ga, p)
+            if gp is False and p["role"] in wr and p["role"] != ga["role"]:
+                gp = True  # الوجه الآخر يقتضي حرفًا آخر (العطف مكان المعية)
             if gp is not None:
                 tot["حرف"] += 1; ok["حرف"] += gp
             if ga["hukm"] and p.get("hukm") is not None:
@@ -287,7 +296,7 @@ def main():
     L = ["# نتائج القياس على المجموعة الذهبية", "",
          f"{len(gold)} جملة. **المجموعة لم يراجعها مختص بعد، فالأرقام مؤقتة.** تُعطى الجمل للأداتين بلا شكل.",
          "الباب: باب الكلمة الأصلي بعد طرح السوابق واللواحق. الحرف: الحرف العامل في الكلمة أو المتصل بها (جر، جزم، نصب، ناسخ، لا النافية للجنس، شرط، معية، سببية)، "
-         "فيُحسب خطأً أن تُغفله الأداة أو تضع مكانه غيره؛ وغير العامل (نفي، استثناء، استئناف…) لا يُقاس، لأن وسوم ماساق تجمعه في «حرف غير عامل». "
+         "فيُحسب خطأً أن تُغفله الأداة أو تضع مكانه غيره؛ وما وافق وجهًا موثّقًا في قائمة الخلاف لا يُعدّ خطأً؛ وغير العامل (نفي، استثناء، استئناف…) لا يُقاس، لأن وسوم ماساق تجمعه في «حرف غير عامل». "
          "الحكم: للأداة القديمة فقط، لأن وسوم المحلّل المدرَّب لا تحمله. ولا تكتشف أيٌّ من الأداتين مواضع الخلاف بعدُ، فلم يُقَس ذلك.", "",
          "**القرآن قسمان:** «في التدريب» آيات من سور درّب عليها المحلّل المدرَّب، فرقمه فيها يقيس الحفظ؛ "
          "و«خارج التدريب» آيات من سور الاختبار (رقمها يُختم بـ7) لم يرها في تدريبه، فهي التي يُقاس بها تعميمه ويُقارن فيها بالأداة القديمة.", "",
@@ -308,8 +317,9 @@ def main():
             cells = []
             for pr in systems.values():
                 p = pr[g["id"]][k]
-                good = p["role"] == ga["role"] or p["role"] in ga["alts"]
-                goodp = gov_ok(ga, p) is not False
+                wr = wajh_roles(g, w)
+                good = p["role"] == ga["role"] or p["role"] in ga["alts"] or p["role"] in wr
+                goodp = gov_ok(ga, p) is not False or (p["role"] in wr and p["role"] != ga["role"])
                 pp = "، ".join(p.get("parts") or [])
                 cells.append(f"{p['role'] or '—'}{' / ' + pp if pp else ''} {'✔' if good and goodp else '✘'}")
             gp_ = "، ".join(ga["parts"])
