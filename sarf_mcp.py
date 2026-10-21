@@ -37,9 +37,9 @@ from camel_tools.morphology.database import MorphologyDB
 from camel_tools.morphology.analyzer import Analyzer
 from camel_tools.tokenizers.word import simple_word_tokenize
 
-INSTRUCTIONS = """أداة «العربية»: عُدّة باحث في علوم العربية تعمل على الجهاز (38 أداة).
+INSTRUCTIONS = """أداة «العربية»: عُدّة باحث في علوم العربية تعمل على الجهاز (39 أداة).
 - الصرف: analyze_word، analyze_text، root_family، conjugate، mizan (الميزان مع الأصل وخطوات الإعلال والإبدال)، mushtaqqat (المشتقات القياسية)، taqalib (تقاليب الجذر).
-- النحو: irab (إعراب الجملة كلمةً كلمة بالأبواب والعلامات، مع ضبط الأواخر).
+- النحو: irab (إعراب الجملة كلمةً كلمة بالأبواب والعلامات، مع ضبط الأواخر)، wujuh_irab (وجوه الإعراب وخلاف النحاة في مواضع الجملة بقائليها ومصادرها، بلا ترجيح).
 - الضبط والعروض والقافية: diacritize، scan_verse وscan_poem (مع الضبط الموجَّه بالوزن)، analyze_qafiya (عناصر القافية وعيوبها).
 - الأصوات: phonetics (IPA والمقاطع والنبر)، huruf (المخارج والصفات).
 - البلاغة: detect_badi (الجناس والطباق والمقابلة والتصريع وردّ العجز والسجع والاقتباس).
@@ -4369,6 +4369,114 @@ def irab(sentence: str, detail: bool = True) -> dict:
     return {"الجمل": out_sents, "النموذج": f"Stanza ({pkg})",
             "تنبيه": "الإعراب آليّ: المحلل مدرَّب على نصوص صحفية معاصرة، فتقلّ دقته في الشعر والتقديم والتأخير؛ وما احتمل وجهين (كالحال والتمييز، والمفعول لأجله، والظرف) يُذكر بوجهيه. "
                       "فراجع الإعراب على قواعد النحو قبل اعتماده، ولا سيما في النصوص التراثية."}
+
+
+# ───────────── وجوه الإعراب وخلاف النحاة ─────────────
+
+# علامة في وصف الإعراب ← مفتاح التركيب في سجلّ الوجوه (data/khilaf/wujuh.jsonl)
+_KHILAF_MARKS = [
+    ("مفعول معه", "مفعول معه"), ("بعد واو المعية", "مضارع بعد واو المعية"), ("بعد فاء السببية", "مضارع بعد فاء السببية"),
+    ("بعد لام التعليل", "مضارع بعد لام التعليل"), ("اسم «لا» النافية للجنس", "اسم لا النافية للجنس"),
+    ("منادى مفرد علم", "المنادى المفرد العلم"), ("لإنشاء المدح", "نعم وبئس"), ("لإنشاء الذم", "نعم وبئس"),
+    ("لإنشاء التعجب", "التعجب"), ("«ما» التعجبية", "التعجب"), ("مفعول به لفعل محذوف وجوبًا يفسّره", "الاشتغال"),
+    ("فاعل لفعل محذوف يفسّره", "الاسم بعد إن الشرطية"), ("ضمير فصل", "ضمير الفصل"), ("اسم شرط", "اسم الشرط مبتدأ"),
+    ("وهو جواب الشرط", "جواب الشرط المجزوم"), ("«إذا» الفجائية", "إذا الفجائية"), ("أجازه الكسائي", "المسألة الزنبورية"),
+    ("بدل (أو عطف بيان)", "البدل أو عطف البيان"), ("مستثنى بـ«إلا»", "المستثنى بإلا"),
+]
+_KHILAF_WORDS = {"اللهم": "اللهم", "مذ": "مذ ومنذ", "منذ": "مذ ومنذ", "حاشا": "حاشا", "حاشى": "حاشا", "كم": "كم", "سوى": "سوى"}
+
+
+def _khilaf_positions(sentence: str) -> list:
+    """[(الكلمة، وصف إعرابها، [مفاتيح التراكيب])] من إعراب الجملة بأداة irab."""
+    r = irab(sentence, detail=False)
+    rows = [row for s_ in r.get("الجمل", []) for row in s_["الإعراب"]]
+    descs = [(row["الكلمة"], " | ".join(p["الإعراب"] for p in row["الأجزاء"]) if "الأجزاء" in row else row["الإعراب"]) for row in rows]
+    out = []
+    for i, (w, d) in enumerate(descs):
+        keys = [k for m, k in _KHILAF_MARKS if m in d]
+        b = _strip_tashkeel(w)
+        if b in _KHILAF_WORDS:
+            keys.append(_KHILAF_WORDS[b])
+        prev = _strip_tashkeel(descs[i - 1][0]) if i else ""
+        if "امتناع لوجود" in (descs[i - 1][1] if i else "") and "مبتدأ" in d:
+            keys.append("الاسم بعد لولا")
+        if prev == "إلا" and "بدل" in d:
+            keys.append("الإتباع بعد إلا")       # المرفوع بعد «إلا»: وجه الإتباع، لا مسألة عامل النصب
+        if "اسم استفهام" in d and i + 1 < len(descs) and _strip_tashkeel(descs[i + 1][0]) == "ذا":
+            keys.append("من ذا")
+        if "معطوف" in d and any(_strip_tashkeel(x)[:2] in ("إن", "أن") and "حرف ناسخ" in y for x, y in descs[:i]) \
+                and any("خبر إنّ" in y or "خبر «إنّ»" in y or "خبر أنّ" in y for _, y in descs[i + 1:]):
+            keys.append("العطف على اسم إن قبل الخبر")
+        if keys:
+            out.append((w, d, list(dict.fromkeys(keys))))
+    return out
+
+
+def _cite_book(title, author, died):
+    name = author.split("،")[0] if (not title or title.isdigit()) else title
+    return f"{name}" + (f" (ت {died}هـ)" if died and died < 1450 else "")
+
+
+@mcp.tool()
+def wujuh_irab(sentence: str, word: str | None = None, other_books: bool = True) -> dict:
+    """وجوه الإعراب وخلاف النحاة في مواضع الجملة، منسوبةً إلى قائليها بالكتاب والجزء والصفحة، بلا ترجيح.
+    تُعرب الجملة أولًا (أداة irab)، ثم تُطابَق تراكيبها بسجلّ الوجوه: مسائل «الإنصاف» (تُقرأ أقوالها من نص المسألة في المدوّنة
+    التراثية المحلية)، ووجوه قُرئت نصوصها في كتب الإعراب والشروح؛ ومعها مواضع المسألة في كتب النحو الأخرى في المدوّنة.
+    sentence: الجملة، ويُستحسن شكلها. word: كلمة بعينها (اختياري). other_books: أضف مواضع المسألة في الكتب الأخرى.
+    ما لم يجده السجلّ لا يعني أن لا خلاف فيه؛ فالسجلّ يغطي مسائل بعينها، ويُوسَّع."""
+    import khilaf as K
+    reg = K.load_registry()
+    if not reg:
+        return {"تنبيه": "سجلّ الوجوه غير موجود (data/khilaf/wujuh.jsonl)."}
+    con = K.connect()
+    pos = _khilaf_positions(sentence)
+    nsent = _norm(_strip_tashkeel(sentence))
+    want = _norm(_strip_tashkeel(word)) if word else None
+    found = []
+    for w, d, keys in pos:
+        if want and want not in _norm(_strip_tashkeel(w)):
+            continue
+        neg = any(_strip_tashkeel(x) in ("ما", "لا", "لم", "لن", "ليس", "هل") for x in sentence.split())
+        for e in reg:
+            if set(e.get("keys", [])) & set(keys) and (e.get("when") != "نفي" or neg):
+                found.append((w, d, e))
+    for e in reg:          # وجوه في نص بعينه (آية أو شاهد)
+        if e.get("text") and _norm(e["text"]) in nsent and (not want or want in _norm(e.get("word", ""))):
+            found.append((e.get("word", ""), "", e))
+    if not found:
+        return {"الجملة": sentence, "الإعراب": irab(sentence, detail=False).get("الجمل"),
+                "النتيجة": "لم أجد في سجلّ الوجوه خلافًا موثّقًا في مواضع هذه الجملة.",
+                "تنبيه": "السجلّ يغطي مسائل بعينها من الإنصاف وكتب الإعراب، فغياب الخلاف فيه لا يعني أن لا خلاف في الموضع."}
+    out, seen = [], set()
+    for w, d, e in found:
+        if (w, e["id"]) in seen:
+            continue
+        seen.add((w, e["id"]))
+        item = {"الكلمة": w, "المسألة": e["title"], "المعرّف": e["id"]}
+        if d:
+            item["الإعراب الذي بُني عليه"] = d
+        if e["kind"] == "مسألة":
+            s = e["source"]
+            item["المصدر"] = f"{s['book']}، المسألة {s['masala']}، ج{s['vol']} ص{s['page']}"
+            t = K.insaf_text(con, s["masala"], s["vol"], s["page"]) if con else None
+            if t:
+                item["الأقوال (نص الإنصاف)"] = [{"القائل": q, "القول": v} for q, v in K.views(t["text"])]
+            else:
+                item["القائلون"] = e.get("qailun", [])
+                item["تنبيه"] = "نص المسألة غير موجود في المدوّنة المحلية؛ فالأقوال تُقرأ في المصدر نفسه."
+            if other_books and e.get("also"):
+                item["مواضعها في كتب أخرى"] = [f"{_cite_book(a['book'], a['author'], a['died'])}" +
+                                              (f" ج{a['vol']}" if a.get("vol") else "") + f" ص{a['page']}" for a in e["also"]]
+        else:
+            item["الأقوال"] = [({"القائل": a["qail"]} if a.get("qail") else {}) | {"القول": a["qawl"]} for a in e["aqwal"]]
+            item["المصادر"] = [f"{s['book']}" + (f" ج{s['vol']}" if s.get("vol") else "") + f" ص{s['page']}" for s in e["sources"]]
+            item["تنبيه"] = "الأقوال هنا بصياغة مختصرة، ونصها في المصادر المذكورة."
+            if e.get("note"):
+                item["ملاحظة"] = e["note"]
+        out.append(item)
+    return {"الجملة": sentence, "المواضع": out,
+            "تنبيه": "الأقوال منسوبة إلى قائليها بلا ترجيح من الأداة. والموضع يُعيَّن من الإعراب الآلي، فإن أخطأ الإعراب أخطأ التعيين: "
+                      "راجع «الإعراب الذي بُني عليه»."}
 
 
 # ───────────── أدوات البحث: تخريج الشاهد، وموازنة التعابير، ونسبة النص، والتطور الدلالي، وكتب اللغة، والبديع ─────────────

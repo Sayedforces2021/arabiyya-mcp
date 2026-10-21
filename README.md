@@ -665,7 +665,7 @@ flowchart LR
 
 ## English summary
 
-**arabiyya** is a Model Context Protocol (MCP) server that exposes 38 tools for Arabic linguistic research to LLM clients such as Claude Desktop. Its premise is a separation of *phrasing* from *judgement*: the language model reads the question and words the answer, while each judgement comes from a tool with a stated method. Outputs are cited to a source (volume and page) or to the tool that produced them. The server runs locally and, after a one-time data download, works offline.
+**arabiyya** is a Model Context Protocol (MCP) server that exposes 39 tools for Arabic linguistic research to LLM clients such as Claude Desktop. Its premise is a separation of *phrasing* from *judgement*: the language model reads the question and words the answer, while each judgement comes from a tool with a stated method. Outputs are cited to a source (volume and page) or to the tool that produced them. The server runs locally and, after a one-time data download, works offline.
 
 **What it is not.** It is not a language model and does not fine-tune one. Its outputs are not infallible, and a client model may still misreport them; the raw output of every call is visible in the client. Published accuracy figures hold for the stated samples only.
 
