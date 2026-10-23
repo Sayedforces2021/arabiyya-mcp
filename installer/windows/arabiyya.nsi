@@ -1,4 +1,4 @@
-; معالج تثبيت «العربية» لويندوز (NSIS). يُبنى بـ: makensis -DROOT=../.. arabiyya.nsi
+; معالج تثبيت «العربية» لويندوز (NSIS). يُبنى بـ: makensis -INPUTCHARSET UTF8 -DROOT=..\.. arabiyya.nsi
 Unicode True
 !include "MUI2.nsh"
 !include "LogicLib.nsh"
@@ -8,7 +8,7 @@ Unicode True
   !define ROOT "../.."
 !endif
 !ifndef VERSION
-  !define VERSION "1.3.0"
+  !define VERSION "1.3.1"
 !endif
 
 Name "العربية"
@@ -70,7 +70,7 @@ Function PacksCreate
   !insertmacro MUI_HEADER_TEXT "اختيار الحزم" "اختر ما تنزّله من البيانات"
   nsDialogs::Create 1018
   Pop $0
-  ${NSD_CreateRadioButton} 0 6u 100% 12u "كامل (موصى به): الأدوات السبع والثلاثون كلها — نحو 4 غيغابايت"
+  ${NSD_CreateRadioButton} 0 6u 100% 12u "كامل (موصى به): الأدوات التسع والثلاثون كلها — نحو 4 غيغابايت"
   Pop $RbFull
   ${NSD_AddStyle} $RbFull ${WS_GROUP}
   ${NSD_Check} $RbFull
@@ -154,27 +154,28 @@ Section "Install"
   ; ---- 2) نسخ ملفات الأداة ----
   !insertmacro MUI_HEADER_TEXT "جارٍ التثبيت" "نسخ ملفات الأداة"
   SetOutPath "$INSTDIR"
-  File "${ROOT}/sarf_mcp.py"
-  File "${ROOT}/sarf_ilal.py"
-  File "${ROOT}/diac_model.py"
-  File "${ROOT}/train_diacritizer.py"
-  File "${ROOT}/build_poetry_index.py"
-  File "${ROOT}/build_lexicon_index.py"
-  File "${ROOT}/build_corpus_index.py"
-  File "${ROOT}/setup_sarf_data.py"
-  File "${ROOT}/import_shamela.py"
-  File "${ROOT}/khilaf.py"
-  File "${ROOT}/openiti_catalog.tsv"
+  File "${ROOT}\sarf_mcp.py"
+  File "${ROOT}\sarf_ilal.py"
+  File "${ROOT}\diac_model.py"
+  File "${ROOT}\train_diacritizer.py"
+  File "${ROOT}\build_poetry_index.py"
+  File "${ROOT}\build_lexicon_index.py"
+  File "${ROOT}\build_corpus_index.py"
+  File "${ROOT}\setup_sarf_data.py"
+  File "${ROOT}\import_shamela.py"
+  File "${ROOT}\khilaf.py"
+  File "${ROOT}\openiti_catalog.tsv"
   File "unregister.ps1"
   File "restart_claude.ps1"
   SetOutPath "$INSTDIR\data\khilaf"
-  File "${ROOT}/data/khilaf/insaf_masail.jsonl"
-  File "${ROOT}/data/khilaf/alfiyya_abwab.jsonl"
-  File "${ROOT}/data/khilaf/wujuh.jsonl"
+  File "${ROOT}\data\khilaf\insaf_masail.jsonl"
+  File "${ROOT}\data\khilaf\alfiyya_abwab.jsonl"
+  File "${ROOT}\data\khilaf\wujuh.jsonl"
+  File "${ROOT}\data\khilaf\ayah_index.jsonl"
   SetOutPath "$INSTDIR\brand"
-  File "${ROOT}/brand/arabiyya-icon.svg"
-  File "${ROOT}/brand/arabiyya-icon-small.svg"
-  File "${ROOT}/brand/arabiyya-mark.svg"
+  File "${ROOT}\brand\arabiyya-icon.svg"
+  File "${ROOT}\brand\arabiyya-icon-small.svg"
+  File "${ROOT}\brand\arabiyya-mark.svg"
 
   InitPluginsDir
   File "/oname=$PLUGINSDIR\install.ps1" "install_wizard.ps1"
@@ -248,6 +249,8 @@ Section "Uninstall"
   Delete "$INSTDIR\unregister.ps1"
   Delete "$INSTDIR\restart_claude.ps1"
   RMDir /r "$INSTDIR\brand"
+  RMDir /r "$INSTDIR\data\khilaf"
+  RMDir "$INSTDIR\data"
   Delete "$INSTDIR\uninstall-arabiyya.exe"
   RMDir "$INSTDIR"
   DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Arabiyya"

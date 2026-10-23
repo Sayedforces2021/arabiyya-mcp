@@ -1,5 +1,7 @@
 name: release
 # يُنشأ الإصدار تلقائيًّا حين يُضاف ملف ملاحظات جديد في releases/vX.Y.Z.md
+# ويُبنى معه معالجا التثبيت (ويندوز وماك) وحزمة السكربت من شيفرة الإصدار نفسها،
+# فلا يبقى ملف تثبيت أقدم من الأداة.
 on:
   push:
     branches: [main]
@@ -8,20 +10,81 @@ on:
 permissions:
   contents: write
 jobs:
-  release:
+  version:
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.v.outputs.tag }}
+      num: ${{ steps.v.outputs.num }}
     steps:
       - uses: actions/checkout@v4
       - id: v
-        run: echo "tag=$(ls releases/v*.md | sed 's#releases/##; s#\.md$##' | sort -V | tail -1)" >> "$GITHUB_OUTPUT"
+        run: |
+          tag=$(ls releases/v*.md | sed 's#releases/##; s#\.md$##' | sort -V | tail -1)
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "num=${tag#v}" >> "$GITHUB_OUTPUT"
+
+  windows:
+    needs: version
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: معالج ويندوز (NSIS)
+        shell: pwsh
+        run: |
+          $mk = 'C:\Program Files (x86)\NSIS\makensis.exe'
+          if (-not (Test-Path $mk)) { choco install nsis -y --no-progress; }
+          & $mk /INPUTCHARSET UTF8 "/DROOT=..\.." "/DVERSION=${{ needs.version.outputs.num }}" installer\windows\arabiyya.nsi
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: installer/windows/arabiyya-setup-windows.exe
+
+  mac:
+    needs: version
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: معالج ماك
+        run: bash installer/mac/build_mac.sh "$PWD" out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac
+          path: out/arabiyya-setup-mac.zip
+
+  release:
+    needs: [version, windows, mac]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: حزمة التثبيت بالسكربت لويندوز
+        run: |
+          zip -q dist/sarf-windows.zip install_sarf_windows.bat install_sarf_windows.ps1 train_diacritizer.bat \
+            sarf_mcp.py sarf_ilal.py diac_model.py train_diacritizer.py build_poetry_index.py build_lexicon_index.py \
+            build_corpus_index.py setup_sarf_data.py import_shamela.py khilaf.py openiti_catalog.tsv \
+            data/khilaf/*.jsonl brand/*.svg
+          ls -la dist
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.v.outputs.tag }}
+          tag_name: ${{ needs.version.outputs.tag }}
           target_commitish: ${{ github.sha }}
-          name: "العربية ${{ steps.v.outputs.tag }}"
-          body_path: releases/${{ steps.v.outputs.tag }}.md
+          name: "العربية ${{ needs.version.outputs.tag }}"
+          body_path: releases/${{ needs.version.outputs.tag }}.md
           make_latest: true
           files: |
+            dist/arabiyya-setup-windows.exe
+            dist/arabiyya-setup-mac.zip
+            dist/sarf-windows.zip
             arabiyya.mcpb
-            releases/sarf-windows.zip
             install_sarf.command
+      - name: تحديث نسختي الموقع
+        run: |
+          cp dist/arabiyya-setup-windows.exe dist/arabiyya-setup-mac.zip docs/downloads/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/downloads
+          git diff --cached --quiet || { git commit -m "الموقع: معالجا التثبيت من ${{ needs.version.outputs.tag }}"; git pull --rebase origin main; git push origin HEAD:main; }

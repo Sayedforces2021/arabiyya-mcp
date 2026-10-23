@@ -80,9 +80,12 @@ Step 'نسخ ملف الخادم'
 $Dest = Join-Path $env:USERPROFILE 'claude'
 New-Item -ItemType Directory -Force -Path $Dest | Out-Null
 Copy-Item (Join-Path $Here 'sarf_mcp.py') (Join-Path $Dest 'sarf_mcp.py') -Force
-foreach ($f in 'sarf_ilal.py','diac_model.py','train_diacritizer.py','build_poetry_index.py','build_lexicon_index.py','build_corpus_index.py','import_shamela.py','setup_sarf_data.py','openiti_catalog.tsv') {
+foreach ($f in 'sarf_ilal.py','diac_model.py','train_diacritizer.py','build_poetry_index.py','build_lexicon_index.py','build_corpus_index.py','import_shamela.py','setup_sarf_data.py','khilaf.py','openiti_catalog.tsv') {
   Copy-Item (Join-Path $Here $f) (Join-Path $Dest $f) -Force
 }
+# سجلّ الخلاف ووجوه الإعراب (أداة wujuh_irab)
+New-Item -ItemType Directory -Force -Path (Join-Path $Dest 'data\khilaf') | Out-Null
+Copy-Item (Join-Path $Here 'data\khilaf\*.jsonl') (Join-Path $Dest 'data\khilaf') -Force
 $Server = Join-Path $Dest 'sarf_mcp.py'
 Write-Host $Server
 

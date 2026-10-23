@@ -10,7 +10,7 @@ on run
 	set welcome to "ستثبّت هذه النافذة أداة «العربية» وتربطها بتطبيق Claude تلقائيًّا." & return & return & "تنزيل بيئة Python والمكتبات والبيانات، وتحتاج إلى نحو 4 غيغابايت من المساحة وإلى اتصال بالإنترنت، وتستغرق من 30 إلى 60 دقيقة. لا تُغلق النافذة ولا تُطفئ الجهاز حتى ينتهي التثبيت."
 	set skipArg to ""
 	try
-		display dialog welcome & return & return & "اختر ما تنزّله:" & return & "• كامل: الأدوات السبع والثلاثون كلها، نحو 4 غيغابايت." & return & "• سريع: بلا دلالة الألفاظ والتشكيل الآلي والإعراب، نحو 2.5 غيغابايت (تضيفها لاحقًا بإعادة تشغيل المعالج)." with title "العربية" buttons {"إلغاء", "سريع", "كامل"} default button "كامل" cancel button "إلغاء" with icon note
+		display dialog welcome & return & return & "اختر ما تنزّله:" & return & "• كامل: الأدوات التسع والثلاثون كلها، نحو 4 غيغابايت." & return & "• سريع: بلا دلالة الألفاظ والتشكيل الآلي والإعراب، نحو 2.5 غيغابايت (تضيفها لاحقًا بإعادة تشغيل المعالج)." with title "العربية" buttons {"إلغاء", "سريع", "كامل"} default button "كامل" cancel button "إلغاء" with icon note
 		if button returned of result is "سريع" then set skipArg to "semantic,catt,stanza"
 	on error
 		return

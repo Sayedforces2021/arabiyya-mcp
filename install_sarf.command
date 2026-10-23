@@ -8,6 +8,8 @@ mkdir -p "$DIR"
 if [ "$SRC" != "$DIR" ]; then
   cp "$SRC"/*.py "$SRC"/openiti_catalog.tsv "$DIR"/
   mkdir -p "$DIR/brand" && cp "$SRC"/brand/*.svg "$DIR/brand/" 2>/dev/null || true
+  # سجلّ الخلاف ووجوه الإعراب (أداة wujuh_irab)
+  mkdir -p "$DIR/data/khilaf" && cp "$SRC"/data/khilaf/*.jsonl "$DIR/data/khilaf/"
 fi
 SERVER="$DIR/sarf_mcp.py"
 CONFIG="$HOME/Library/Application Support/Claude/claude_desktop_config.json"
