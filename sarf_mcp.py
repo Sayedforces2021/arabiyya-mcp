@@ -4942,9 +4942,21 @@ def takhrij_shahid(verse: str, limit: int = 8, citations: bool = True) -> dict:
             nis = out.get("النسبة")
             pk = _attr_key(_ntoks(nis["الشاعر"])) if isinstance(nis, dict) else None
             if top["عدد الكتب"] >= 2 and pk not in {_attr_key(_ntoks(a["الشاعر"])) for a in books_attr}:
-                out["تنبيه النسبة"] = (f"نسبته كتب المدوّنة إلى «{top['الشاعر']}» في {top['عدد الكتب']} كتبٍ أقدمها {top['أقدمها']}، "
-                                       f"وليس فيها من نسبه إلى «{nis['الشاعر'] if isinstance(nis, dict) else ''}» الذي في «أشعار»؛ "
-                                       "فالأرجح أن ما في «أشعار» تضمينٌ أو نسخة بغير نسبتها، ونسبةُ الكتب أولى بالاعتماد.")
+                # نسبة الكتب أولى؛ فإن كان في «أشعار» بيتٌ لمن نسبته إليه الكتب قُدّم في «النسبة»
+                # (كالشطر «تجري الرياح بما لا تشتهي السفن»: ضمّنه أديب إسحاق صدرًا، وهو عجز بيت المتنبي)
+                tk = _attr_key(_ntoks(top["الشاعر"]))
+                alt = next((v2 for sc2, v2, _t2 in (allc if "allc" in locals() else [])
+                            if sc2 >= 0.85 and not _is_quotation(v2[0], v2[4]) and _attr_key(_ntoks(v2[3] or "")) == tk), None)
+                if alt is not None and isinstance(nis, dict):
+                    out["النسبة"] = {"الشاعر": alt[3], "العصر": alt[6], "القصيدة": alt[4], "البحر": alt[5], "رقم البيت": alt[2],
+                                     "نص البيت": f"{alt[0]} * {alt[1]}", "نسبة التطابق": round(_sim(q, _ntoks(alt[0] + " " + alt[1])) if len(q) > len(_ntoks(alt[0] + " " + alt[1])) * 0.7 else max(_sim(q, _ntoks(alt[0])), _sim(q, _ntoks(alt[1]))), 2)}
+                    out["تنبيه النسبة"] = (f"قُدّمت نسبة كتب المدوّنة: نسبته إلى «{top['الشاعر']}» {top['عدد الكتب']} كتبٍ أقدمها {top['أقدمها']}، "
+                                           f"وهو في «أشعار» من شعره. ووقع في «أشعار» أيضًا عند «{nis['الشاعر']}» ولم ينسبه إليه كتاب، "
+                                           "فالأرجح أنه تضمينٌ أو نسخة بغير نسبتها.")
+                else:
+                    out["تنبيه النسبة"] = (f"نسبته كتب المدوّنة إلى «{top['الشاعر']}» في {top['عدد الكتب']} كتبٍ أقدمها {top['أقدمها']}، "
+                                           f"وليس فيها من نسبه إلى «{nis['الشاعر'] if isinstance(nis, dict) else ''}» الذي في «أشعار»؛ "
+                                           "فالأرجح أن ما في «أشعار» تضمينٌ أو نسخة بغير نسبتها، ونسبةُ الكتب أولى بالاعتماد.")
         cites = []
         for pid, (died, title, author, genre, vol, page, text) in sorted(hits.items(), key=lambda x: x[1][0]):
             item = {"الكتاب": f"{title} ({_died_label(died)})", "الفن": genre, "الموضع": _cite(vol, page).lstrip("، ")}
