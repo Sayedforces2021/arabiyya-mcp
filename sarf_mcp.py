@@ -587,6 +587,21 @@ def _fit_meter(orig_parts: list, base_parts: list, meter: str | None = None):
     return base_parts, [], None
 
 
+def _musarra(r, sadr_text: str) -> bool:
+    """البيت المصرَّع: تأتي عروضه على صورة ضربه، فتُقبل في الصدر صورٌ لا تكون إلا في الضرب (كالقطع في الكامل).
+    يُحكم به إذا كان العجز موزونًا، ونمط الصدر من أنماط الضرب في البحر نفسه، وآخر الصدر على رويّ العجز."""
+    if r is None or r.is_valid or not r.sadr or not r.ajuz or not r.ajuz.is_valid or not r.qafiyah:
+        return False
+    grams = [g for g in _meter_grammars() if g["key"] == r.meter_key and g["type"] == str(r.bahr_type)]
+    if not any(r.sadr.pattern in g["ajuz"] for g in grams):
+        return False
+    units, hyps = _qafiya_hypotheses(sadr_text)
+    return any(units[pos][0] == r.qafiyah.rawi for pos in hyps)
+
+
+_MUSARRA_NOTE = "البيت مصرَّع: جاءت عروضه على صورة ضربه، وهو جائز في المطلع وفي كل بيت صُرِّع."
+
+
 @mcp.tool()
 def scan_verse(verse: str, meter: str | None = None, auto_diacritize: bool = True) -> dict:
     """تقطيع بيت شعر عروضيًّا: البحر ونوعه، والتفعيلات وزحافاتها وعللها، والقافية والرويّ.
@@ -625,7 +640,15 @@ def scan_verse(verse: str, meter: str | None = None, auto_diacritize: bool = Tru
             "حركة الروي": HARAKA.get(str(q.rawi_haraka), q.rawi_haraka),
             "نوعها": q.qafiyah_type_ar,
         }
-    if r.errors:
+    if len(parts) > 1 and _musarra(r, parts[0]):
+        out["موزون"] = True
+        out["الصدر"]["موزون"] = True
+        for f in out["الصدر"]["التفعيلات"]:
+            if not f["سليمة"]:
+                f["سليمة"] = True
+                f["الحال"] += "، في العروض المصرَّعة"
+        out["التصريع"] = _MUSARRA_NOTE
+    elif r.errors:
         out["ملاحظات المحلل"] = [str(e) for e in r.errors]
     out["النص المقطَّع"] = " * ".join(parts)
     if changes:
@@ -1748,7 +1771,7 @@ def _prepare_poem(poem: str, meter: str | None, auto_diacritize: bool):
     r = pyarud.analyze_poem(prepared, forced_meter=meter) if meter else pyarud.analyze_poem(prepared)
     fixed = {}
     if auto_diacritize:
-        dom = meter or r.meter
+        dom = meter or r.meter_key
         for i, v in enumerate(r.verses):
             if not (v.is_valid and v.score >= 0.99):
                 o = [verses[i][0], verses[i][1]] if verses[i][1] else [verses[i][0]]
@@ -1774,18 +1797,22 @@ def scan_poem(poem: str, meter: str | None = None, auto_diacritize: bool = True)
     rows, odd = [], []
     for i, (v, (s_, a_)) in enumerate(zip(r.verses, verses), 1):
         rawi = v.qafiyah.rawi if v.qafiyah else None
+        sadr_scanned = (prepared[i - 1][0] if i - 1 < len(prepared) and prepared[i - 1] else s_)
+        musarra = bool(a_) and _musarra(v, sadr_scanned)
         row = {"البيت": i, "النص": f"{s_} * {a_}" if a_ else s_, "البحر": v.meter_name_ar,
-               "موزون": v.is_valid, "المطابقة": round(v.score, 2), "الروي": rawi}
-        if not v.is_valid:
+               "موزون": v.is_valid or musarra, "المطابقة": round(v.score, 2), "الروي": rawi}
+        if musarra:
+            row["التصريع"] = _MUSARRA_NOTE
+        elif not v.is_valid:
             row["الخلل"] = [str(e) for e in v.errors][:2]
         if i in fixed:
             row["ضبط موجَّه بالوزن"] = fixed[i]
             row["النص المقطَّع"] = " * ".join(x for x in prepared[i - 1] if x)
         rows.append(row)
-        if v.meter_name_ar != r.meter_name_ar or not v.is_valid or (rawi and r.dominant_rawi and rawi != r.dominant_rawi):
+        if v.meter_name_ar != r.meter_name_ar or not row["موزون"] or (rawi and r.dominant_rawi and rawi != r.dominant_rawi):
             odd.append(i)
     out = {"البحر الغالب": r.meter_name_ar, "الروي الغالب": r.dominant_rawi, "عدد الأبيات": r.total_verses,
-           "الموزون منها": r.valid_verses_count, "متجانسة البحر": r.is_homogeneous,
+           "الموزون منها": sum(1 for x in rows if x["موزون"]), "متجانسة البحر": r.is_homogeneous,
            "أبيات تستحق المراجعة": odd, "الأبيات": rows}
     if notes:
         out["تنبيه"] = " ".join(sorted(notes)) + " راجع الضبط في الأبيات المختلة قبل الحكم عليها. ولتفصيل القافية وعيوبها استعمل analyze_qafiya."
