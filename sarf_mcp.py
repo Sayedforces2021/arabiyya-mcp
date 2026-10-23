@@ -5296,7 +5296,12 @@ def lughawiyyat(word: str, books: list[str] | None = None, limit: int = 12) -> d
     sel = [(u, n) for u, n in LUGHAWIYYAT if not books or any(b in n for b in books)]
     missing = [n for u, n in sel if u not in have]
     words = [w for w in _strip_tashkeel(word).split() if w]
-    vs_all = [set(_variants(w, True)) | {_norm(w)} for w in words]
+    # اللفظ معرّفًا ومنكّرًا: «الكهام» تطابق «سيفٌ كهام»، و«خوف» تطابق «الخوف»
+    def forms(w):
+        if w.startswith("ال") and len(w) > 4:
+            return {w, w[2:]}
+        return {w, "ال" + w} if len(w) >= 3 else {w}
+    vs_all = [set().union(*(set(_variants(f, True)) | {_norm(f)} for f in forms(w))) for w in words]
     res = []
     for u, n in sel:
         if u not in have:

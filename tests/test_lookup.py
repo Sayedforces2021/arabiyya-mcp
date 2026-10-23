@@ -46,5 +46,19 @@ class TestMaajimWord(unittest.TestCase):
         self.assertEqual(r["المواد"][0]["الموضع"], "ج4 ص299")
 
 
+@unittest.skipUnless(os.path.exists(M.CORPUS_DB), "المدوّنة غير مبنية")
+class TestLughawiyyat(unittest.TestCase):
+    def places(self, q, **kw):
+        r = M.lughawiyyat(q, **kw)["المواضع"]
+        return [(x["الكتاب"], x["الموضع"]) for x in r] if isinstance(r, list) else []
+
+    def test_definite_finds_indefinite(self):
+        # في فقه اللغة ص215: «سيف كهام… لسان كهام… فرس كهام» بلا «ال»
+        self.assertIn(("فقه اللغة وسر العربية للثعالبي", "ص215"), self.places("الكهام"))
+
+    def test_indefinite_finds_definite(self):
+        self.assertEqual(self.places("خوف خشية", books=["الفروق"]), self.places("الخوف الخشية", books=["الفروق"]))
+
+
 if __name__ == "__main__":
     unittest.main()
