@@ -3194,10 +3194,47 @@ def taqalib(root: str) -> dict:
                      "المعاجم": [names.get(b, b) for b in books]})
     con.close()
     used = [r["التقليب"] for r in rows if r["الحال"] == "مستعمل"]
-    return {"الجذر": " ".join(letters), "التقاليب": rows, "المستعمل": used,
-            "المهمل": [r["التقليب"] for r in rows if r["الحال"] == "مهمل"],
-            "ملاحظة": "الحكم بالاستعمال مبني على ورود المادة في المعاجم المرتبة على الحروف (لا يكفي ذكرها في أبواب التقاليب، فقد يُذكر فيها المهمل). "
-                      "وللنظر في المعنى الجامع بين التقاليب (الاشتقاق الأكبر) اعرض موادّها بـ maajim."}
+    out = {"الجذر": " ".join(letters), "التقاليب": rows, "المستعمل": used,
+           "المهمل": [r["التقليب"] for r in rows if r["الحال"] == "مهمل"],
+           "ملاحظة": "الحكم بالاستعمال مبني على ورود المادة في المعاجم المرتبة على الحروف (لا يكفي ذكرها في أبواب التقاليب، فقد يُذكر فيها المهمل). "
+                     "وللنظر في المعنى الجامع بين التقاليب (الاشتقاق الأكبر) اعرض موادّها بـ maajim."}
+    ij = _ibn_jinni_taqalib(perms)
+    if ij:
+        out["في الخصائص لابن جني"] = ij
+        out["الاشتقاق الأكبر"] = ("قال ابن جني: «أن تأخذ أصلًا من الأصول الثلاثية، فتعقد عليه وعلى تقاليبه الستة معنًى واحدًا، "
+                                 "تجتمع التراكيب الستة وما يتصرف من كل واحد منها عليه» (الخصائص ج2 ص136). "
+                                 "وهو اجتهادٌ منه في معنًى جامع، فاعرضه على موادّ التقاليب في المعاجم.")
+    return out
+
+
+def _ibn_jinni_taqalib(perms: list, limit: int = 3) -> list:
+    """مواضع كلام ابن جني في «الخصائص» على تقاليب هذا الجذر بحروفه المفرّقة («ج ب ر»، «ق س و»)،
+    مع ما حولها من كلامه، بالجزء والصفحة؛ وتُترك فهارس الطبعة (أرقامٌ كثيرة)."""
+    import sqlite3
+    if not os.path.exists(CORPUS_DB):
+        return []
+    con = sqlite3.connect(f"file:{CORPUS_DB}?mode=ro", uri=True)
+    bk = con.execute("SELECT id FROM books WHERE uri LIKE '%IbnJinni%Khasais%'").fetchone()
+    out, seen = [], set()
+    if bk:
+        for p in perms:
+            spaced = " ".join(p)
+            for pid, text, vol, page in con.execute(
+                    "SELECT p.id, p.text, p.vol, p.page FROM paras p WHERE p.book = ? AND p.id IN "
+                    "(SELECT rowid FROM paras_fts WHERE paras_fts MATCH ?) ORDER BY p.id", (bk[0], f'"{spaced}"')):
+                if pid in seen:
+                    continue
+                seen.add(pid)
+                plain = _strip_tashkeel(text)
+                if sum(c in "٠١٢٣٤٥٦٧٨٩" for c in plain) > 12:      # فهرس الطبعة
+                    continue
+                i = _norm(plain).find(_norm(spaced))
+                i = max(0, i if i >= 0 else 0)
+                a, b = max(0, i - 120), min(len(plain), i + 480)
+                out.append(((vol or 0, page or 0), {"الموضع": _cite(vol, page).lstrip("، "),
+                            "النص": ("…" if a else "") + plain[a:b].strip() + ("…" if b < len(plain) else "")}))
+    con.close()
+    return [x for _, x in sorted(out, key=lambda t: t[0])][:limit]
 
 
 
