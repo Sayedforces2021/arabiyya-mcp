@@ -32,22 +32,23 @@
   --ui-line:#2A3644;
   --display:"Aref Ruqaa", Amiri, serif;
   --text:Amiri, "Noto Naskh Arabic", serif;
-  --code:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; /* taste-skill-ignore: literal tool names in <code> */
+  --code:ui-monospace, "SFMono-Regular", Menlo, Consolas, Amiri, monospace; /* taste-skill-ignore: literal tool names in <code> */
   --s-small:16px; --s-body:19px; --s-lead:clamp(21px, 1vw + 14px, 25px);
   --s-head:clamp(38px, 3.4vw + 12px, 64px); --s-card:clamp(30px, 1.4vw + 20px, 40px); --s-display:clamp(64px, 7vw + 16px, 128px);
   --margin:clamp(16px, 3vw, 48px); --gutter:clamp(16px, 2vw, 32px); --section:clamp(88px, 9vw, 168px);
   --ease-out:cubic-bezier(.22,1,.36,1); --ease-io:cubic-bezier(.76,0,.24,1);
+  --mark:var(--paper);
   color-scheme:dark;
 }
 @media (prefers-color-scheme: light){
   :root:not([data-theme="dark"]){
-    --bg:#F3ECDD; --surface:#E8DEC8; --deep:#FBF7EC; --ink:#121A24; --accent:#7A5C22; --accent-ink:#F6F0E2;
-    --paper:#FFFBF2; --paper-ink:#121A24; --paper-soft:#5A5040; --red:#8E2B23; --ui-line:#D9CCAF; color-scheme:light;
+    --bg:#E9DCC0; --surface:#E8DEC8; --deep:#FBF7EC; --ink:#121A24; --accent:#7A5C22; --accent-ink:#F6F0E2;
+    --paper:#FFFBF2; --paper-ink:#121A24; --paper-soft:#5A5040; --red:#8E2B23; --ui-line:#D9CCAF; --mark:var(--accent); color-scheme:light;
   }
 }
 :root[data-theme="light"]{
-  --bg:#F3ECDD; --surface:#E8DEC8; --deep:#FBF7EC; --ink:#121A24; --accent:#7A5C22; --accent-ink:#F6F0E2;
-  --paper:#FFFBF2; --paper-ink:#121A24; --paper-soft:#5A5040; --red:#8E2B23; --ui-line:#D9CCAF; color-scheme:light;
+  --bg:#E9DCC0; --surface:#E8DEC8; --deep:#FBF7EC; --ink:#121A24; --accent:#7A5C22; --accent-ink:#F6F0E2;
+  --paper:#FFFBF2; --paper-ink:#121A24; --paper-soft:#5A5040; --red:#8E2B23; --ui-line:#D9CCAF; --mark:var(--accent); color-scheme:light;
 }
 :root[data-theme="dark"]{ color-scheme:dark; }
 
@@ -62,7 +63,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 ::selection{background:var(--accent);color:var(--accent-ink)}
 h1,h2{font-family:var(--display);font-weight:700;text-wrap:balance;letter-spacing:0}
-.brand span,.card .wm,.fact b,.fsheet h3,.fsheet .meas b,.count .total b,.wordmark{font-weight:700}
+.brand span,.card .wm,.fact b,.fsheet h3,.fsheet .meas b,.count .grand b,.wordmark{font-weight:700}
 h2{font-size:var(--s-head);line-height:1.25}
 h3{font-family:var(--text);font-weight:700;font-size:var(--s-lead);line-height:1.45}
 p{text-wrap:pretty}
@@ -97,7 +98,7 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 .nav{display:flex;align-items:center;gap:28px;font-size:var(--s-small)}
 .nav a{text-decoration:none}
 .nav .tlink{text-decoration:underline;text-decoration-color:transparent}
-.nav .tlink:hover{text-decoration-color:currentColor}
+@media (hover:hover) and (pointer:fine){.nav .tlink:hover{text-decoration-color:currentColor}}
 .nav .btn{min-height:44px;padding:0 20px;font-size:var(--s-small)}
 
 /* ---------- hero: the printed card beside the folio ---------- */
@@ -116,11 +117,11 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 .card .links{display:flex;flex-wrap:wrap;justify-content:center;gap:0 28px;margin-top:auto;padding-top:28px;font-size:var(--s-small)}
 .card .links a{padding-block:10px}
 .folio{position:relative;overflow:hidden;background:var(--deep);min-height:420px}
-.folio img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1600ms ease;transform:scale(1.04)}
-.folio img.on{opacity:1}
+.folio img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1600ms ease,transform 7s linear;transform:scale(1.04)}
+.folio img.on{opacity:1;transform:scale(1.1)}
 .folio img:first-child{opacity:1}
 .js .folio img:first-child:not(.on){opacity:0}
-.folio .cap{position:absolute;inset-inline:0;bottom:0;margin:0;padding:56px 28px 22px;color:#F2F2F0;font-size:var(--s-small);line-height:1.6;background:rgba(10,14,20,.66)} /* taste-skill-ignore: neutral scrim under a caption on a photograph */
+.folio .cap{position:absolute;inset-inline:0;bottom:0;margin:0;padding:56px 28px 22px;color:#F2F2F0;font-size:var(--s-small);line-height:1.6;background:rgba(10,14,20,.66);transition:opacity 300ms ease} /* taste-skill-ignore: neutral scrim under a caption on a photograph */
 
 /* ---------- intro: title, note, facts row ---------- */
 .intro{padding-block:var(--section) calc(var(--section) * .8)}
@@ -218,17 +219,17 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 .menu li{display:grid;grid-template-columns:1fr auto;gap:0 20px;align-items:baseline;font-size:var(--s-body);line-height:1.45}
 .menu li span{grid-column:1;font-size:var(--s-small);color:var(--paper-soft)}
 .menu li em{grid-row:1;grid-column:2;font-style:normal;font-variant-numeric:tabular-nums;white-space:nowrap}
-.menu li a{text-decoration:none;display:inline-block;padding-block:8px;margin-block:-8px}
-.menu li a:hover{text-decoration:underline}
+.menu li a{display:inline-block;padding-block:8px;margin-block:-8px;text-decoration:underline;text-underline-offset:.25em;text-decoration-color:color-mix(in srgb, currentColor 35%, transparent)}
+@media (hover:hover) and (pointer:fine){.menu li a:hover{text-decoration-color:currentColor}}
 .menu .hours{margin-top:52px;font-size:var(--s-small);line-height:1.7}
 
 /* ---------- count: the total and its receipt ---------- */
 .count{padding-block:var(--section);align-items:stretch}
 .count .left{grid-column:1 / span 6;display:flex;flex-direction:column}
 .count .left p{margin-top:16px;max-width:40ch}
-.count .total{margin-top:auto;padding-top:48px}
-.count .total b{display:block;font-family:var(--display);font-size:clamp(160px, 18vw, 300px);line-height:.8;color:var(--accent)}
-.count .total span{display:block;margin-top:28px;font-size:var(--s-lead)}
+.count .grand{margin-top:auto;padding-top:48px}
+.count .grand b{display:block;font-family:var(--display);font-size:clamp(160px, 18vw, 300px);line-height:.8;color:var(--accent)}
+.count .grand span{display:block;margin-top:28px;font-size:var(--s-lead)}
 .count .receipt{grid-column:8 / span 5}
 .count .rrow .r{font-variant-numeric:tabular-nums}
 .count .sub{display:block;font-size:14px;color:var(--paper-soft);line-height:1.5;margin-top:-2px;margin-bottom:6px;direction:ltr;text-align:end;unicode-bidi:isolate}
@@ -243,7 +244,7 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 .faq .qa code{font-size:14px}
 
 /* ---------- install: the reply card ---------- */
-.install{position:relative;background:var(--accent);color:var(--accent-ink);min-height:84svh;padding-top:var(--section);overflow:hidden;align-items:end}
+.install{position:relative;background:var(--accent);color:var(--accent-ink);min-height:84svh;padding-top:var(--section);overflow-x:clip;align-items:end}
 .install .say{grid-column:1 / span 4;align-self:end;padding-bottom:96px}
 .install .say p{font-size:var(--s-lead);line-height:1.6}
 .install .say p + p{margin-top:18px;font-size:var(--s-small)}
@@ -252,7 +253,7 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 .rcard h2{font-size:var(--s-card)}
 .rcard .line{margin-top:10px;font-size:var(--s-body)}
 .rcard .seg{display:grid;grid-template-columns:1fr 1fr;margin-top:24px;background:color-mix(in srgb, var(--paper-ink) 9%, transparent);padding:4px}
-.rcard .seg button{min-height:42px;font-size:var(--s-small);transition:background-color 200ms ease,color 200ms ease}
+.rcard .seg button{min-height:44px;font-size:var(--s-small);transition:background-color 200ms ease,color 200ms ease}
 .rcard .seg button[aria-pressed="true"]{background:var(--paper-ink);color:var(--paper);font-weight:700}
 .rcard ol{counter-reset:s;margin:24px 0 0;padding:0;text-align:start;display:grid;gap:10px;font-size:var(--s-small);line-height:1.55}
 .rcard ol li{counter-increment:s;display:grid;grid-template-columns:30px 1fr;gap:10px;list-style:none}
@@ -260,7 +261,11 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 .rcard .file{display:flex;justify-content:space-between;gap:12px;margin-top:20px;font-size:var(--s-small);color:var(--paper-soft)}
 .rcard .go{display:flex;align-items:center;justify-content:center;min-height:56px;margin-top:22px;background:var(--paper-ink);color:var(--paper);font-weight:700;text-decoration:none;transition:background-color 200ms ease}
 @media (hover:hover) and (pointer:fine){.rcard .go:hover{background:color-mix(in srgb, var(--paper-ink) 82%, var(--accent))}}
-.rcard .alt{margin-top:14px;font-size:var(--s-small)}
+.rcard .alt{margin-top:6px;font-size:var(--s-small)}
+.rcard .alt a{display:inline-block;padding-block:10px}
+.rcard .warn{margin-top:12px;font-size:var(--s-small);line-height:1.55;color:var(--paper-soft)}
+.rcard .phone{margin-top:20px;padding:14px 16px;background:color-mix(in srgb, var(--paper-ink) 7%, transparent);font-size:var(--s-small);line-height:1.55}
+.rcard .phone button{display:block;width:100%;min-height:48px;margin-top:10px;background:var(--paper-ink);color:var(--paper);font-weight:700}
 
 /* ---------- the author's letter, with its tear-off strip ---------- */
 .letter{padding-block:calc(var(--section) * 1.1) var(--section)}
@@ -284,12 +289,12 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 .back .addr{position:relative;padding-top:8px}
 .back .addr ul{display:grid;gap:12px;font-size:var(--s-body);list-style:none;margin:0;padding:0;padding-inline-end:110px}
 .back .addr a{text-decoration:none;display:inline-block;padding-block:6px}
-.back .addr a:hover{text-decoration:underline}
+@media (hover:hover) and (pointer:fine){.back .addr a:hover{text-decoration:underline}}
 .stamp{position:absolute;top:0;inset-inline-end:0;width:88px;padding:6px;background:#F7EBCB;transform:rotate(3deg)}
 .stamp img{width:100%;aspect-ratio:3 / 4;object-fit:cover}
 .back .imprint{grid-column:1 / -1;align-self:end;justify-self:center;max-width:70ch;font-size:14px;line-height:1.7;color:var(--paper-soft);text-align:center}
 .back .imprint a{text-underline-offset:.2em}
-.wordmark{grid-column:1 / -1;font-family:var(--display);font-size:clamp(96px, 22vw, 340px);line-height:1;text-align:center;color:var(--paper);margin-top:var(--section)}
+.wordmark{grid-column:1 / -1;font-family:var(--display);font-size:clamp(96px, 22vw, 340px);line-height:1.1;padding-bottom:.12em;text-align:center;color:var(--mark);margin-top:var(--section)}
 
 /* ---------- motion layer ----------
    Load: the stripe's bars drop in, the wordmark is inked from the right, the card's lines rise.
@@ -299,17 +304,21 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
   .btn,.rcard .go{transition:transform 160ms var(--ease-out),background-color 200ms ease}
   .btn:active{transform:scale(.97)}
   .rcard .go:active{transform:scale(.98)}
+  .rcard .seg button{transition:transform 120ms var(--ease-out),background-color 200ms ease,color 200ms ease}
+  .rcard .seg button:active{transform:scale(.97)}
+  .js [data-reveal]:not(.in){opacity:0;translate:0 var(--dy)}
+  .js [data-reveal].in{animation:enter 600ms var(--ease-out) both;animation-delay:calc(var(--i,0) * 60ms)}
+  [data-reveal]{--dy:calc(18px + var(--i,0) * 6px)}
+  .js .receipt:not(.in) .rrow{opacity:0}
+  .js .receipt.in .rrow{animation:print 360ms var(--ease-out) both;animation-delay:calc(var(--r,0) * 40ms + 150ms)}
   .slip{transition:transform 280ms var(--ease-out),background-color 200ms ease}
   .js .sheet.fresh > *{animation-name:page-in;animation-duration:420ms;animation-timing-function:var(--ease-out)}
-  .js .stripe i{animation:bar 700ms var(--ease-out) both;animation-delay:calc(var(--n) * 18ms)}
-  .js [data-rise]{opacity:0;transform:translateY(22px);animation:rise 900ms var(--ease-out) forwards;animation-delay:calc(var(--i,0) * 90ms + 200ms)}
-  .js .card .wm{clip-path:inset(0 0 0 100%);animation:ink 1400ms var(--ease-io) 250ms forwards}
-  .folio img.on{animation:drift 9s linear both}
+  .js .stripe i{animation:bar 400ms var(--ease-out) both;animation-delay:calc(var(--n) * 10ms)}
+  .js [data-rise]{opacity:0;transform:translateY(16px);animation:rise 500ms var(--ease-out) forwards;animation-delay:calc(var(--i,0) * 60ms + 80ms)}
+  .js .card .wm{clip-path:inset(0 0 0 100%);animation:ink 800ms var(--ease-io) forwards}
   @supports (animation-timeline: view()){
-    [data-reveal]{animation:enter linear forwards;animation-timeline:view();animation-range:entry 0% entry calc(220px + var(--i,0) * 60px);--dy:calc(24px + var(--i,0) * 10px)}
-    .rrow{animation:print linear forwards;animation-timeline:view();animation-range:entry 0% entry 120px}
     .slip{animation:slip-in linear forwards;animation-timeline:view();animation-range:entry 0% entry 200px}
-    .rcard{animation:settle linear forwards;animation-timeline:view();animation-range:entry 0% entry 420px}
+    .rcard{animation:settle linear forwards;animation-timeline:view();animation-range:entry 0% entry 35%}
     .fsheet figure img{animation:breathe linear both;animation-timeline:view();animation-range:cover 0% cover 100%}
   }
 }
@@ -317,12 +326,12 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 @keyframes bar{from{transform:scaleY(0)}to{transform:none}}
 @keyframes rise{to{opacity:1;transform:none}}
 @keyframes ink{to{clip-path:inset(0)}}
-@keyframes drift{from{transform:scale(1.04)}to{transform:scale(1.11)}}
 @keyframes enter{from{opacity:0;translate:0 var(--dy)}to{opacity:1;translate:0 0}}
 @keyframes print{from{opacity:0;translate:14px 0}to{opacity:1;translate:0 0}}
 @keyframes slip-in{from{opacity:.2;translate:0 70px}to{opacity:1;translate:0 0}}
-@keyframes settle{from{rotate:-6deg;translate:0 90px}to{rotate:0deg;translate:0 0}}
+@keyframes settle{from{rotate:-3deg;translate:0 32px}to{rotate:0deg;translate:0 0}}
 @keyframes breathe{from{scale:1.12}to{scale:1}}
+@media print{.js [data-reveal],.js .receipt .rrow{opacity:1;translate:none;animation:none}}
 @media (prefers-reduced-motion: reduce){
   html{scroll-behavior:auto}
   .folio img{transition:none}
@@ -371,7 +380,7 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
   .fsheet .meas{padding-bottom:28px}
   .fsheet .tools{padding-bottom:44px}
   .count .left,.count .receipt{grid-column:1 / -1}
-  .count .total b{font-size:40vw}
+  .count .grand b{font-size:40vw}
   .count .receipt{margin-top:40px}
   .faq .qa{columns:1}
   .install{min-height:0}
@@ -432,7 +441,7 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
   </div>
   <figure class="folio" id="folio">
     <img src="assets/alfiyya.jpg" width="1600" height="1131" fetchpriority="high" alt="صفحتان من مخطوط شرحٍ على ألفية ابن مالك، يتوسّط المتنُ الصفحة وتحيط به الحواشي من كل جهة" data-cap="شرحٌ على ألفية ابن مالك: المتن في الوسط، وحوله حواشٍ تُسنده وتراجعه. على هذا كُتب العلم، وعليه تعمل الأداة.">
-    <figcaption class="cap" id="fcap" aria-live="polite">شرحٌ على ألفية ابن مالك: المتن في الوسط، وحوله حواشٍ تُسنده وتراجعه. على هذا كُتب العلم، وعليه تعمل الأداة.</figcaption>
+    <figcaption class="cap" id="fcap">شرحٌ على ألفية ابن مالك: المتن في الوسط، وحوله حواشٍ تُسنده وتراجعه. على هذا كُتب العلم، وعليه تعمل الأداة.</figcaption>
   </figure>
 </section>
 
@@ -601,7 +610,7 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
   <div class="left">
     <h2 id="t-count" data-reveal>تسعٌ وثلاثون أداة</h2>
     <p class="lead" data-reveal style="--i:1">يستدعيها Claude بأسمائها، ولكلٍّ منها منهجها وحدودها، مكتوبةً في المستودع.</p>
-    <div class="total" data-reveal style="--i:2"><b class="num" id="total">39</b><span>أداةً في عشرة فروع</span></div>
+    <div class="grand" data-reveal style="--i:2"><b class="num" id="total">39</b><span>أداةً في عشرة فروع</span></div>
   </div>
   <div class="receipt" id="count-receipt" data-reveal style="--i:1">
     <div class="body">
@@ -675,6 +684,7 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
     </ol>
     <p class="file"><span id="fname">arabiyya-setup-windows.exe</span><span id="fsize">612 ك.ب</span></p>
     <a class="go" id="dl" href="downloads/arabiyya-setup-windows.exe" download>تنزيل المعالج لويندوز</a>
+    <p class="warn" id="warn">الملف غير موقّع رقميًّا، فسيُنبّهك ويندوز: اضغط «مزيد من المعلومات» ثم «تشغيل على أي حال».</p>
     <p class="alt">أو <a class="tlink" href="wizard-preview.html">جرّب المعالج هنا</a> قبل تنزيله.</p>
   </div>
 </section>
@@ -786,8 +796,10 @@ const SAMPLES = [
 // ---------- install: choose the system ----------
 (() => {
   const files = {
-    win: ['downloads/arabiyya-setup-windows.exe', 'arabiyya-setup-windows.exe', '612 ك.ب', 'شغّل الملف، واضغط «ابدأ التثبيت».', 'تنزيل المعالج لويندوز'],
-    mac: ['downloads/arabiyya-setup-mac.zip', 'arabiyya-setup-mac.zip', '1.1 م.ب', 'فكّ ضغط الملف، وشغّل التطبيق، واضغط «ابدأ التثبيت».', 'تنزيل المعالج لماك']
+    win: ['downloads/arabiyya-setup-windows.exe', 'arabiyya-setup-windows.exe', '612 ك.ب', 'شغّل الملف، واضغط «ابدأ التثبيت».', 'تنزيل المعالج لويندوز',
+      'الملف غير موقّع رقميًّا، فسيُنبّهك ويندوز: اضغط «مزيد من المعلومات» ثم «تشغيل على أي حال».'],
+    mac: ['downloads/arabiyya-setup-mac.zip', 'arabiyya-setup-mac.zip', '1.1 م.ب', 'فكّ ضغط الملف، وشغّل التطبيق، واضغط «ابدأ التثبيت».', 'تنزيل المعالج لماك',
+      'التطبيق غير موقّع رقميًّا: انقر عليه بالزر الأيمن واختر «فتح».']
   };
   const btns = [...document.querySelectorAll('.seg button')];
   const set = (os) => {
@@ -795,9 +807,22 @@ const SAMPLES = [
     btns.forEach((b) => b.setAttribute('aria-pressed', b.dataset.os === os));
     const a = document.getElementById('dl'); a.href = f[0]; a.textContent = f[4];
     document.getElementById('fname').textContent = f[1]; document.getElementById('fsize').textContent = f[2]; document.getElementById('step1').textContent = f[3];
+    document.getElementById('warn').textContent = f[5];
   };
   btns.forEach((b) => b.addEventListener('click', () => set(b.dataset.os)));
-  if (/Mac/.test(navigator.platform || navigator.userAgent)) set('mac');
+  const ua = navigator.userAgent, phone = /Android|iPhone|iPad|iPod/.test(ua) || (/Mac/.test(navigator.platform) && navigator.maxTouchPoints > 1);
+  if (!phone && /Mac/.test(navigator.platform || ua)) set('mac');
+  // on a phone the wizard has nowhere to run: say so, and offer to send the page to a computer
+  if (phone) {
+    const box = document.createElement('div'); box.className = 'phone';
+    box.innerHTML = 'المعالج يعمل على حاسوب بويندوز أو ماك، لا على الهاتف. افتح هذه الصفحة على حاسوبك.<button type="button">أرسل الرابط إلى حاسوبك</button>';
+    const b = box.querySelector('button'), url = location.href.split('#')[0] + '#install';
+    b.addEventListener('click', async () => {
+      try { if (navigator.share) { await navigator.share({ title: 'العربية', url }); return; } await navigator.clipboard.writeText(url); b.textContent = 'نُسخ الرابط'; }
+      catch (e) { if (e && e.name !== 'AbortError') b.textContent = url; }
+    });
+    document.querySelector('.rcard .seg').before(box);
+  }
 })();
 
 // ---------- the folio: slow crossfade between manuscripts, with its caption ----------
@@ -830,7 +855,9 @@ const SAMPLES = [
   const step = () => {
     const n = (i + 1) % imgs.length;
     if (!ready(imgs[n])) { fetchImg(n); return; }
-    imgs[i].classList.remove('on'); i = n; imgs[i].classList.add('on'); cap.textContent = imgs[i].dataset.cap;
+    imgs[i].classList.remove('on'); i = n; imgs[i].classList.add('on');
+    // the caption changes once the new manuscript is mostly in, so the words and the picture agree
+    cap.style.opacity = 0; setTimeout(() => { cap.textContent = imgs[i].dataset.cap; cap.style.opacity = ''; }, 700);
     fetchImg((i + 1) % imgs.length);
   };
   addEventListener('load', () => fetchImg(1), { once: true });
@@ -839,6 +866,22 @@ const SAMPLES = [
   const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && !document.hidden ? run() : stop()));
   io.observe(document.getElementById('folio'));
   document.addEventListener('visibilitychange', () => document.hidden ? stop() : run());
+})();
+
+// ---------- reveals: each part enters once, when it is reached ----------
+(() => {
+  // anything whose top has come within the screen is revealed, including what a fast scroll or a jump carried past
+  let rest = [...document.querySelectorAll('[data-reveal]')], ticking = false;
+  const sweep = () => {
+    ticking = false;
+    const line = innerHeight * 0.92;
+    rest = rest.filter((e) => { if (e.getBoundingClientRect().top < line) { e.classList.add('in'); return false; } return true; });
+    if (!rest.length) removeEventListener('scroll', onScroll);
+  };
+  const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(sweep); } };
+  addEventListener('scroll', onScroll, { passive: true });
+  addEventListener('resize', onScroll, { passive: true });
+  sweep();
 })();
 
 // ---------- the sources photograph drifts as it scrolls past ----------
@@ -859,10 +902,11 @@ const SAMPLES = [
 (() => {
   const el = document.getElementById('total');
   if (matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return;
+  el.textContent = '0'; // starts from nothing before it is seen, so it never shows 39 and then drops to 0
   const io = new IntersectionObserver((es) => es.forEach((e) => {
     if (!e.isIntersecting) return; io.disconnect();
     const t0 = performance.now(), n = 39;
-    const f = (t) => { const p = Math.min(1, (t - t0) / 1400); el.textContent = Math.round(n * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(f); };
+    const f = (t) => { const p = Math.min(1, (t - t0) / 800); el.textContent = Math.round(n * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(f); };
     requestAnimationFrame(f);
   }), { threshold: .4 });
   io.observe(el);
