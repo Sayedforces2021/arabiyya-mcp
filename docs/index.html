@@ -27,7 +27,7 @@
    Direction: "the page is the object" (taste-skill, seed 1310078193): every section is a filled paper object on the
    navy ground, with real edges (a ruled band, a zigzag, scallops), never an outlined box. Brand palette and faces kept. */
 :root{
-  --bg:#121A24; --surface:#1A2430; --deep:#0E151E; --ink:#EDE0C2; --muted:#B4AD9C; --accent:#C9A35C; --accent-ink:#121A24;
+  --bg:#121A24; --surface:#1A2430; --deep:#0E151E; --ink:#EDE0C2; --accent:#C9A35C; --accent-ink:#121A24;
   --paper:#E9D8B0; --paper-ink:#121A24; --paper-soft:#4A4234; --red:#8E2B23;
   --ui-line:#2A3644;
   --display:"Aref Ruqaa", Amiri, serif;
@@ -35,24 +35,24 @@
   --code:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; /* taste-skill-ignore: literal tool names in <code> */
   --s-small:16px; --s-body:19px; --s-lead:clamp(21px, 1vw + 14px, 25px);
   --s-head:clamp(38px, 3.4vw + 12px, 64px); --s-card:clamp(30px, 1.4vw + 20px, 40px); --s-display:clamp(64px, 7vw + 16px, 128px);
-  --margin:clamp(16px, 3vw, 48px); --gutter:clamp(16px, 2vw, 32px); --section:clamp(96px, 11vw, 200px);
+  --margin:clamp(16px, 3vw, 48px); --gutter:clamp(16px, 2vw, 32px); --section:clamp(88px, 9vw, 168px);
   --ease-out:cubic-bezier(.22,1,.36,1); --ease-io:cubic-bezier(.76,0,.24,1);
   color-scheme:dark;
 }
 @media (prefers-color-scheme: light){
   :root:not([data-theme="dark"]){
-    --bg:#F3ECDD; --surface:#E8DEC8; --deep:#FBF7EC; --ink:#121A24; --muted:#4E5662; --accent:#7A5C22; --accent-ink:#F6F0E2;
+    --bg:#F3ECDD; --surface:#E8DEC8; --deep:#FBF7EC; --ink:#121A24; --accent:#7A5C22; --accent-ink:#F6F0E2;
     --paper:#FFFBF2; --paper-ink:#121A24; --paper-soft:#5A5040; --red:#8E2B23; --ui-line:#D9CCAF; color-scheme:light;
   }
 }
 :root[data-theme="light"]{
-  --bg:#F3ECDD; --surface:#E8DEC8; --deep:#FBF7EC; --ink:#121A24; --muted:#4E5662; --accent:#7A5C22; --accent-ink:#F6F0E2;
+  --bg:#F3ECDD; --surface:#E8DEC8; --deep:#FBF7EC; --ink:#121A24; --accent:#7A5C22; --accent-ink:#F6F0E2;
   --paper:#FFFBF2; --paper-ink:#121A24; --paper-soft:#5A5040; --red:#8E2B23; --ui-line:#D9CCAF; color-scheme:light;
 }
 :root[data-theme="dark"]{ color-scheme:dark; }
 
 *,*::before,*::after{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;scrollbar-color:color-mix(in srgb, var(--accent) 60%, var(--bg)) var(--bg)}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--text);font-size:var(--s-body);line-height:1.75;-webkit-font-smoothing:antialiased}
 h1,h2,h3,p,figure,ul,ol,dl,dd,blockquote{margin:0}
 ul[class],ol[class]{list-style:none;padding:0}
@@ -62,6 +62,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 ::selection{background:var(--accent);color:var(--accent-ink)}
 h1,h2{font-family:var(--display);font-weight:700;text-wrap:balance;letter-spacing:0}
+.brand span,.card .wm,.fact b,.fsheet h3,.fsheet .meas b,.count .total b,.wordmark{font-weight:700}
 h2{font-size:var(--s-head);line-height:1.25}
 h3{font-family:var(--text);font-weight:700;font-size:var(--s-lead);line-height:1.45}
 p{text-wrap:pretty}
@@ -74,8 +75,7 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 .num{font-variant-numeric:tabular-nums}
 
 /* one button: square, flat */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:54px;padding:0 28px;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:var(--s-body);text-decoration:none;transition:transform 160ms var(--ease-out),background-color 200ms ease}
-.btn:active{transform:scale(.97)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:54px;padding:0 28px;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:var(--s-body);text-decoration:none;transition:background-color 200ms ease}
 .btn.ink{background:var(--paper-ink);color:var(--paper)}
 .tlink{text-decoration:underline;text-underline-offset:.32em;text-decoration-thickness:1px;text-decoration-color:color-mix(in srgb, currentColor 40%, transparent);transition:text-decoration-color 200ms ease}
 @media (hover:hover) and (pointer:fine){
@@ -91,7 +91,7 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 
 /* ---------- header ---------- */
 .top{display:flex;align-items:center;justify-content:space-between;gap:24px;padding-block:18px}
-.brand{display:flex;align-items:center;gap:12px;text-decoration:none}
+.brand{display:flex;align-items:center;gap:12px;min-height:44px;text-decoration:none}
 .brand svg{width:40px;height:40px;flex:none}
 .brand span{font-family:var(--display);font-size:var(--s-lead);line-height:1}
 .nav{display:flex;align-items:center;gap:28px;font-size:var(--s-small)}
@@ -113,7 +113,8 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 .card .acts{display:flex;flex-direction:column;align-items:center;gap:14px;margin-top:32px}
 .card .btn{background:var(--paper-ink);color:var(--paper)}
 .card .meta{font-size:var(--s-small);color:var(--paper-soft)}
-.card .links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 28px;margin-top:auto;padding-top:36px;font-size:var(--s-small)}
+.card .links{display:flex;flex-wrap:wrap;justify-content:center;gap:0 28px;margin-top:auto;padding-top:28px;font-size:var(--s-small)}
+.card .links a{padding-block:10px}
 .folio{position:relative;overflow:hidden;background:var(--deep);min-height:420px}
 .folio img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1600ms ease;transform:scale(1.04)}
 .folio img.on{opacity:1}
@@ -150,13 +151,13 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 .sheet .hashiya s{text-decoration-color:var(--red);text-decoration-thickness:2px}
 .sheet .tier{grid-column:1 / -1;margin-top:8px;font-size:var(--s-small);color:var(--paper-soft)}
 .sheet .tier b{color:var(--paper-ink)}
-.js .sheet.fresh > *{animation:page-in 560ms var(--ease-out) both}
-.js .sheet.fresh > :nth-child(2){animation-delay:70ms}
-.js .sheet.fresh > :nth-child(3){animation-delay:140ms}
-.js .sheet.fresh > :nth-child(4){animation-delay:210ms}
-@keyframes page-in{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.js .sheet.fresh > *{animation:page-fade 240ms ease both}
+.js .sheet.fresh > :nth-child(2){animation-delay:50ms}
+.js .sheet.fresh > :nth-child(3){animation-delay:100ms}
+.js .sheet.fresh > :nth-child(4){animation-delay:150ms}
+@keyframes page-fade{from{opacity:0}to{opacity:1}}
 .slips{position:relative;margin-top:auto;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;align-items:end;padding-inline:var(--margin)}
-.slip{background:var(--paper);color:var(--paper-ink);text-align:start;padding:20px 20px 0;font-size:var(--s-small);line-height:1.6;overflow:hidden;transition:transform 420ms var(--ease-out),background-color 220ms ease;transform:translateY(var(--sink,0)) rotate(var(--tilt,0deg))}
+.slip{background:var(--paper);color:var(--paper-ink);text-align:start;padding:20px 20px 0;font-size:var(--s-small);line-height:1.6;overflow:hidden;transition:background-color 200ms ease;transform:translateY(var(--sink,0)) rotate(var(--tilt,0deg))}
 .slip b{display:block;font-size:var(--s-small);line-height:1.45}
 .slip .tear{display:block;color:var(--paper-soft);letter-spacing:2px;margin:6px 0;overflow:hidden;white-space:nowrap}
 .slip .ln{display:block}
@@ -191,7 +192,7 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 .fsheet h3{font-family:var(--display);font-size:var(--s-card);line-height:72px;height:72px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fsheet .p{margin-top:24px;font-size:var(--s-body);line-height:1.7;max-width:44ch}
 .fsheet .tools{margin-top:20px;display:flex;flex-wrap:wrap;gap:8px}
-.fsheet .tools li{padding:3px 10px;background:color-mix(in srgb, currentColor 10%, transparent)}
+.fsheet .tools li{padding:3px 10px;box-shadow:inset 0 0 0 1px color-mix(in srgb, currentColor 32%, transparent)}
 .fsheet .meas{margin-top:auto;padding-top:32px;display:grid;gap:14px}
 .fsheet .meas div{display:grid;grid-template-columns:auto 1fr;gap:4px 18px;align-items:baseline}
 .fsheet .meas b{font-family:var(--display);font-size:var(--s-card);line-height:1.1;direction:ltr;unicode-bidi:isolate;font-variant-numeric:tabular-nums}
@@ -217,7 +218,7 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 .menu li{display:grid;grid-template-columns:1fr auto;gap:0 20px;align-items:baseline;font-size:var(--s-body);line-height:1.45}
 .menu li span{grid-column:1;font-size:var(--s-small);color:var(--paper-soft)}
 .menu li em{grid-row:1;grid-column:2;font-style:normal;font-variant-numeric:tabular-nums;white-space:nowrap}
-.menu li a{text-decoration:none}
+.menu li a{text-decoration:none;display:inline-block;padding-block:8px;margin-block:-8px}
 .menu li a:hover{text-decoration:underline}
 .menu .hours{margin-top:52px;font-size:var(--s-small);line-height:1.7}
 
@@ -257,9 +258,8 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 .rcard ol li{counter-increment:s;display:grid;grid-template-columns:30px 1fr;gap:10px;list-style:none}
 .rcard ol li::before{content:counter(s, arabic-indic);width:26px;height:26px;border-radius:50%;background:var(--paper-ink);color:var(--paper);display:grid;place-items:center;font-size:14px;margin-top:2px}
 .rcard .file{display:flex;justify-content:space-between;gap:12px;margin-top:20px;font-size:var(--s-small);color:var(--paper-soft)}
-.rcard .go{display:flex;align-items:center;justify-content:center;min-height:56px;margin-top:22px;background:var(--paper-ink);color:var(--paper);font-weight:700;text-decoration:none;transition:transform 160ms var(--ease-out),background-color 200ms ease}
-.rcard .go:hover{background:color-mix(in srgb, var(--paper-ink) 82%, var(--accent))}
-.rcard .go:active{transform:scale(.98)}
+.rcard .go{display:flex;align-items:center;justify-content:center;min-height:56px;margin-top:22px;background:var(--paper-ink);color:var(--paper);font-weight:700;text-decoration:none;transition:background-color 200ms ease}
+@media (hover:hover) and (pointer:fine){.rcard .go:hover{background:color-mix(in srgb, var(--paper-ink) 82%, var(--accent))}}
 .rcard .alt{margin-top:14px;font-size:var(--s-small)}
 
 /* ---------- the author's letter, with its tear-off strip ---------- */
@@ -273,6 +273,7 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 .lsheet .sign span{display:block;font-style:normal;font-size:var(--s-small);color:var(--paper-soft)}
 .tearoff{background:var(--paper);color:var(--paper-ink);border-top:5px dotted color-mix(in srgb, var(--paper-ink) 30%, transparent);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 24px;padding:16px clamp(28px, 5vw, 60px) 20px;min-height:72px}
 .tearoff .btn{min-height:46px;font-size:var(--s-small)}
+.tearoff .tlink{padding-block:10px}
 
 /* ---------- footer: the back of the card ---------- */
 .foot{padding-bottom:max(24px, env(safe-area-inset-bottom, 0px))}
@@ -282,7 +283,7 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 .back .msg p{margin-top:14px;font-size:var(--s-body);line-height:1.65;max-width:40ch}
 .back .addr{position:relative;padding-top:8px}
 .back .addr ul{display:grid;gap:12px;font-size:var(--s-body);list-style:none;margin:0;padding:0;padding-inline-end:110px}
-.back .addr a{text-decoration:none}
+.back .addr a{text-decoration:none;display:inline-block;padding-block:6px}
 .back .addr a:hover{text-decoration:underline}
 .stamp{position:absolute;top:0;inset-inline-end:0;width:88px;padding:6px;background:#F7EBCB;transform:rotate(3deg)}
 .stamp img{width:100%;aspect-ratio:3 / 4;object-fit:cover}
@@ -295,6 +296,11 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
    Scroll: every part enters on its own scroll timeline (visible by default, so nothing can stay hidden),
    the reply card settles, the receipts print row by row, the folio crossfades and drifts. */
 @media (prefers-reduced-motion: no-preference){
+  .btn,.rcard .go{transition:transform 160ms var(--ease-out),background-color 200ms ease}
+  .btn:active{transform:scale(.97)}
+  .rcard .go:active{transform:scale(.98)}
+  .slip{transition:transform 280ms var(--ease-out),background-color 200ms ease}
+  .js .sheet.fresh > *{animation-name:page-in;animation-duration:420ms;animation-timing-function:var(--ease-out)}
   .js .stripe i{animation:bar 700ms var(--ease-out) both;animation-delay:calc(var(--n) * 18ms)}
   .js [data-rise]{opacity:0;transform:translateY(22px);animation:rise 900ms var(--ease-out) forwards;animation-delay:calc(var(--i,0) * 90ms + 200ms)}
   .js .card .wm{clip-path:inset(0 0 0 100%);animation:ink 1400ms var(--ease-io) 250ms forwards}
@@ -307,6 +313,7 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
     .fsheet figure img{animation:breathe linear both;animation-timeline:view();animation-range:cover 0% cover 100%}
   }
 }
+@keyframes page-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes bar{from{transform:scaleY(0)}to{transform:none}}
 @keyframes rise{to{opacity:1;transform:none}}
 @keyframes ink{to{clip-path:inset(0)}}
@@ -362,6 +369,7 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
   .fsheet .txt > *:not(h3){padding-inline:20px}
   .fsheet .p{font-size:17px}
   .fsheet .meas{padding-bottom:28px}
+  .fsheet .tools{padding-bottom:44px}
   .count .left,.count .receipt{grid-column:1 / -1}
   .count .total b{font-size:40vw}
   .count .receipt{margin-top:40px}
@@ -423,10 +431,7 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
     </nav>
   </div>
   <figure class="folio" id="folio">
-    <img src="assets/alfiyya.jpg" width="1600" height="1131" alt="صفحتان من مخطوط شرحٍ على ألفية ابن مالك، يتوسّط المتنُ الصفحة وتحيط به الحواشي من كل جهة" data-cap="شرحٌ على ألفية ابن مالك: المتن في الوسط، وحوله حواشٍ تُسنده وتراجعه. على هذا كُتب العلم، وعليه تعمل الأداة.">
-    <img src="assets/hashiya.jpg" width="948" height="1600" alt="صفحة من مخطوط ملتقى الأبحر، متنها في الوسط وفي هوامشها تعليقات بالحبر الأسود والأحمر" decoding="async" data-cap="«ملتقى الأبحر» لإبراهيم الحلبي، نسخة 1679م، وفي هوامشها تعليقات القرّاء.">
-    <img src="assets/qamus.jpg" width="1600" height="1224" alt="فاتحة مخطوط القاموس المحيط للفيروزآبادي، وإلى جانبها فهرس أبوابه بأرقام صفحاتها" decoding="async" data-cap="القاموس المحيط للفيروزآبادي: الفاتحة المذهّبة، وفهرس أبوابه بأرقام صفحاتها. مجموعة خليلي.">
-    <img src="assets/kufic.jpg" width="1600" height="1113" alt="ورقة من مصحف بالخط الكوفي على رقّ، بنقط الإعراب الحمراء" decoding="async" data-cap="ورقة من مصحف بالخط الكوفي على رقّ، من القرن الثاني أو الثالث للهجرة، والنقط الحمر علامات إعرابه.">
+    <img src="assets/alfiyya.jpg" width="1600" height="1131" fetchpriority="high" alt="صفحتان من مخطوط شرحٍ على ألفية ابن مالك، يتوسّط المتنُ الصفحة وتحيط به الحواشي من كل جهة" data-cap="شرحٌ على ألفية ابن مالك: المتن في الوسط، وحوله حواشٍ تُسنده وتراجعه. على هذا كُتب العلم، وعليه تعمل الأداة.">
     <figcaption class="cap" id="fcap" aria-live="polite">شرحٌ على ألفية ابن مالك: المتن في الوسط، وحوله حواشٍ تُسنده وتراجعه. على هذا كُتب العلم، وعليه تعمل الأداة.</figcaption>
   </figure>
 </section>
@@ -445,7 +450,7 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 
 <!-- samples: real output on slips, and the open page they make -->
 <section class="samples" id="samples" aria-labelledby="t-samples">
-  <video class="bgimg" id="qalam" autoplay muted loop playsinline preload="metadata" poster="assets/qalam.jpg" width="854" height="356" aria-label="يد خطّاط تكتب «والقلم» بقصبة على ورق"><source src="assets/qalam.webm" type="video/webm"><source src="assets/qalam.mp4" type="video/mp4"></video>
+  <video class="bgimg" id="qalam" muted loop playsinline preload="none" poster="assets/qalam.jpg" width="854" height="356" aria-label="يد خطّاط تكتب «والقلم» بقصبة على ورق"><source src="assets/qalam.webm" type="video/webm"><source src="assets/qalam.mp4" type="video/mp4"></video>
   <div class="top-area wrap">
     <div class="say" data-reveal>
       <h2 id="t-samples">من الكتاب، بالجزء والصفحة</h2>
@@ -797,11 +802,38 @@ const SAMPLES = [
 
 // ---------- the folio: slow crossfade between manuscripts, with its caption ----------
 (() => {
-  const imgs = [...document.querySelectorAll('#folio img')], cap = document.getElementById('fcap');
-  imgs[0].classList.add('on');
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches || imgs.length < 2) return;
+  const folio = document.getElementById('folio'), cap = document.getElementById('fcap');
+  folio.querySelector('img').classList.add('on');
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  // the other manuscripts join the folio only here, so the page loads with the first one alone
+  const MORE = [
+    { src: "assets/hashiya.jpg", w: 948, h: 1600,
+      alt: "صفحة من مخطوط ملتقى الأبحر، متنها في الوسط وفي هوامشها تعليقات بالحبر الأسود والأحمر",
+      cap: "«ملتقى الأبحر» لإبراهيم الحلبي، نسخة 1679م، وفي هوامشها تعليقات القرّاء." },
+    { src: "assets/qamus.jpg", w: 1600, h: 1224,
+      alt: "فاتحة مخطوط القاموس المحيط للفيروزآبادي، وإلى جانبها فهرس أبوابه بأرقام صفحاتها",
+      cap: "القاموس المحيط للفيروزآبادي: الفاتحة المذهّبة، وفهرس أبوابه بأرقام صفحاتها. مجموعة خليلي." },
+    { src: "assets/kufic.jpg", w: 1600, h: 1113,
+      alt: "ورقة من مصحف بالخط الكوفي على رقّ، بنقط الإعراب الحمراء",
+      cap: "ورقة من مصحف بالخط الكوفي على رقّ، من القرن الثاني أو الثالث للهجرة، والنقط الحمر علامات إعرابه." }
+  ];
+  const imgs = [folio.querySelector('img'), ...MORE.map((m) => {
+    const im = document.createElement('img');
+    im.width = m.w; im.height = m.h; im.alt = m.alt; im.decoding = 'async';
+    im.dataset.src = m.src; im.dataset.cap = m.cap;
+    folio.insertBefore(im, cap); return im;
+  })];
   let i = 0, timer = null;
-  const step = () => { imgs[i].classList.remove('on'); i = (i + 1) % imgs.length; imgs[i].classList.add('on'); cap.textContent = imgs[i].dataset.cap; };
+  // only the first manuscript loads with the page; each next one is fetched a step ahead and shown once it has arrived
+  const fetchImg = (k) => { const im = imgs[k]; if (!im.getAttribute('src') && im.dataset.src) im.src = im.dataset.src; };
+  const ready = (im) => im.getAttribute('src') && im.complete && im.naturalWidth > 0;
+  const step = () => {
+    const n = (i + 1) % imgs.length;
+    if (!ready(imgs[n])) { fetchImg(n); return; }
+    imgs[i].classList.remove('on'); i = n; imgs[i].classList.add('on'); cap.textContent = imgs[i].dataset.cap;
+    fetchImg((i + 1) % imgs.length);
+  };
+  addEventListener('load', () => fetchImg(1), { once: true });
   const run = () => { if (!timer) timer = setInterval(step, 6000); };
   const stop = () => { clearInterval(timer); timer = null; };
   const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && !document.hidden ? run() : stop()));
