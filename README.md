@@ -547,7 +547,7 @@ flowchart LR
 
 **الإضافة لتطبيق Claude (اختيارية):** بعد التثبيت، نزّل [`arabiyya.mcpb`](https://github.com/ikagi07/arabiyya-mcp/raw/main/arabiyya.mcpb) وانقره نقرتين، ثم اضغط «تثبيت». فتظهر الأداة في إضافات Claude باسمها وأيقونتها، وتُدار وتُحذف من الإعدادات. والإضافة غلاف خفيف يشغّل الأداة المثبّتة على الجهاز (مصدره في `extension/`)، فإن ثُبّتت أزال ملف التثبيت السطر اليدوي من إعدادات Claude تفاديًا للتكرار.
 
-**في Claude Code (Plugin):** تُثبَّت الأداة ومعها مهارات تعلّم Claude استعمالها (`arabiyya`، و`irab` لإعراب يراجع فيه Claude ما رجّحته الآلة ويصحّحه، و`wujuh-irab` لوجوه الإعراب بمصادرها، و`setup` للتجهيز):
+**في Claude Code (Plugin):** تُثبَّت الأداة ومعها مهارات تعلّم Claude استعمالها (`arabiyya`، و`irab` لإعراب يراجع فيه Claude ما رجّحته الآلة ويصحّحه، و`wujuh-irab` لوجوه الإعراب بمصادرها، و`sarf` للميزان والإعلال والتصريف، و`arud` للتقطيع والقافية، و`takhrij` لتخريج الشاهد ونسبته، و`muajam` للمعاجم والفروق، و`setup` للتجهيز):
 
 ```
 /plugin marketplace add ikagi07/arabiyya-mcp
@@ -721,7 +721,7 @@ flowchart LR
 **Stylometry**
 - Keyness, standardized TTR and Jaccard overlap, and authorship attribution with Burrows's Delta and Cosine Delta.
 
-**Install.** Windows and macOS installers set up the Python environment and data (see the Arabic section). In Claude Code it also installs as a plugin, with skills for tool use, full *iʿrāb* (Claude reviews and corrects what the parser guessed), *wujūh al-iʿrāb* (grammarians' views on a contested position, cited by volume and page) and first-run setup:
+**Install.** Windows and macOS installers set up the Python environment and data (see the Arabic section). In Claude Code it also installs as a plugin, with skills for tool use, full *iʿrāb* (Claude reviews and corrects what the parser guessed), *wujūh al-iʿrāb* (grammarians' views on a contested position, cited by volume and page), morphology (*ṣarf*), prosody and rhyme (*ʿarūḍ*), verse attribution (*takhrīj*), the classical dictionaries (*muʿjam*), and first-run setup:
 
 ```
 /plugin marketplace add ikagi07/arabiyya-mcp
