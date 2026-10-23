@@ -601,6 +601,21 @@ def _musarra(r, sadr_text: str) -> bool:
 
 _MUSARRA_NOTE = "البيت مصرَّع: جاءت عروضه على صورة ضربه، وهو جائز في المطلع وفي كل بيت صُرِّع."
 
+# مجزوء الوافر إذا عُصبت تفعيلاته كلها (مفاعلْتن) صار على لفظ الهزج (مفاعيلن)، ولا يفرق بينهما إلا «مفاعَلَتن» سالمة.
+# والمحلل يقدّم الوافر فيه؛ وعلى 40 بيتًا من كل بحر في «أشعار»: 13 من الهزج على هذا اللفظ، وبيت واحد من الوافر.
+_HAZAJ_NOTE = ("جاءت تفعيلاته كلها على «مفاعيلن» أو «مفاعيلُ»، فيحتمل مجزوء الوافر إذا عُصبت تفعيلاته كلها، "
+               "ولا يفرق بينهما إلا «مفاعَلَتن» سالمة في سائر القصيدة. وقُدّم الهزج لأن الوافر لا يأتي على هذا اللفظ "
+               "إلا بالعصب في كل تفعيلة.")
+_HAZAJ_POEM_NOTE = ("القصيدة على الهزج: لم تأتِ في بيت منها «مفاعَلَتن» سالمة، فتفعيلاتها كلها «مفاعيلن» أو «مفاعيلُ». "
+                    "ويحتمل لفظها مجزوء الوافر إذا عُصبت تفعيلاته كلها، والوافر لا يأتي عليه إلا بالعصب في كل تفعيلة.")
+
+
+def _asb_only(r) -> bool:
+    """كل شطر من البيت المقطَّع على الوافر على لفظ الهزج: «مفاعيلن» أو «مفاعيلُ» ثم «مفاعيلن» (بالرموز، لأن المحلل يسمّي
+    الضرب المعصوب «سالمًا» إذ يعدّه صورة من صور الضرب)؛ فلا «مفاعَلَتن» سالمة ولا معقولة."""
+    pats = [s.pattern for s in (r.sadr, r.ajuz) if s]
+    return bool(pats) and all(re.fullmatch(r"(?:1101010|110101)1101010", p or "") for p in pats)
+
 
 @mcp.tool()
 def scan_verse(verse: str, meter: str | None = None, auto_diacritize: bool = True) -> dict:
@@ -624,6 +639,13 @@ def scan_verse(verse: str, meter: str | None = None, auto_diacritize: bool = Tru
         fitted, changes, r2 = _fit_meter(orig_parts, parts, meter)
         if r2 is not None and changes and (r2.is_valid, r2.score) > (r.is_valid, r.score):
             parts, r = fitted, r2
+    hazaj = False
+    if meter is None and r.meter_name_ar in ("مجزوء الوافر", "بحر الهزج") and _asb_only(r):
+        if r.meter_name_ar == "مجزوء الوافر":
+            h = pyarud.analyze_verse(parts[0], parts[1] if len(parts) > 1 else "", forced_meter="hazaj")
+            if h.is_valid and h.score >= r.score - 0.01:
+                r = h
+        hazaj = r.meter_name_ar == "بحر الهزج"
     out = {
         "البحر": r.meter_name_ar,
         "نوعه": BAHR_TYPE.get(str(r.bahr_type), r.bahr_type),
@@ -650,6 +672,8 @@ def scan_verse(verse: str, meter: str | None = None, auto_diacritize: bool = Tru
         out["التصريع"] = _MUSARRA_NOTE
     elif r.errors:
         out["ملاحظات المحلل"] = [str(e) for e in r.errors]
+    if hazaj:
+        out["بحر محتمل"] = {"البحر": "مجزوء الوافر", "السبب": _HAZAJ_NOTE}
     out["النص المقطَّع"] = " * ".join(parts)
     if changes:
         out["ضبط موجَّه بالوزن"] = changes
@@ -1863,6 +1887,14 @@ def _prepare_poem(poem: str, meter: str | None, auto_diacritize: bool):
                     fixed[i + 1] = ch
         if fixed:
             r = pyarud.analyze_poem(prepared, forced_meter=meter) if meter else pyarud.analyze_poem(prepared)
+    wv = [v for v in r.verses if v.meter_name_ar in ("مجزوء الوافر", "بحر الهزج")]
+    if not meter and r.meter_key in ("wafer", "hazaj") and wv and 2 * len(wv) >= len(r.verses) and all(_asb_only(v) for v in wv):
+        if r.meter_key == "wafer":
+            h = pyarud.analyze_poem(prepared, forced_meter="hazaj")
+            if sum(v.is_valid for v in h.verses) >= sum(v.is_valid for v in r.verses):
+                r = h
+        if r.meter_key == "hazaj":
+            notes.add(_HAZAJ_POEM_NOTE)
     if fixed:
         notes.add(f"وعُدّل ضبط كلمات في {len(fixed)} بيتًا ليستقيم على البحر الغالب (انظر «ضبط موجَّه بالوزن»)، وهو ضبطٌ يقتضيه العروض لا روايةٌ محققة.")
     return verses, prepared, r, fixed, notes
@@ -3302,7 +3334,7 @@ def _sign(w, f, case_or_mood: str) -> str:
     """علامة الإعراب الأصلية أو الفرعية بحسب نوع الكلمة."""
     t = _strip_tashkeel(w.text or "")
     num, gen = f.get("Number"), f.get("Gender")
-    if w.upos == "VERB":
+    if w.upos in ("VERB", "AUX") or case_or_mood in ("Ind", "Sub", "Jus"):   # «لم يكنِ»: يسمّه المحلل AUX
         five = t.endswith(("ون", "ين", "ان")) and f.get("Person") in ("2", "3") and num in ("Plur", "Dual") or \
             (t.endswith("ين") and gen == "Fem" and f.get("Person") == "2")
         if case_or_mood == "Ind":
@@ -3639,6 +3671,40 @@ def _vowel_at(bases, end) -> str:
     return None
 
 
+_KANA_FORMS = {_norm(x) for x in ("كان", "كانت", "كانوا", "كنت", "كنا", "كنتم", "كن", "يكن", "تكن", "أكن", "نكن", "يكون",
+                                   "تكون", "أكون", "نكون", "يكونوا", "تكونوا", "يكونا", "تكونا", "ليس", "ليست", "لست", "لسنا", "ليسوا")}
+
+
+# صيغ الغائب التي يليها اسمها ظاهرًا؛ أما «كنتُ» و«كانوا» ونحوهما فاسمها الضمير، وما بعدها خبرها
+_KANA_GHAIB = {_norm(x) for x in ("كان", "كانت", "يكن", "يكون", "ليس", "ليست", "صار", "أصبح", "أمسى", "أضحى", "ظل", "بات")}
+
+
+def _kana_before(toks_before):
+    """أقرب فعل قبل الاسم، إن كان من «كان» وأخواتها («لم يكنِ الظالمُ»): نصّه؛ وإلا None."""
+    for x in reversed(toks_before):
+        vs = [w for w in x.words if w.upos in ("VERB", "AUX")]
+        if vs:
+            v = vs[-1]
+            vt = _strip_tashkeel(v.text)
+            kana = _bare_ar(v.lemma) in {_norm(y) for y in _NASIKH_KANA} or _norm(vt) in _KANA_FORMS
+            return vt if kana else None
+    return None
+
+
+def _juhud_before(toks_before) -> bool:
+    """قبل اللام «كان» منفية بـ«ما» أو «لم» («ما كان الله ليعذبهم»، «لم يكن الظالم ليفلح»): فهي لام الجحود."""
+    for i in range(len(toks_before) - 1, -1, -1):
+        x = toks_before[i]
+        xt = _norm(_strip_tashkeel(x.text))
+        if not (xt in _KANA_FORMS or any(w.upos in ("VERB", "AUX") for w in x.words)):
+            continue
+        if xt not in _KANA_FORMS and not _kana_before([x]):
+            return False                       # أقرب فعل ليس «كان»
+        neg = [_strip_tashkeel(y.text) for y in toks_before[max(0, i - 2):i]]
+        return any(n.lstrip("وف") in ("ما", "لم") for n in neg)
+    return False
+
+
 def _irab_haraka_rules(doc, sentence: str):
     """إذا شكل المستخدم الجملة فحركاته حكمٌ مقدَّم على تقدير المحلل، وبها يُفرَّق:
     لام الأمر (بعدها مجزوم) من لام التعليل (بعدها منصوب بأن مضمرة جوازًا)؛
@@ -3758,6 +3824,9 @@ def _irab_haraka_rules(doc, sentence: str):
                     _set_feat(verb, "Mood", mood)
                     if mood == "Jus":
                         lam_ar = "اللام لام الأمر حرف جزم مبني على " + ("السكون" if wf else "الكسر") + " لا محل له من الإعراب"
+                    elif _juhud_before(toks[:k]):
+                        lam_ar = "اللام لام الجحود حرف جر مبني على الكسر، والمصدر المؤول من «أن» المضمرة والفعل في محل جر بها"
+                        verb.mood_note = "بأن مضمرة وجوبًا بعد لام الجحود"
                     else:
                         lam_ar = "اللام لام التعليل حرف جر مبني على الكسر، والمصدر المؤول من «أن» المضمرة والفعل في محل جر بها"
                         verb.mood_note = "بأن مضمرة جوازًا بعد لام التعليل"
@@ -4381,15 +4450,37 @@ def _irab_syntax_rules(doc, sentence: str):
                 n.deprel = "obj"
                 _set_feat(n, "Case", "Acc")
 
-            # ── المرفوع المشكول لا يكون مفعولًا: بعد «إنّ/أنّ» واسمها خبرها، وإلا ففاعل ──
+            # ── المرفوع المشكول لا يكون مفعولًا: بعد «إنّ/أنّ» واسمها خبرها، وبعد «كان» وأخواتها اسمها، وبعد «إذا» الفجائية مبتدأ، وإلا ففاعل ──
             if nominal(n) and vowel(tok) == "u" and (n.deprel or "") == "obj" and not getattr(n, "role_override", None):
                 inna = next((bare(x) for x in toks[:k] if bare(x) in _NASIKH_INNA), None)
-                n.role_override = f"خبر «{_NASIKH_INNA[inna]}»" if inna else "فاعل"
+                kana = _kana_before(toks[:k])
+                n.role_override = f"خبر «{_NASIKH_INNA[inna]}»" if inna else f"اسم {kana}" if kana else "فاعل"
                 _set_feat(n, "Case", "Nom")
+
+            # ── الاسم بعد «كان» وأخواتها مسندةً إلى الغائب اسمُها («لم يكنِ الظالمُ ليفلحَ»)، والمحلل قد يجعله فاعلًا لفعل بعده ──
+            if len(words) == 1 and nominal(n) and _norm(pt) in _KANA_GHAIB and vowel(tok) != "a" and not tanwin(tok) \
+                    and not getattr(n, "role_override", None):
+                n.role_override = f"اسم {pt}"
+                _set_feat(n, "Case", "Nom")
+
+            # ── «مذ» و«منذ» قبل المرفوع ظاهرًا («مذ يومان»): اسمان مبتدآن وما بعدهما خبر، لا حرفا جر ──
+            if t in ("مذ", "منذ") and nxt is not None:
+                n2, nb = main_word(nxt), bare(nxt)
+                if nominal(n2) and (vowel(nxt) == "u" or (len(nb) > 3 and nb.endswith(("ان", "ون")))):
+                    w.upos = "NOUN"
+                    w.irab_override = f"اسم مبني على {'السكون' if t == 'مذ' else 'الضم'} في محل رفع مبتدأ (وقيل خبر مقدم)"
+                    n2.role_override = "خبر (وقيل مبتدأ مؤخر)"
+                    _set_feat(n2, "Case", "Nom")
+                    if (n2.deprel or "") in ("obl", "nmod"):
+                        n2.deprel = "dep"
 
             # ── «إذا» الفجائية، والضمير المنفصل المنصوب بعدها في المسألة الزنبورية ──
             if core == "إذا" and prefix == "ف":
                 words[-1].irab_override = "«إذا» الفجائية حرف مفاجأة مبني على السكون لا محل له من الإعراب (وقيل ظرف)"
+                n3 = main_word(nxt) if nxt is not None else None      # لا يليها إلا الجملة الاسمية
+                if n3 is not None and len(nxt.words) == 1 and nominal(n3) and vowel(nxt) != "a" and not getattr(n3, "role_override", None):
+                    n3.role_override = "مبتدأ"
+                    _set_feat(n3, "Case", "Nom")
             if t in ("إياها", "إياه", "إياهم") and k >= 2 and bare(toks[k - 2]).endswith("إذا"):
                 w.irab_override = "ضمير منفصل مبني في محل نصب، أجازه الكسائي؛ والوجه عند سيبويه «فإذا هو هي» بالرفع خبرًا"
 
@@ -4561,10 +4652,16 @@ def _irab_snapshot(w):
     return w.head          # تغيير العامل قاعدةٌ في البنية؛ أما تغيير العلاقة وحدها («منصوب فهو مفعول به») فظنّ
 
 
+# حروف الجر التي لا تكون إلا حروفًا: ما يسمّيه المحلل حرف جر منها يقين. وليس منها «مذ» و«منذ» (اسمان قبل المرفوع)،
+# ولا «خلا» و«عدا» و«حاشا» (أفعال إذا نصبت)، ولا «سوى» (اسم)، فهذه يبقى فيها ترجيح المحلل.
+_HURUF_JARR = {_norm(x) for x in ("من", "إلى", "عن", "على", "في", "ب", "ل", "ك", "رب", "حتى", "و", "ت", "كي")}
+
+
 def _irab_certainty(w, before, standalone: bool) -> str:
     """«بقاعدة» إن حسمت قاعدةٌ بابَ الكلمة، أو كانت حرف جر، أو حرف عطف مستقلًّا؛ وإلا فـ«ترجيح آلي».
     حركة المستخدم وحدها تحسم الحكم لا الباب («نفسًا» منصوبة، أمفعول هي أم تمييز؟)، فلا تكفي."""
-    if w.upos == "ADP" or w.deprel == "case" or (standalone and (w.upos == "CCONJ" or w.deprel == "cc")):
+    jarr = (w.upos == "ADP" or w.deprel == "case") and _bare_ar(w.text) in _HURUF_JARR
+    if jarr or (standalone and (w.upos == "CCONJ" or w.deprel == "cc")):
         return "بقاعدة"                      # الواو المتصلة قد يقتطعها المحلل من الكلمة («ورثة»)، فلا تُحسم
     if any(getattr(w, a, None) for a in _RULE_ATTRS) or (before is not None and before != _irab_snapshot(w)):
         return "بقاعدة"
@@ -4634,7 +4731,7 @@ def irab(sentence: str, detail: bool = True) -> dict:
 # علامة في وصف الإعراب ← مفتاح التركيب في سجلّ الوجوه (data/khilaf/wujuh.jsonl)
 _KHILAF_MARKS = [
     ("مفعول معه", "مفعول معه"), ("بعد واو المعية", "مضارع بعد واو المعية"), ("بعد فاء السببية", "مضارع بعد فاء السببية"),
-    ("بعد لام التعليل", "مضارع بعد لام التعليل"), ("اسم «لا» النافية للجنس", "اسم لا النافية للجنس"),
+    ("بعد لام التعليل", "مضارع بعد لام التعليل"), ("بعد لام الجحود", "لام الجحود"), ("اسم «لا» النافية للجنس", "اسم لا النافية للجنس"),
     ("منادى مفرد علم", "المنادى المفرد العلم"), ("لإنشاء المدح", "نعم وبئس"), ("لإنشاء الذم", "نعم وبئس"),
     ("لإنشاء التعجب", "التعجب"), ("«ما» التعجبية", "ما التعجبية"), ("المخصوص ب", "المخصوص بالمدح"), ("مفعول به لفعل محذوف وجوبًا يفسّره", "الاشتغال"),
     ("فاعل لفعل محذوف يفسّره", "الاسم بعد إن الشرطية"), ("ضمير فصل", "ضمير الفصل"), ("اسم شرط", "اسم الشرط مبتدأ"),
@@ -4660,6 +4757,9 @@ def _khilaf_positions(sentence: str) -> list:
             keys.append("الاسم بعد لولا")
         if prev == "إلا" and "بدل" in d:
             keys.append("الإتباع بعد إلا")       # المرفوع بعد «إلا»: وجه الإتباع، لا مسألة عامل النصب
+        nd = descs[i + 1][1] if i + 1 < len(descs) else ""
+        if d.startswith("مبتدأ") and "فعل" in nd and "في محل رفع خبر" in nd and "ضمير متصل مبني في محل نصب مفعول به" in nd:
+            keys.append("الاشتغال بالرفع")       # «العلمُ طلبتُه»: وجه الرفع والنصب، لا مسألة ناصب المشغول عنه
         if "اسم استفهام" in d and i + 1 < len(descs) and _strip_tashkeel(descs[i + 1][0]) == "ذا":
             keys.append("من ذا")
         if "معطوف" in d and any(_strip_tashkeel(x)[:2] in ("إن", "أن") and "حرف ناسخ" in y for x, y in descs[:i]) \

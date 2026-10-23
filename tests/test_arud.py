@@ -28,6 +28,24 @@ class TestMusarra(unittest.TestCase):
         self.assertNotIn("التصريع", r)
 
 
+class TestHazajWafir(unittest.TestCase):
+    # مجزوء الوافر إذا عُصبت تفعيلاته كلها صار على لفظ الهزج؛ ولا يفرق بينهما إلا «مفاعَلَتن» سالمة
+    def test_all_mafailun_is_hazaj_with_note(self):
+        r = M.scan_verse("وَعَهدي بِصُحونَ الدا * ر تَمشي بَينَها الشَمسُ")  # أشجع السلمي، من الهزج
+        self.assertEqual(r["البحر"], "بحر الهزج")
+        self.assertEqual(r["بحر محتمل"]["البحر"], "مجزوء الوافر")
+
+    def test_mufaalatun_stays_wafir(self):
+        r = M.scan_verse("فَأَربَعَةٌ لِأَربَعَةٍ * لِكُلِّ طَبيعَةٍ رِطلُ")  # أبو نواس: مفاعَلَتن سالمة
+        self.assertEqual(r["البحر"], "مجزوء الوافر")
+        self.assertNotIn("بحر محتمل", r)
+
+    def test_poem_decides_by_all_verses(self):
+        hz = "إِلَى كَمْ نَحْنُ فِي ضِيقٍ * وَفِي عَزْلٍ وَفِي أَزْلِ"
+        self.assertEqual(M.scan_poem("وَعَهدي بِصُحونَ الدا * ر تَمشي بَينَها الشَمسُ\n" + hz)["البحر الغالب"], "بحر الهزج")
+        self.assertEqual(M.scan_poem("فَأَربَعَةٌ لِأَربَعَةٍ * لِكُلِّ طَبيعَةٍ رِطلُ\n" + hz)["البحر الغالب"], "بحر الوافر")
+
+
 class TestScanPoem(unittest.TestCase):
     def test_poem_with_musarra_opening(self):
         p = M.scan_poem(SHAWQI + "\nأَعَلِمْتَ أَشْرَفَ أَوْ أَجَلَّ مِنَ الَّذِي * يَبْنِي وَيُنْشِئُ أَنْفُسًا وَعُقُولا")
