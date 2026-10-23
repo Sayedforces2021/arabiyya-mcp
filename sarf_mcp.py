@@ -2988,7 +2988,7 @@ def mizan(word: str, context: str | None = None) -> dict:
     vocalized = any(c in HARAKAT for c in w)
     all_analyses = analyses
     if vocalized:  # ما ضبطه السائل حَكَمٌ على قراءات المحلّل: «مَوازِن» بالفتح لا تُقرأ «مُوازِن»
-        analyses = [a for a in analyses if I.vowels_agree(w, a.get("diac") or "")]
+        analyses = [a for a in analyses if I.vowels_agree(w, a.get("diac") or "") and I.shadda_agrees(w, a.get("diac") or "")]
     readings, seen = [], set()
     for a in analyses[:12]:
         diac = a.get("diac") or ""
@@ -4843,6 +4843,8 @@ _ATTR_TRIGGER = re.compile(r"(?:^|\s)(?:و|ف)?(?:قال|قول|كقول|لقو�
 _ATTR_STOP = {"في", "يصف", "يمدح", "يرثي", "يذكر", "يهجو", "يفخر", "يخاطب", "من", "وهو", "حين", "لما", "وقد", "ابياتا",
               "بيتا", "قصيدته", "معلقته", "قصيدة", "شعرا", "رحمه", "رضي", "عليه", "الله", "تعالي"}
 _ATTR_ANON = {"الشاعر", "الاخر", "اخر", "بعضهم", "الراجز", "رجل", "القاءل", "الشعراء", "بعض", "قاءل", "فيه", "فيها",
+              "الاول", "غيره", "احدهم", "شاعر", "اعرابي", "الاعرابي", "اعرابيه", "الحماسي", "القدماء", "المتقدمين",
+              "الذي", "التي", "الذين", "قاءله", "متمثلا", "متمثل", "يتمثل", "تمثلا",
               "تعالي", "الله", "النبي", "رسول", "ايضا", "فيهم", "لهم", "له", "لي", "عنه", "المصنف", "الشيخ", "المصنف", "الشارح", "المؤلف", "ابن", "هذا", "ذلك"}
 _ATTR_CASE = {"ابي": "ابو", "ابا": "ابو", "امريء": "امرء", "امري": "امرء", "امرا": "امرء", "ذا": "ذو", "ذي": "ذو"}
 _ATTR_ALIAS = {"ابو الطيب": "المتنبي", "ابو العلاء": "المعري", "ابو فراس": "ابو فراس", "حبيب": "ابو تمام",
@@ -4865,23 +4867,34 @@ def _attribution_in_books(ref: list, hits: dict, names: dict | None = None) -> l
     ولا يُحصى «قال الشاعر» و«قال الآخر» (بلا تسمية). names: {مفتاح النسبة: اسم الشاعر كما في «أشعار»} لعرض الاسم تامًّا."""
     if len(ref) < 2:
         return []
-    pat = re.compile(r"\W+".join(re.escape(t) for t in ref[:2]))
+    # الواو والفاء في أول البيت تختلف بين الروايات: «فعين الرضا» في «أشعار» و«وعين الرضا» في الكتب
+    t0 = ref[0][1:] if len(ref[0]) > 2 and ref[0][0] in "وف" else ref[0]
+    pat = re.compile(r"(?<![ء-ي])[وف]?" + re.escape(t0) + r"\W+" + re.escape(ref[1]))
     agg = {}
     for pid, (died, title, author, genre, vol, page, text) in hits.items():
         nt = _norm(_strip_tashkeel(text))
-        m = pat.search(nt)
-        if not m:
+        # كل مواضع البيت في الفقرة، لا أولها وحده: قد يرد أولًا في عنوان باب («[عين الرضا وعين السخط]» في «الحيوان»)
+        found = None
+        for m in pat.finditer(nt):
+            before = nt[max(0, m.start() - 400):m.start()]
+            trig = list(_ATTR_TRIGGER.finditer(before))
+            if not trig:
+                continue
+            tail = before[trig[-1].end():]
+            nw = len(re.findall(r"[ء-ي]+", tail))
+            # بين «قال» والبيت كلام كثير: ليست نسبة، إلا أن يكون أبياتًا قبله من القطعة نفسها (يفصل شطريها «...»)
+            # بصيغة نسبة صريحة («قال فلان:»)، لا «لقول» الواقعة في الشعر نفسه («فلم أجزع لقول عداتي»)
+            if nw <= 8 or (nw <= 70 and tail.count("...") * 18 >= nw
+                           and re.match(r"\s*(?:[ء-ي]+\s+){0,9}[ء-ي]+\s*[:\[(]", tail)):  # «عبد الله بن معاوية بن عبد الله بن جعفر:»
+                found = (trig, tail)
+                break
+        if not found:
             continue
-        before = nt[max(0, m.start() - 90):m.start()]
-        trig = list(_ATTR_TRIGGER.finditer(before))
-        if not trig:
-            continue
-        tail = before[trig[-1].end():]
-        if len(re.findall(r"[ء-ي]+", tail)) > 8:     # بين «قال» والبيت كلام كثير: ليست نسبة
-            continue
+        trig, tail = found
         name = []
         for w in re.findall(r"[ء-ي]+|[:\[(«]", tail):
-            if w in ":[(«" or w in _ATTR_STOP or len(name) >= 5:
+            # «الله» توقف الاسم في «رحمه الله»، لا في «عبد الله بن معاوية»
+            if w in ":[(«" or (w in _ATTR_STOP and not (w == "الله" and name and name[-1] in ("عبد", "عبيد"))) or len(name) >= 5:
                 break
             name.append(w)
         if name and name[0].startswith("ل") and trig[-1].group(0).strip().endswith(("انشد", "انشده", "انشدنا", "انشدني")):
@@ -5028,7 +5041,9 @@ def takhrij_shahid(verse: str, limit: int = 8, citations: bool = True) -> dict:
                 tk = _attr_key(_ntoks(top["الشاعر"]))
                 alt = next((v2 for sc2, v2, _t2 in (allc if "allc" in locals() else [])
                             if sc2 >= 0.85 and not _is_quotation(v2[0], v2[4]) and _attr_key(_ntoks(v2[3] or "")) == tk), None)
-                if alt is not None and isinstance(nis, dict):
+                # لا تُقدَّم إلا نسبةٌ راجحة في الكتب، لا متعادلة مع غيرها («لسان الفتى نصف»: زهير والأعور الشني 5 و5)
+                clear = len(books_attr) == 1 or books_attr[1]["عدد الكتب"] < top["عدد الكتب"]
+                if alt is not None and isinstance(nis, dict) and clear:
                     out["النسبة"] = {"الشاعر": alt[3], "العصر": alt[6], "القصيدة": alt[4], "البحر": alt[5], "رقم البيت": alt[2],
                                      "نص البيت": f"{alt[0]} * {alt[1]}", "نسبة التطابق": round(_sim(q, _ntoks(alt[0] + " " + alt[1])) if len(q) > len(_ntoks(alt[0] + " " + alt[1])) * 0.7 else max(_sim(q, _ntoks(alt[0])), _sim(q, _ntoks(alt[1]))), 2)}
                     out["تنبيه النسبة"] = (f"قُدّمت نسبة كتب المدوّنة: نسبته إلى «{top['الشاعر']}» {top['عدد الكتب']} كتبٍ أقدمها {top['أقدمها']}، "

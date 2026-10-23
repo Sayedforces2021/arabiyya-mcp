@@ -25,5 +25,25 @@ class TestAttribution(unittest.TestCase):
         self.assertEqual(self.poet("أضاعوني وأي فتى أضاعوا"), "العرجي")
 
 
+@unittest.skipUnless(HAVE_DATA, "فهرس الشعر أو المدوّنة غير مبني")
+class TestAttributionInBooks(unittest.TestCase):
+    def books(self, verse):
+        return M.takhrij_shahid(verse, limit=4).get("قائله في كتب المدوّنة", [])
+
+    def test_full_name_and_early_books(self):
+        # «عبد الله بن معاوية» كان يُقطع «عبد» عند «الله»، و«الحيوان» يرد فيه البيت أولًا في عنوان باب،
+        # و«عيون الأخبار» يسمّي الشاعر قبل بيتين من القطعة
+        b = self.books("وعين الرضا عن كل عيب كليلة ولكن عين السخط تبدي المساويا")
+        self.assertEqual(b[0]["الشاعر"], "عبد الله بن معاوية")
+        self.assertGreaterEqual(b[0]["عدد الكتب"], 4)
+        self.assertIn("الحيوان", b[0]["أقدمها"])
+
+    def test_no_anonymous_names(self):
+        for v in ("وعين الرضا عن كل عيب كليلة ولكن عين السخط تبدي المساويا",
+                  "ستبدي لك الأيام ما كنت جاهلا ويأتيك بالأخبار من لم تزود"):
+            names = {x["الشاعر"] for x in self.books(v)}
+            self.assertFalse(names & {"عبد", "الاول", "الأول", "الذي يقول"}, names)
+
+
 if __name__ == "__main__":
     unittest.main()

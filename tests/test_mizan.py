@@ -33,6 +33,23 @@ class TestMizan(unittest.TestCase):
     def test_faalaa(self):
         self.assertEqual(first("حمراء"), ("ح م ر", "فَعْلاء"))
 
+    def test_mithal_masdar(self):
+        # مصدر المثال الواوي على «فِعْلة»: حُذفت فاؤه وعُوّض عنها التاء، وكان الميزان يعجز عنه أو يقرؤه مضعّفًا
+        for w, root in (("ثقة", "و ث ق"), ("جهة", "و ج ه"), ("صلة", "و ص ل"), ("صِفَة", "و ص ف"), ("زِنَة", "و ز ن")):
+            q = M.mizan(w)["القراءات"][0]
+            self.assertEqual((q["الجذر"], q["الوزن"], q["الوزن على لفظه"]), (root, "فِعْلَة", "عِلَة"), w)
+        self.assertEqual(first("وِجْهَة"), ("و ج ه", "فِعْلَة"))   # وجاء تامًّا أيضًا
+
+    def test_lafif_maqrun_keeps_ain(self):
+        # إذا اجتمع حرفا علة عينًا ولامًا أُعلّت اللام وصحّت العين؛ وكان يخرج «مَآي»
+        for w, root in (("مأوى", "ء و ي"), ("مثوى", "ث و ي")):
+            q = M.mizan(w)["القراءات"][0]
+            self.assertEqual((q["الجذر"], q["الوزن"], q["الكلمة"].replace("ْ", "")[-2:]), (root, "مَفْعَل", "وَى"), w)
+
+    def test_typed_shadda_rules(self):
+        self.assertEqual(first("عِدَة"), ("و ع د", "فِعْلَة"))
+        self.assertEqual(first("عِدَّة"), ("ع د د", "فِعْلَة"))
+
     def test_known_words_untouched(self):
         self.assertEqual(first("ميزان"), ("و ز ن", "مِفْعال"))
         self.assertEqual(first("داعٍ"), ("د ع و", "فاعِلٌ"))   # المنوّن اسم، لا فعل من «د و ع»

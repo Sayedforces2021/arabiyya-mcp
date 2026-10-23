@@ -183,9 +183,25 @@ def r_mithal_mudari(tk, ctx):
     return None
 
 
+def r_mithal_masdar(tk, ctx):
+    """مصدر المثال الواوي على «فِعْلة»: تُحذف الفاء وتُنقل كسرتها إلى العين، وتُعوَّض عنها التاء (عِدَة، صِلَة، زِنَة، جِهَة).
+    لا تعمل إلا حيث طُلبت (ctx «mithal_masdar»)، لأن من هذه المصادر ما جاء تامًّا أيضًا (وِجْهة)."""
+    if not ctx.get("mithal_masdar"):
+        return None
+    if len(tk) == 4 and tk[0].rad == 1 and tk[0].c == "و" and tk[0].v == "i" and tk[1].rad == 2 and tk[1].v == "0" \
+            and tk[2].rad == 3 and tk[3].c == "ة":
+        nt = [x.copy() for x in tk[1:]]
+        nt[0].v = "i"
+        return nt, ("حُذفت فاء المثال (الواو) من المصدر على «فِعْلة» ونُقلت كسرتها إلى العين، "
+                    "وعُوِّض عنها تاءُ التأنيث في آخره (كعِدَة وصِلَة وزِنَة)")
+    return None
+
+
 def r_naql(tk, ctx):
-    """نقل حركة العين المعتلة إلى الساكن الصحيح قبلها."""
-    if ctx.get("no_naql"):
+    """نقل حركة العين المعتلة إلى الساكن الصحيح قبلها؛ إلا أن تكون اللام معتلة أيضًا (اللفيف المقرون)،
+    فإذا اجتمع حرفا علة عينًا ولامًا أُعلّت اللام وصحّت العين («مَأْوَى»، «طَوَى»)."""
+    # اللام معتلة في أصلها، ولو قُلبت ألفًا قبل هذه القاعدة («مَأْوَيٌ» ← «مَأْوَى»)
+    if ctx.get("no_naql") or any(t.rad == 3 and t.c in WEAK + "اى" for t in tk):
         return None
     for i in range(1, len(tk)):
         w, p = tk[i], tk[i - 1]
@@ -379,11 +395,12 @@ def r_ifala(tk, ctx):
 
 
 KIND = {"r_hamzatan": "إبدال (الهمزة مدًّا)", "r_iftial": "إبدال", "r_mithal_mudari": "إعلال بالحذف", "r_ifala": "إعلال بالنقل والقلب والحذف مع التعويض",
+        "r_mithal_masdar": "إعلال بالحذف مع التعويض",
         "r_naql": "إعلال بالنقل", "r_sakinayn_mafool": "إعلال بالحذف", "r_hamz_fail": "إبدال (همزة)", "r_hamz_tatarruf": "إبدال (همزة)",
         "r_wy": "إعلال بالقلب مع الإدغام", "r_qalb_alif": "إعلال بالقلب", "r_naqis_kasra": "إعلال بالقلب", "r_madd": "إعلال بالقلب",
         "r_manqus_tanween": "إعلال بالحذف", "r_idgham": "إدغام"}
 
-RULES = [r_hamzatan, r_iftial, r_mithal_mudari, r_ifala, r_naql, r_sakinayn_mafool, r_hamz_fail, r_hamz_tatarruf,
+RULES = [r_hamzatan, r_iftial, r_mithal_mudari, r_mithal_masdar, r_ifala, r_naql, r_sakinayn_mafool, r_hamz_fail, r_hamz_tatarruf,
          r_wy, r_qalb_alif, r_naqis_kasra, r_madd, r_manqus_tanween, r_idgham]
 
 
@@ -532,16 +549,20 @@ def match_word(word_diac: str, roots: list, pos_hint: str | None):
             if sum(1 for t in tpl if t.rad) != len(root):
                 continue
             ctx = ctx_for(wazn.replace("َة", "") if wazn.endswith("َة") and wazn not in ("مِفْعَلَة", "فِعالَة", "فَعالَة", "فَعْلَة", "فِعْلَة", "فُعْلَة", "فَعَلَة", "تَفْعِلَة", "مُفاعَلَة") else wazn, pos, form)
-            r = derive(tpl, root, ctx)
-            if r is None:
-                continue
-            asl, surf, steps = r
-            pref_variants = [bare(surf)]
-            if pos == "verb" and wazn.startswith("يَ") or wazn.startswith("يُ"):
-                pref_variants += [c + bare(surf)[1:] for c in "تنء"]
-            if target in pref_variants and (SHADDA in surf) == has_sh and vowels_agree(word_diac, surf):
-                out.append({"order": order.get(wazn, 99), "wazn": wazn, "desc": desc, "form": form, "pos": pos, "root": root, "asl": asl, "surf": surf,
-                            "steps": steps, "swazn": surface_wazn(tpl, root, ctx)})
+            tries = [(ctx, desc)]
+            if wazn == "فِعْلَة" and pos == "noun" and root[:1] == "و":  # عِدَة، صِلَة، زِنَة، جِهَة، ثِقَة، صِفَة
+                tries.append((dict(ctx, mithal_masdar=True), "مصدر المثال الواوي على «فِعْلة» (حُذفت فاؤه وعُوّض عنها التاء)"))
+            for ctx, desc_ in tries:
+                r = derive(tpl, root, ctx)
+                if r is None:
+                    continue
+                asl, surf, steps = r
+                pref_variants = [bare(surf)]
+                if pos == "verb" and wazn.startswith("يَ") or wazn.startswith("يُ"):
+                    pref_variants += [c + bare(surf)[1:] for c in "تنء"]
+                if target in pref_variants and (SHADDA in surf) == has_sh and vowels_agree(word_diac, surf):
+                    out.append({"order": order.get(wazn, 99), "wazn": wazn, "desc": desc_, "form": form, "pos": pos, "root": root, "asl": asl, "surf": surf,
+                                "steps": steps, "swazn": surface_wazn(tpl, root, ctx)})
     return out
 
 
@@ -581,6 +602,9 @@ def skeleton_roots(word: str, pos_hint: str | None = None, min_fixed: int = 0) -
             r = "".join(r)
             if r not in out:
                 out.append(r)
+    # مصدر المثال المحذوف الفاء: حرفان وتاء («جِهَة» من «وجه»)، لا يطابق قالبًا بحروفه
+    if pos_hint in (None, "noun") and len(target) == 3 and target.endswith("ة") and "و" + target[:2] not in out:
+        out.append("و" + target[:2])
     return out
 
 
@@ -598,6 +622,14 @@ def _lm(w):
         elif not ("\u064b" <= ch <= "\u0652"):
             out.append([ch, ""])
     return out
+
+
+def shadda_agrees(word: str, surf: str) -> bool:
+    """حرفٌ ضبطه الكاتب بحركة ولم يشدّده لا يُقرأ مشددًا («عِدَة» غير «عِدَّة»)؛ وما لم يضبطه فلا حكم فيه."""
+    a, b = _lm(strip_case(word)), _lm(strip_case(surf))
+    if len(a) != len(b):
+        return True
+    return not any(ma and SHADDA not in ma and SHADDA in mb for (_, ma), (_, mb) in zip(a, b))
 
 
 def vowels_agree(word: str, surf: str) -> bool:
