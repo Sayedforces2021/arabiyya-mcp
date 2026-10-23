@@ -5397,7 +5397,8 @@ def _roots_of(w: str) -> set:
 @mcp.tool()
 def detect_badi(text: str) -> dict:
     """استخراج المحسنات البديعية من بيت أو قصيدة أو نثر: الجناس (التام، والناقص بزيادة حرف، والمضارع واللاحق باختلاف حرف متقارب المخرج أو متباعده، والمحرّف باختلاف الحركات، وجناس الاشتقاق)،
-    والطباق (طباق الإيجاب بمعجم للأضداد، وطباق السلب بالنفي)، والمقابلة، والتصريع، وردّ العجز على الصدر، ولزوم ما لا يلزم، والسجع في النثر (المطرَّف والمتوازي)، والاقتباس من القرآن.
+    والطباق (طباق الإيجاب بمعجم للأضداد، وطباق السلب بالنفي)، والمقابلة، والتصريع، وردّ العجز على الصدر، ولزوم ما لا يلزم، والسجع في النثر (المطرَّف والمتوازي)، والاقتباس من القرآن،
+    وما لا يستحيل بالانعكاس (القلب): ما يُقرأ من آخره حرفًا حرفًا كما يُقرأ من أوله («ساكب كاس»، «مودّته تدوم لكلّ هول وهل كلٌّ مودّته تدوم»).
     text: النص؛ والشعر بيتًا في كل سطر بشطريه مفصولين بـ «*». النتائج مرشحات تُراجع: البديع حكم بلاغي يتوقف على المعنى."""
     import re
     lines = [l.strip() for l in text.strip().splitlines() if l.strip()]
@@ -5411,7 +5412,8 @@ def detect_badi(text: str) -> dict:
             for seg in re.split(r"[.،؛!?؟\n]+", l):
                 if seg.strip():
                     units.append((seg.strip(), ""))
-    found = {"الجناس": [], "الطباق": [], "المقابلة": [], "التصريع": [], "ردّ العجز على الصدر": [], "السجع": [], "لزوم ما لا يلزم": [], "الاقتباس": []}
+    found = {"الجناس": [], "الطباق": [], "المقابلة": [], "التصريع": [], "ردّ العجز على الصدر": [], "السجع": [], "لزوم ما لا يلزم": [], "الاقتباس": [],
+             "ما لا يستحيل بالانعكاس (القلب)": []}
     ant = _antonym_index()
     neg = {"لا", "لم", "لن", "ما", "ليس", "غير"}
     for ui, (s_, a_) in enumerate(units, 1):
@@ -5419,6 +5421,9 @@ def detect_badi(text: str) -> dict:
         bare = [_core_letters(w) for w in words]
         lemmas = [_lemma_bare(w) for w in words]
         where = f"البيت {ui}" if poetry else f"الجملة {ui}"
+        # ما لا يستحيل بالانعكاس: سمّاه الحريري بهذا، والقزويني «القلب»
+        for p in _palindromes(s_, a_, poetry):
+            found["ما لا يستحيل بالانعكاس (القلب)"].append({"الموضع": where, **p})
         # الجناس
         for i in range(len(words)):
             for j in range(i + 1, len(words)):
@@ -5500,6 +5505,46 @@ def detect_badi(text: str) -> dict:
     return {"المحسنات": found or "لم يظهر محسّن بديعي من الأنواع المرصودة.",
             "ملاحظة": "الجناس يُرصد بالموازنة الحرفية والصرفية، والطباق بمعجم أضداد مختار وبالنفي؛ فهي مرشحات يُحكم فيها المعنى. "
                       "والتورية والاستخدام والتوجيه ونحوها مما يقوم على المعنى الخفي لا يُرصد آليًّا."}
+
+
+def _palindrome_letters(text: str) -> str:
+    """حروف الكلام للقلب: بلا ضبط ولا فواصل، والهمزة على الألف ألف («أجر» = «اجر»)، والهمزة المفردة همزة."""
+    t = _strip_tashkeel(text).translate(str.maketrans({"أ": "ا", "إ": "ا", "آ": "ا", "ٱ": "ا"}))
+    return "".join(c for c in t if "ء" <= c <= "ي")
+
+
+def _palindromes(s_: str, a_: str, poetry: bool) -> list:
+    """ما لا يستحيل بالانعكاس: ما يُقرأ من آخره حرفًا حرفًا كما يُقرأ من أوله؛ البيت كله، أو شطره، أو كلمات متصلة منه
+    (كلمتان فأكثر وستة أحرف فأكثر). ويُجرَّب أيضًا بإسقاط واو العطف أو فائه من أول القطعة («وربَّك فكبّر»)."""
+    def pal(s):
+        p = _palindrome_letters(s)
+        return p if len(p) >= 5 and p == p[::-1] else None
+    out, covered = [], []
+    whole = f"{s_} {a_}".strip()
+    for label, seg in ((("البيت كله" if poetry else "الجملة كلها"), whole), ("الصدر", s_ if a_ else ""), ("العجز", a_)):
+        if seg and len(seg.split()) >= 2 and pal(seg):
+            out.append({"النص": seg, "نطاقه": label, "عدد الحروف": len(_palindrome_letters(seg))})
+            covered.append(seg)
+            if label in ("البيت كله", "الجملة كلها"):
+                return out
+    words = whole.split()
+    for size in range(len(words), 1, -1):
+        for i in range(len(words) - size + 1):
+            chunk = " ".join(words[i:i + size])
+            if any(chunk in c for c in covered):
+                continue
+            note = None
+            ok = pal(chunk) and len(_palindrome_letters(chunk)) >= 6
+            if not ok and words[i][:1] in "وف" and len(words[i]) > 2:
+                ok = pal(chunk[1:]) and len(_palindrome_letters(chunk[1:])) >= 6
+                note = f"من غير «{words[i][0]}» في أوله" if ok else None
+            if ok:
+                item = {"النص": chunk, "نطاقه": "بعض الكلام", "عدد الحروف": len(_palindrome_letters(chunk[1:] if note else chunk))}
+                if note:
+                    item["تنبيه"] = note
+                out.append(item)
+                covered.append(chunk)
+    return out
 
 
 def _wazn_of(w: str) -> str:
