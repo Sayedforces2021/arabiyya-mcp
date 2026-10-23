@@ -1186,13 +1186,67 @@ def _q_ref(ref: str):
     return nums
 
 
+_Q_PROCLITICS = ("وال", "فال", "بال", "كال", "لل", "ال", "و", "ف", "ب", "ك", "ل")
+
+
+def _q_plain(s: str, tanween_alif: bool = False, dagger_alif: bool = False) -> str:
+    """الكلمة القرآنية بالرسم الإملائي: «ٱلصَّلَوٰةَ» = «الصلاة»، «مُوسَىٰ» = «موسى»، بلا ضبط ولا علامات وقف.
+    tanween_alif: إبقاء ألف تنوين النصب («مَسْـُٔولًا» = «مسؤولا»)، وإلا حُذفت («مسؤول»).
+    dagger_alif: الألف الخنجرية ألفًا («كِتَٰب» = «كتاب»)، وإلا حُذفت («ٱلرَّحْمَٰن» = «الرحمن»، «هَٰذَا» = «هذا»)."""
+    s = s.replace("وٰ", "ا").replace("ىٰ", "ى").replace("ٔ", "ء").replace("ـ", "")
+    if dagger_alif:
+        s = s.replace("ٰ", "ا")
+    if not tanween_alif:
+        s = s.replace("ًا", "").replace("اً", "")
+    s = "".join(c for c in s if not ("ً" <= c <= "ٟ" or c == "ٰ" or "ۖ" <= c <= "ۭ"))
+    s = s.translate(str.maketrans({"ٱ": "ا", "أ": "ا", "إ": "ا", "آ": "ا", "ؤ": "ء", "ئ": "ء", "ى": "ي", "ة": "ه"}))
+    return s.replace("ءا", "ا")  # «قُرْءَان» = «قرآن»
+
+
+def _q_same_word(quranic: str, typed: str, loose: bool = False) -> bool:
+    """كلمة المصحف هي الكلمة المكتوبة بلا أثر للرسم العثماني والضبط، ولو دخلت إحداهما «ال» أو حرف عطف أو جر.
+    loose: مطابقة مرخّاة تُسقط حروف المد أيضًا (لما اختلف رسمه اختلافًا أوسع)، تُستعمل إن لم تُجد الأولى."""
+    import khilaf as K
+    # تُنزع السوابق من كلمة المصحف، ومن المكتوبة «ال» وحدها؛ وإلا طابقت «كتابا» كلمةَ «تابا»
+    strip = lambda s, ps: next((s[len(p):] for p in ps if s.startswith(p) and len(s) - len(p) >= 2), s)
+    if loose:
+        qs, t = {K._loose(quranic)}, K._loose(typed)
+    else:
+        qs = {_q_plain(quranic, ta, da) for ta in (False, True) for da in (False, True)}
+        t = _q_plain(typed)
+    t2 = strip(t, _Q_PROCLITICS[:6])
+    return t in qs or t2 in {strip(q, _Q_PROCLITICS) for q in qs}
+
+
 @mcp.tool()
-def quran_word(ref: str) -> dict:
+def quran_word(ref: str | None = None, word: str | None = None, limit: int = 20) -> dict:
     """التحليل الصرفي لكلمات آية أو كلمة في القرآن من «المدوّنة القرآنية»: لكل جزء من الكلمة نوعه وجذره وصيغته ووزن بابه وإعرابه وسماته، بلا إنترنت.
-    ref: «سورة:آية» مثل «2:255»، أو «سورة:آية:كلمة» مثل «1:5:2» لكلمة واحدة."""
+    ref: «سورة:آية» مثل «2:255»، أو «سورة:آية:كلمة» مثل «1:5:2» لكلمة واحدة.
+    word: كلمة بلا ضبط ولا رسم عثماني (مثل «سيارة»)، ولو بـ«ال» أو حرف عطف أو جر. وحدها: مواضعها في القرآن
+    وتحليلها في أولها؛ ومع ref: تُقيَّد الآية بهذه الكلمة.
+    limit: عدد المواضع المعروضة حين يُبحث بالكلمة وحدها."""
     if not os.path.exists(QURAN_FILE):
         return {"تنبيه": "بيانات المدوّنة القرآنية غير منزّلة؛ شغّل سكربت التثبيت مرة أخرى."}
+    if not ref and not word:
+        return {"تنبيه": "أعطِ مرجع الآية (مثل 2:255) أو الكلمة (word)، أو كليهما."}
     words, _, t = _quran()
+    surface = lambda k: "".join(f for f, _, _ in words[k])
+    analyse = lambda k: {"الموضع": f"{k[0]}:{k[1]}:{k[2]}", "الكلمة": surface(k),
+                         "الأجزاء": [_q_segment(f, c, ft, t) for f, c, ft in words[k]]}
+    src = "Quranic Arabic Corpus 0.4 بتصحيحات mustafa0x/quran-morphology (GPL)"
+    if not ref:
+        hits, loose = sorted(k for k in words if _q_same_word(surface(k), word)), False
+        if not hits:
+            hits, loose = sorted(k for k in words if _q_same_word(surface(k), word, loose=True)), True
+        if not hits:
+            return {"تنبيه": f"لم ترد «{word}» بلفظها في القرآن؛ وللجذر كله استعمل quran_root."}
+        limit = max(1, min(int(limit), 300))
+        out = {"الكلمة": word, "عدد الورود": len(hits),
+               "المواضع": [{"الموضع": f"{k[0]}:{k[1]}:{k[2]}", "الكلمة": surface(k)} for k in hits[:limit]],
+               "تحليل أول موضع": analyse(hits[0]), "المصدر": src}
+        if loose:
+            out["تنبيه"] = "لم ترد بلفظها، فهذه مواضع ما يقاربها رسمًا بإسقاط حروف المد؛ فاختر منها ما تريد."
+        return out
     nums = _q_ref(ref)
     if len(nums) < 2:
         return {"تنبيه": "اكتب المرجع بصورة سورة:آية، مثل 2:255."}
@@ -1200,16 +1254,13 @@ def quran_word(ref: str) -> dict:
     keys = sorted(k for k in words if k[0] == s and k[1] == a and (len(nums) < 3 or k[2] == nums[2]))
     if not keys:
         return {"تنبيه": "لم أجد هذا الموضع."}
-    out = []
-    for k in keys:
-        segs = words[k]
-        out.append({
-            "الموضع": f"{k[0]}:{k[1]}:{k[2]}",
-            "الكلمة": "".join(f for f, _, _ in segs),
-            "الأجزاء": [_q_segment(f, c, ft, t) for f, c, ft in segs],
-        })
-    return {"الآية": f"{s}:{a}", "النص": " ".join(w["الكلمة"] for w in out), "الكلمات": out,
-            "المصدر": "Quranic Arabic Corpus 0.4 بتصحيحات mustafa0x/quran-morphology (GPL)"}
+    text = " ".join(surface(k) for k in keys)
+    if word:
+        only = [k for k in keys if _q_same_word(surface(k), word)] or [k for k in keys if _q_same_word(surface(k), word, loose=True)]
+        if not only:
+            return {"تنبيه": f"ليست «{word}» في الآية {s}:{a}.", "النص": text}
+        keys = only
+    return {"الآية": f"{s}:{a}", "النص": text, "الكلمات": [analyse(k) for k in keys], "المصدر": src}
 
 
 @mcp.tool()
@@ -1296,17 +1347,47 @@ def _excerpt_from(text: str, variants: list, max_chars: int):
     return None
 
 
+def _root_from_word(w: str) -> str | None:
+    """جذر الكلمة: من الميزان أولًا (وهو يتحقق بالاشتقاق)، ثم من المحلّل الصرفي."""
+    try:
+        q = mizan(w).get("القراءات")
+        if q:
+            return q[0]["الجذر"].replace(" ", "")
+    except Exception:
+        pass
+    for a in _analyzer().analyze(_strip_tashkeel(w)):
+        rr = _resolve_roots(a.get("root") or "", a.get("diac") or "")
+        if rr:
+            return rr[0]
+    return None
+
+
 @mcp.tool()
-def maajim(root: str, books: list[str] | None = None, max_chars_per_entry: int = 3000) -> dict:
+def maajim(root: str | None = None, books: list[str] | None = None, max_chars_per_entry: int = 3000,
+           word: str | None = None) -> dict:
     """مادة الجذر من 15 معجمًا تراثيًّا بلا إنترنت، مرتبةً زمنيًّا مع الجزء والصفحة (ترقيم المطبوع كما في الشاملة):
     العين، الجمهرة، التهذيب، الصحاح، مقاييس اللغة، مجمل اللغة، المحكم، المفردات، أساس البلاغة، النهاية، مختار الصحاح، لسان العرب، المصباح المنير، القاموس المحيط، تاج العروس.
     root: الجذر (كتب، أمن، قول، دعو) أو بحروف مفرّقة (ك ت ب).
+    word: كلمة بدل الجذر (السيارة، استقامة)، فيُستخرج جذرها بالميزان ويُذكر في الجواب لتراجعه.
     books: لتقييد المعاجم بجزء من أسمائها، مثل ["لسان", "مقاييس", "العين"].
     max_chars_per_entry: الحد الأقصى لنص كل مادة (مواد اللسان والتاج قد تتجاوز عشرين ألف حرف).
     النصوص من مشروع OpenITI بلا تشكيل في الغالب؛ وفي أبواب التقاليب (العين والجمهرة والمحكم) يبدأ النص من موضع المادة داخل الباب."""
     import sqlite3
     if not os.path.exists(MAAJIM_DB):
         return {"تنبيه": "فهرس المعاجم لم يُبنَ بعد؛ شغّل سكربت التثبيت مرة أخرى."}
+    if not root and not word:
+        return {"تنبيه": "أعطِ الجذر (root) أو الكلمة (word)."}
+    # كلمةٌ أُعطيت مكان الجذر («السيارة»): أكثر من أربعة أحرف، أو بـ«ال»
+    bare_root = _strip_tashkeel(root or "").replace(" ", "")
+    if root and (len(bare_root) > 4 or (bare_root.startswith("ال") and len(bare_root) > 3)):
+        word, root = root, None
+    if not root:
+        root = _root_from_word(word)
+        if not root:
+            return {"تنبيه": f"لم أستخرج جذر «{word}»؛ أعطِ الجذر نفسه (root)."}
+        out = maajim(root, books, max_chars_per_entry)
+        return {"الكلمة": word, "جذرها عند الأداة": " ".join(root), **out,
+                "تنبيه الجذر": "استُخرج الجذر آليًّا بالميزان؛ فإن لم تكن المادة مادة كلمتك فأعطِ الجذر نفسه."}
     variants = _root_variants(root)
     sorted_key = "~" + "".join(sorted(variants[0]))
     con = sqlite3.connect(f"file:{MAAJIM_DB}?mode=ro", uri=True)
