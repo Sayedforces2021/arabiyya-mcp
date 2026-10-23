@@ -482,7 +482,8 @@ NOUN_TEMPLATES = [
     ("فَعالَة", "مصدر ثلاثي", "I"), ("فِعال", "مصدر ثلاثي أو جمع تكسير", "I"), ("فُعال", "مصدر ثلاثي (للداء والصوت غالبًا)", "I"),
     ("فَعال", "مصدر ثلاثي أو اسم", "I"), ("فَعْلَة", "اسم مرة أو مصدر", "I"), ("فِعْلَة", "اسم هيئة أو مصدر", "I"),
     ("فُعْلَة", "اسم", "I"), ("فَعَلَة", "جمع تكسير أو اسم", "I"), ("فَيْعِل", "صفة مشبهة", "I"), ("فُعْلَى", "اسم أو صفة مؤنثة", "I"),
-    ("فَعْلَى", "صفة مؤنثة أو جمع", "I"), ("أَفْعال", "جمع تكسير (جمع قلة)", "I"), ("فُعَلاء", "جمع تكسير", "I"),
+    ("فَعْلَى", "صفة مؤنثة أو جمع", "I"), ("فَعْلاء", "صفة مشبهة مؤنثة (مؤنث أَفْعَل) أو اسم", "I"),
+    ("أَفْعال", "جمع تكسير (جمع قلة)", "I"), ("فُعَلاء", "جمع تكسير", "I"),
     ("أَفْعِلاء", "جمع تكسير", "I"), ("فَواعِل", "جمع تكسير (صيغة منتهى الجموع)", "I"), ("مَفاعِل", "جمع تكسير (صيغة منتهى الجموع)", "I"),
     ("مَفاعِيل", "جمع تكسير (صيغة منتهى الجموع)", "I"), ("فَعائِل", "جمع تكسير (صيغة منتهى الجموع)", "I"),
     ("إِفْعال", "مصدر أَفْعَلَ", "IV"), ("تَفْعِيل", "مصدر فَعَّلَ", "II"), ("تَفْعِلَة", "مصدر فَعَّلَ (للناقص غالبًا)", "II"),
@@ -541,6 +542,45 @@ def match_word(word_diac: str, roots: list, pos_hint: str | None):
             if target in pref_variants and (SHADDA in surf) == has_sh and vowels_agree(word_diac, surf):
                 out.append({"order": order.get(wazn, 99), "wazn": wazn, "desc": desc, "form": form, "pos": pos, "root": root, "asl": asl, "surf": surf,
                             "steps": steps, "swazn": surface_wazn(tpl, root, ctx)})
+    return out
+
+
+def skeleton_roots(word: str, pos_hint: str | None = None, min_fixed: int = 0) -> list:
+    """جذور مرشحة بمطابقة حروف الكلمة على القوالب القياسية حرفًا بحرف: الزوائد تطابق زوائد القالب،
+    وما وقع موقع الأصل يؤخذ أصلًا، وحرف العلة أو الهمزة في موضع الأصل يُردّ إلى الواو والياء والهمزة جميعًا.
+    مرشحات فحسب، لمن لم يعرف المحلّلُ الكلمةَ: لا يُقبل منها إلا ما يعيد به الاشتقاقُ الكلمةَ نفسها (match_word).
+    min_fixed: أقل عدد من الزوائد (سوى تاء التأنيث) في القالب؛ فالكلمة غير المشكولة لا تُطابَق على قالب
+    كـ«فَعِلَة» تحتمله كل كلمة من أربعة أحرف."""
+    import itertools
+    target = bare(strip_case(word))
+    templates = []
+    if pos_hint in (None, "verb"):
+        templates += [w for w, _, _ in VERB_TEMPLATES]
+    if pos_hint in (None, "noun"):
+        templates += [w for w, _, _ in NOUN_TEMPLATES]
+        templates += [w + "َة" for w, _, _ in NOUN_TEMPLATES if not w.endswith(("َة", "ء", "ى"))]
+    out = []
+    for wazn in templates:
+        toks = expand(parse_wazn(wazn))
+        if len(toks) != len(target) or sum(1 for t in toks if t.rad) < 3 \
+                or sum(1 for t in toks if not t.rad and t.c != "ة") < min_fixed:
+            continue
+        slots, ok = {}, True
+        for t, ch in zip(toks, target):
+            if t.rad:
+                if slots.setdefault(t.rad, ch) != ch:
+                    ok = False
+                    break
+            elif bare(t.c) != ch:
+                ok = False
+                break
+        if not ok or sorted(slots) != list(range(1, len(slots) + 1)):
+            continue
+        opts = [["و", "ي", "ء"] if slots[k] in "اوىيء" else [slots[k]] for k in sorted(slots)]
+        for r in itertools.product(*opts):
+            r = "".join(r)
+            if r not in out:
+                out.append(r)
     return out
 
 

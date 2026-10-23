@@ -2839,6 +2839,7 @@ def _ilal():
 
 
 @lru_cache(maxsize=4096)
+@lru_cache(maxsize=4096)
 def _root_books(root: str) -> int:
     """عدد المعاجم التي فيها هذا الجذر (لترجيح الواوي على اليائي ونحوه)."""
     import sqlite3
@@ -2904,14 +2905,14 @@ def mizan(word: str, context: str | None = None) -> dict:
     if not analyses:
         analyses = sorted(_analyzer().analyze(_strip_tashkeel(w)), key=lambda x: -float(x.get("pos_lex_logprob", -99) or -99))
     vocalized = any(c in HARAKAT for c in w)
+    all_analyses = analyses
+    if vocalized:  # ما ضبطه السائل حَكَمٌ على قراءات المحلّل: «مَوازِن» بالفتح لا تُقرأ «مُوازِن»
+        analyses = [a for a in analyses if I.vowels_agree(w, a.get("diac") or "")]
     readings, seen = [], set()
     for a in analyses[:12]:
         diac = a.get("diac") or ""
-        stem = a.get("stem") or diac
         # الكلمة مجردة من السوابق واللواحق: جذعها مع لاحقة التأنيث أو حرف المضارعة
         core = _stem_core(a)
-        if vocalized and not _agrees(core, _core_of_typed(w, core)):
-            pass
         pos = "verb" if a.get("pos") == "verb" else "noun"
         roots = _resolve_roots(a.get("root") or "", core)
         if not roots:
@@ -2923,37 +2924,63 @@ def mizan(word: str, context: str | None = None) -> dict:
         ms = I.match_word(core, roots[:3], pos)
         if not ms:
             continue
-        if len({m["root"] for m in ms}) > 1:  # جذران محتملان: يُرجَّح ما تشهد له المعاجم بورود الكلمة في مادته
-            ev = {rt: _root_evidence(_strip_tashkeel(core), rt) for rt in {m["root"] for m in ms}}
-            roots = sorted(roots, key=lambda rt: -ev.get(rt, -1))
-        ms.sort(key=lambda m: (roots.index(m["root"]), m["order"]))
-        m = ms[0]
-        r = {
-            "الكلمة": diac, "الجذع المعتبر": core, "الجذر": " ".join(m["root"]), "نوع الجذر": I.root_type(m["root"]),
-            "الصيغة": m["desc"], "الوزن": m["wazn"], "الأصل": m["asl"],
-            "خطوات الإعلال": [{"النوع": s["النوع"], "الخطوة": s["الخطوة"], "فصار": s["الصورة"]} for s in m["steps"]] or "لا إعلال فيه",
-            "الوزن على لفظه": m["swazn"] if m["steps"] and any(x["النوع"] != "إدغام" for x in m["steps"]) else m["wazn"],
-        }
-        if pos == "verb" and m["form"] == "I" and m["wazn"].startswith("فَعَ"):
-            ah = _ain_haraka((a.get("lex") or "").split("_")[0].split("-")[0])
-            if ah:
-                r["باب الفعل"] = _BAB.get(ah, "")
-                r["الوزن"] = {"ضمة": "فَعَلَ", "كسرة": "فَعَلَ", "فتحة": "فَعِلَ"}[ah] if m["steps"] else r["الوزن"]
-        alts = list(dict.fromkeys(f"{x['wazn']} ({x['desc']})" for x in ms[1:6] if x["wazn"] != m["wazn"]))[:3]
-        if alts:
-            r["أوزان أخرى تحتملها"] = alts
-        if len(roots) > 1 and roots[0] == m["root"]:
-            others = [" ".join(x) for x in roots[1:] if any(y["root"] == x for y in ms)]
-            if others:
-                r["جذر محتمل آخر"] = others
-        readings.append(r)
+        readings.append(_mizan_reading(I, diac, core, ms, roots, pos, a))
         if len(readings) >= 3:
             break
+    # ما لم يعرفه المحلّل (كـ«مَوازِين» جمعًا لـ«ميزان»): مطابقة الكلمة على القوالب، ويُقدَّم منه ما تشهد له المعاجم أكثر
+    bare_w = _strip_tashkeel(w)
+    ev = lambda rd: _root_evidence(bare_w, rd["الجذر"].replace(" ", ""))
+    have = {rd["الجذر"] for rd in readings}
+    top = ev(readings[0]) if readings else -1
+    extra = []
+    sk_pos = "noun" if any(c in "ًٌٍ" for c in w) else None  # المنوّن اسم
+    # قالب بلا زوائد يحتمل كثيرًا من الكلمات: لا يُقبل إلا لكلمة مشكولة لم يُعرف لها وزن غيره
+    for rt in [r for r in I.skeleton_roots(w, sk_pos, 0 if vocalized and not readings else 2) if _root_books(r)][:24]:
+        if " ".join(rt) in have:
+            continue
+        ms = I.match_word(w, [rt], sk_pos)
+        if ms:
+            ms.sort(key=lambda m: m["order"])
+            rd = _mizan_reading(I, ms[0]["surf"], ms[0]["surf"], ms, [rt], ms[0]["pos"])
+            if ev(rd) > top:
+                extra.append(rd)
+    extra.sort(key=lambda rd: -ev(rd))
+    readings = (extra + readings)[:3]
+    if not readings and vocalized and len(all_analyses) > len(analyses):
+        return mizan(bare_w, context) | {"تنبيه": "لم توافق قراءاتُ المحلّل ضبطَك، فهذا وزن الكلمة بغير ضبط؛ راجع الضبط."}
     if not readings:
         return {"تنبيه": "لم أستطع وزن هذه الكلمة بالقوالب القياسية؛ قد تكون جامدة أو رباعية أو أعجمية، أو على وزن غير مدرج.",
-                "التحليل الصرفي": _fmt(analyses[0]) if analyses else None}
+                "التحليل الصرفي": _fmt(all_analyses[0]) if all_analyses else None}
     return {"القراءات": readings,
             "ملاحظة": "الأصل والخطوات مولّدة بقواعد الإعلال والإبدال ومتحقَّق منها بإعادة الكلمة نفسها؛ وما فيه خلاف بين البصريين والكوفيين أو بين سيبويه والأخفش يُنبَّه عليه في الخطوة."}
+
+
+def _mizan_reading(I, diac: str, core: str, ms: list, roots: list, pos: str, a: dict | None = None) -> dict:
+    """قراءة واحدة في الميزان من مطابقات القوالب: أولاها هي القراءة، والبقية أوزان أخرى تحتملها أو جذور أخرى."""
+    if len({m["root"] for m in ms}) > 1:  # جذران محتملان: يُرجَّح ما تشهد له المعاجم بورود الكلمة في مادته
+        ev = {rt: _root_evidence(_strip_tashkeel(core), rt) for rt in {m["root"] for m in ms}}
+        roots = sorted(roots, key=lambda rt: -ev.get(rt, -1))
+    ms.sort(key=lambda m: (roots.index(m["root"]), m["order"]))
+    m = ms[0]
+    r = {
+        "الكلمة": diac, "الجذع المعتبر": core, "الجذر": " ".join(m["root"]), "نوع الجذر": I.root_type(m["root"]),
+        "الصيغة": m["desc"], "الوزن": m["wazn"], "الأصل": m["asl"],
+        "خطوات الإعلال": [{"النوع": s["النوع"], "الخطوة": s["الخطوة"], "فصار": s["الصورة"]} for s in m["steps"]] or "لا إعلال فيه",
+        "الوزن على لفظه": m["swazn"] if m["steps"] and any(x["النوع"] != "إدغام" for x in m["steps"]) else m["wazn"],
+    }
+    if a and pos == "verb" and m["form"] == "I" and m["wazn"].startswith("فَعَ"):
+        ah = _ain_haraka((a.get("lex") or "").split("_")[0].split("-")[0])
+        if ah:
+            r["باب الفعل"] = _BAB.get(ah, "")
+            r["الوزن"] = {"ضمة": "فَعَلَ", "كسرة": "فَعَلَ", "فتحة": "فَعِلَ"}[ah] if m["steps"] else r["الوزن"]
+    alts = list(dict.fromkeys(f"{x['wazn']} ({x['desc']})" for x in ms[1:6] if x["wazn"] != m["wazn"]))[:3]
+    if alts:
+        r["أوزان أخرى تحتملها"] = alts
+    if len(roots) > 1 and roots[0] == m["root"]:
+        others = [" ".join(x) for x in roots[1:] if any(y["root"] == x for y in ms)]
+        if others:
+            r["جذر محتمل آخر"] = others
+    return r
 
 
 def _stem_core(a: dict) -> str:
