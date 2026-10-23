@@ -121,6 +121,10 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 .folio img.on{opacity:1;transform:scale(1.1)}
 .folio img:first-child{opacity:1}
 .js .folio img:first-child:not(.on){opacity:0}
+.still{position:absolute;inset-block-start:12px;inset-inline-end:12px;z-index:2;width:44px;height:44px;display:grid;place-items:center;background:rgba(10,14,20,.6);color:#F2F2F0;border-radius:50%} /* taste-skill-ignore: neutral scrim behind a control on a photograph */
+.still svg{width:16px;height:16px;fill:currentColor}
+.still .play,.still[aria-pressed="true"] .pause{display:none}
+.still[aria-pressed="true"] .play{display:block}
 .folio .cap{position:absolute;inset-inline:0;bottom:0;margin:0;padding:56px 28px 22px;color:#F2F2F0;font-size:var(--s-small);line-height:1.6;background:rgba(10,14,20,.66);transition:opacity 300ms ease} /* taste-skill-ignore: neutral scrim under a caption on a photograph */
 
 /* ---------- intro: title, note, facts row ---------- */
@@ -239,8 +243,12 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 .faq{padding-block:var(--section);align-items:start}
 .faq h2{grid-column:1 / span 3;font-size:var(--s-card);position:sticky;top:32px}
 .faq .qa{grid-column:5 / -1;columns:2;column-gap:56px}
-.faq .qa p{break-inside:avoid;margin-bottom:22px;font-size:var(--s-small);line-height:1.65}
-.faq .qa b{font-weight:700}
+.faq .qa details{break-inside:avoid;border-bottom:1px solid color-mix(in srgb, var(--ink) 18%, transparent)}
+.faq .qa summary{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding-block:10px;font-weight:700;font-size:var(--s-body);line-height:1.5;cursor:pointer;list-style:none}
+.faq .qa summary::-webkit-details-marker{display:none}
+.faq .qa summary::after{content:"";flex:none;width:9px;height:9px;margin-top:-4px;border-right:2px solid var(--accent);border-bottom:2px solid var(--accent);transform:rotate(45deg)}
+.faq .qa details[open] summary::after{margin-top:4px;transform:rotate(225deg)}
+.faq .qa details p{padding-bottom:18px;font-size:var(--s-small);line-height:1.7}
 .faq .qa code{font-size:14px}
 
 /* ---------- install: the reply card ---------- */
@@ -365,9 +373,14 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
   .facts{display:grid;grid-template-columns:1fr 1fr;row-gap:32px}
   .sheet{grid-template-columns:1fr;min-height:0}
   .sheet .hashiya{padding-inline-start:16px}
-  .slips{grid-template-columns:repeat(3,minmax(0,1fr));align-items:start;padding-bottom:24px}
-  .slip:nth-child(n){height:auto;padding-bottom:20px}
-  .slip[aria-pressed="true"]{--sink:0px;outline:3px solid var(--accent);outline-offset:-3px}
+  .samples .top-area{display:contents}
+  .samples .say{order:1;margin:48px var(--margin) 0}
+  .slips{order:2;margin-top:16px;display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-inline:var(--margin);padding:4px var(--margin) 12px;scrollbar-width:none;align-items:stretch}
+  .slips::-webkit-scrollbar{display:none}
+  .sheet{order:3;margin:0 var(--margin) 40px}
+  .slip,.slip:nth-child(n){flex:0 0 auto;width:min(62vw, 240px);height:auto;padding:12px 14px;transform:none;animation:none;scroll-snap-align:start}
+  .slip .tear,.slip .ln{display:none}
+  .slip[aria-pressed="true"]{outline:3px solid var(--accent);outline-offset:-3px}
   .how .say,.receipt{grid-column:1 / -1}
   .receipt{margin-top:40px;width:100%}
   .fsheet{position:relative;top:auto;height:auto;min-height:0;margin-bottom:0;grid-template-columns:1fr;border-radius:20px 20px 0 0}
@@ -392,14 +405,13 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 }
 @media (max-width:560px){
   body{font-size:18px}
+  .count .sub{display:none}
+  .count .rrow{padding-block:7px}
   .nav{gap:12px}
   .card .wm{font-size:17vw;margin-top:16px}
   .card .say{margin-top:16px;font-size:var(--s-body)}
   .card .acts{margin-top:24px}
   .card .links{padding-top:24px}
-  .slips{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-  .slip{padding:14px 14px 16px;min-height:0}
-  .slip .tear,.slip .ln{display:none}
   .rcard{padding:28px 22px 32px}
   .back .addr{padding-top:0}
   .stamp{position:static;width:72px;margin-bottom:16px}
@@ -441,6 +453,7 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
   </div>
   <figure class="folio" id="folio">
     <img src="assets/alfiyya.jpg" width="1600" height="1131" fetchpriority="high" alt="صفحتان من مخطوط شرحٍ على ألفية ابن مالك، يتوسّط المتنُ الصفحة وتحيط به الحواشي من كل جهة" data-cap="شرحٌ على ألفية ابن مالك: المتن في الوسط، وحوله حواشٍ تُسنده وتراجعه. على هذا كُتب العلم، وعليه تعمل الأداة.">
+    <button type="button" class="still" id="folio-still" aria-pressed="false" aria-label="أوقف تبديل الصور" hidden><svg class="pause" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="2" width="3.5" height="12" rx="1"/><rect x="9.5" y="2" width="3.5" height="12" rx="1"/></svg><svg class="play" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11a.8.8 0 0 0 1.2.7l9-5.5a.8.8 0 0 0 0-1.4l-9-5.5A.8.8 0 0 0 4 2.5z"/></svg></button>
     <figcaption class="cap" id="fcap">شرحٌ على ألفية ابن مالك: المتن في الوسط، وحوله حواشٍ تُسنده وتراجعه. على هذا كُتب العلم، وعليه تعمل الأداة.</figcaption>
   </figure>
 </section>
@@ -460,6 +473,7 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 <!-- samples: real output on slips, and the open page they make -->
 <section class="samples" id="samples" aria-labelledby="t-samples">
   <video class="bgimg" id="qalam" muted loop playsinline preload="none" poster="assets/qalam.jpg" width="854" height="356" aria-label="يد خطّاط تكتب «والقلم» بقصبة على ورق"><source src="assets/qalam.webm" type="video/webm"><source src="assets/qalam.mp4" type="video/mp4"></video>
+  <button type="button" class="still" id="qalam-still" aria-pressed="false" aria-label="أوقف مقطع الخطّاط" hidden><svg class="pause" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="2" width="3.5" height="12" rx="1"/><rect x="9.5" y="2" width="3.5" height="12" rx="1"/></svg><svg class="play" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11a.8.8 0 0 0 1.2.7l9-5.5a.8.8 0 0 0 0-1.4l-9-5.5A.8.8 0 0 0 4 2.5z"/></svg></button>
   <div class="top-area wrap">
     <div class="say" data-reveal>
       <h2 id="t-samples">من الكتاب، بالجزء والصفحة</h2>
@@ -647,20 +661,20 @@ code{font-family:var(--code);font-size:14px;direction:ltr;unicode-bidi:isolate}
 <section class="wrap grid faq" id="faq" aria-labelledby="t-faq">
   <h2 id="t-faq" data-reveal>ما يُسأل عنه</h2>
   <div class="qa" data-reveal style="--i:1">
-    <p><b>لمن هذه الأدوات؟</b> لطالب العربية والباحث فيها ومعلّمها، ولكل من يسأل الذكاء الاصطناعي في الصرف والنحو والعروض والمعجم ويريد جوابًا يُراجَع.</p>
-    <p><b>هل هي نموذج لغوي؟</b> لا، ولا تُدرّب نموذجًا ولا تُغيّره. هي أدوات يستدعيها النموذج، ويرجع إليها كما يرجع الباحث إلى كتاب.</p>
-    <p><b>هل أحكامها معصومة؟</b> لا. أحكامها على مراتب: النقل والقاعدة والترجيح. وما كان ترجيحًا يُعرض بوجوهه ولا يُجزم به، وفي الإعراب تَسِمه الأداة ليراجعه Claude.</p>
-    <p><b>هل تغني عن المصادر؟</b> لا. تختصر الطريق إلى الموضع بالجزء والصفحة، والتحقيق بعدها للباحث.</p>
-    <p><b>هل تضمن أن ينقل النموذج مُخرَجها بأمانة؟</b> لا. العبرة بمُخرَج الأداة نفسه، وهو ظاهر في تطبيق Claude لمن أراد مراجعته.</p>
-    <p><b>ما الفرق بين الأداة والمهارة؟</b> الأداة برنامج يُخرج دليلًا يُتحقَّق منه: نصًّا من كتاب بموضعه، أو حكمًا من قاعدة. والمهارة تعليمات للنموذج: متى يستدعي الأداة، وكيف ينقل مُخرَجها، وما الذي يحكم فيه هو بالمعنى.</p>
-    <p><b>ماذا أحتاج لتشغيلها؟</b> حاسوبًا بويندوز 10 أو 11 أو بماك، وتطبيق Claude Desktop، واتصالًا بالشبكة أثناء التثبيت وحده.</p>
-    <p><b>كم تأخذ من جهازي؟</b> نحو 4 غيغابايت في التثبيت الكامل، ونحو 2.5 في السريع، ويستغرق من نصف ساعة إلى ساعة.</p>
-    <p><b>هل تعمل بلا اتصال؟</b> نعم، بعد التثبيت. إلا <code>lexicon_lookup</code> فإنها تبحث في موقع على الشبكة.</p>
-    <p><b>هل تعمل مع Claude Code ومع غير Claude؟</b> نعم. في Claude Code تُثبَّت إضافةً بمهاراتها، وتعمل مع أي عميل يدعم بروتوكول سياق النموذج (MCP).</p>
-    <p><b>كيف أرجع إلى كتب إعراب القرآن في آية؟</b> تُستورد الكتب من المكتبة الشاملة المثبّتة على جهازك، ثم تعيد الأداة في كل آية ما قاله فيها كل كتاب بجزئه وصفحته.</p>
-    <p><b>ظهرت رسالة تحذير عند فتح المعالج؟</b> الملفان غير موقَّعين رقميًّا، فيُنبّهك النظام. في ويندوز اضغط «مزيد من المعلومات» ثم «تشغيل على أي حال»، وفي ماك انقر بالزر الأيمن على التطبيق واختر «فتح». والمعالج مفتوح المصدر في <a class="tlink" href="https://github.com/ikagi07/arabiyya-mcp/tree/main/installer" target="_blank" rel="noopener">المستودع</a>.</p>
-    <p><b>ما الذي لم يُنجز بعد؟</b> مشكِّل خاص بالشعر، ومجموعة اختبار ثالثة للإعراب والخلاف، وتقويم بشري يشارك فيه متخصصون، واستضافة على الشبكة تُغني عن التثبيت.</p>
-    <p><b>كيف أحذفها؟</b> من «التطبيقات المثبّتة» في ويندوز، أو احذف التطبيق من مجلد التطبيقات في ماك.</p>
+    <details><summary>لمن هذه الأدوات؟</summary><p>لطالب العربية والباحث فيها ومعلّمها، ولكل من يسأل الذكاء الاصطناعي في الصرف والنحو والعروض والمعجم ويريد جوابًا يُراجَع.</p></details>
+    <details><summary>هل هي نموذج لغوي؟</summary><p>لا، ولا تُدرّب نموذجًا ولا تُغيّره. هي أدوات يستدعيها النموذج، ويرجع إليها كما يرجع الباحث إلى كتاب.</p></details>
+    <details><summary>هل أحكامها معصومة؟</summary><p>لا. أحكامها على مراتب: النقل والقاعدة والترجيح. وما كان ترجيحًا يُعرض بوجوهه ولا يُجزم به، وفي الإعراب تَسِمه الأداة ليراجعه Claude.</p></details>
+    <details><summary>هل تغني عن المصادر؟</summary><p>لا. تختصر الطريق إلى الموضع بالجزء والصفحة، والتحقيق بعدها للباحث.</p></details>
+    <details><summary>هل تضمن أن ينقل النموذج مُخرَجها بأمانة؟</summary><p>لا. العبرة بمُخرَج الأداة نفسه، وهو ظاهر في تطبيق Claude لمن أراد مراجعته.</p></details>
+    <details><summary>ما الفرق بين الأداة والمهارة؟</summary><p>الأداة برنامج يُخرج دليلًا يُتحقَّق منه: نصًّا من كتاب بموضعه، أو حكمًا من قاعدة. والمهارة تعليمات للنموذج: متى يستدعي الأداة، وكيف ينقل مُخرَجها، وما الذي يحكم فيه هو بالمعنى.</p></details>
+    <details><summary>ماذا أحتاج لتشغيلها؟</summary><p>حاسوبًا بويندوز 10 أو 11 أو بماك، وتطبيق Claude Desktop، واتصالًا بالشبكة أثناء التثبيت وحده.</p></details>
+    <details><summary>كم تأخذ من جهازي؟</summary><p>نحو 4 غيغابايت في التثبيت الكامل، ونحو 2.5 في السريع، ويستغرق من نصف ساعة إلى ساعة.</p></details>
+    <details><summary>هل تعمل بلا اتصال؟</summary><p>نعم، بعد التثبيت. إلا <code>lexicon_lookup</code> فإنها تبحث في موقع على الشبكة.</p></details>
+    <details><summary>هل تعمل مع Claude Code ومع غير Claude؟</summary><p>نعم. في Claude Code تُثبَّت إضافةً بمهاراتها، وتعمل مع أي عميل يدعم بروتوكول سياق النموذج (MCP).</p></details>
+    <details><summary>كيف أرجع إلى كتب إعراب القرآن في آية؟</summary><p>تُستورد الكتب من المكتبة الشاملة المثبّتة على جهازك، ثم تعيد الأداة في كل آية ما قاله فيها كل كتاب بجزئه وصفحته.</p></details>
+    <details><summary>ظهرت رسالة تحذير عند فتح المعالج؟</summary><p>الملفان غير موقَّعين رقميًّا، فيُنبّهك النظام. في ويندوز اضغط «مزيد من المعلومات» ثم «تشغيل على أي حال»، وفي ماك انقر بالزر الأيمن على التطبيق واختر «فتح». والمعالج مفتوح المصدر في <a class="tlink" href="https://github.com/ikagi07/arabiyya-mcp/tree/main/installer" target="_blank" rel="noopener">المستودع</a>.</p></details>
+    <details><summary>ما الذي لم يُنجز بعد؟</summary><p>مشكِّل خاص بالشعر، ومجموعة اختبار ثالثة للإعراب والخلاف، وتقويم بشري يشارك فيه متخصصون، واستضافة على الشبكة تُغني عن التثبيت.</p></details>
+    <details><summary>كيف أحذفها؟</summary><p>من «التطبيقات المثبّتة» في ويندوز، أو احذف التطبيق من مجلد التطبيقات في ماك.</p></details>
   </div>
 </section>
 
@@ -767,6 +781,8 @@ const SAMPLES = [
     sheet.classList.remove('fresh'); void sheet.offsetWidth; sheet.classList.add('fresh');
     [...slips.children].forEach((b, i) => b.setAttribute('aria-pressed', i === k));
     if (focus) slips.children[k].focus();
+    // on a phone the tabs scroll sideways: keep the chosen one in view
+    if (matchMedia('(max-width: 900px)').matches) slips.children[k].scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
   };
   SAMPLES.forEach((s, i) => {
     const b = document.createElement('button');
@@ -774,7 +790,7 @@ const SAMPLES = [
     b.setAttribute('aria-pressed', 'false');
     b.innerHTML = `<b>${esc(s.tab)}: ${esc(s.q)}</b><span class="tear" aria-hidden="true">ـــــــــــــــــــــــــــــــــ</span>` +
       s.out.map(([a, b]) => `<span class="ln${a.startsWith('صحّحه') ? ' red' : ''}">${esc(a)}: ${rich(b)}</span>`).join('');
-    b.addEventListener('click', () => { open(i); if (matchMedia('(max-width: 900px)').matches) sheet.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); });
+    b.addEventListener('click', () => open(i));
     slips.appendChild(b);
   });
   slips.addEventListener('keydown', (e) => {
@@ -790,7 +806,10 @@ const SAMPLES = [
   const v = document.getElementById('qalam');
   if (!v) return;
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) { v.removeAttribute('autoplay'); v.pause(); return; }
-  if ('IntersectionObserver' in window) new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting ? v.play().catch(() => {}) : v.pause())).observe(v);
+  const still = document.getElementById('qalam-still'); let held = false;
+  still.hidden = false;
+  still.addEventListener('click', () => { held = !held; still.setAttribute('aria-pressed', held); still.setAttribute('aria-label', held ? 'شغّل مقطع الخطّاط' : 'أوقف مقطع الخطّاط'); held ? v.pause() : v.play().catch(() => {}); });
+  if ('IntersectionObserver' in window) new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && !held ? v.play().catch(() => {}) : v.pause())).observe(v);
 })();
 
 // ---------- install: choose the system ----------
@@ -861,7 +880,10 @@ const SAMPLES = [
     fetchImg((i + 1) % imgs.length);
   };
   addEventListener('load', () => fetchImg(1), { once: true });
-  const run = () => { if (!timer) timer = setInterval(step, 6000); };
+  const still = document.getElementById('folio-still'); let held = false;
+  still.hidden = false;
+  still.addEventListener('click', () => { held = !held; still.setAttribute('aria-pressed', held); still.setAttribute('aria-label', held ? 'شغّل تبديل الصور' : 'أوقف تبديل الصور'); held ? stop() : run(); });
+  const run = () => { if (!timer && !held) timer = setInterval(step, 6000); };
   const stop = () => { clearInterval(timer); timer = null; };
   const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && !document.hidden ? run() : stop()));
   io.observe(document.getElementById('folio'));
