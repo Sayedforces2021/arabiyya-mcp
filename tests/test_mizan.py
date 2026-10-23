@@ -42,9 +42,9 @@ class TestMizan(unittest.TestCase):
 
     def test_lafif_maqrun_keeps_ain(self):
         # إذا اجتمع حرفا علة عينًا ولامًا أُعلّت اللام وصحّت العين؛ وكان يخرج «مَآي»
-        for w, root in (("مأوى", "ء و ي"), ("مثوى", "ث و ي")):
+        for w, root, form in (("مأوى", "ء و ي", "مَأْوَى"), ("مثوى", "ث و ي", "مَثْوَى")):
             q = M.mizan(w)["القراءات"][0]
-            self.assertEqual((q["الجذر"], q["الوزن"], q["الكلمة"].replace("ْ", "")[-2:]), (root, "مَفْعَل", "وَى"), w)
+            self.assertEqual((q["الجذر"], q["الوزن"], q["الكلمة"]), (root, "مَفْعَل", form), w)
 
     def test_typed_shadda_rules(self):
         self.assertEqual(first("عِدَة"), ("و ع د", "فِعْلَة"))
